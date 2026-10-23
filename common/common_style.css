@@ -1,5 +1,4 @@
 /* 공통 디자인 (PM) - 모듈에서는 아래 변수만 사용합니다 */
-/* 기본 색(버튼, 배경, 글자)은 .streamlit/config.toml의 [theme]과 같은 값입니다 */
 :root {
   --color-primary: #3b6ef5;
   --color-bg: #f4f6fa;
@@ -9,20 +8,85 @@
   --color-border: #e5e7eb;
   --radius: 12px;
   --font-main: "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --sidebar-width: 220px;
 }
 
-/* 사이드바 로고 */
-.common-logo {
-  margin: 0 0 8px;
-  font-size: 18px;
-  font-weight: 700;
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
   color: var(--color-text);
+  font-family: var(--font-main);
+}
+
+.common-app {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* 사이드바 */
+.common-sidebar {
+  flex: 0 0 var(--sidebar-width);
+  background: var(--color-card);
+  border-right: 1px solid var(--color-border);
+  padding: 24px 12px;
+}
+
+.common-logo {
+  margin: 0 12px 24px;
+  font-size: 18px;
+}
+
+.common-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.common-menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.common-menu-item:hover {
+  background: var(--color-bg);
+}
+
+.common-menu-item.is-active {
+  background: var(--color-primary);
+  color: var(--color-card);
+}
+
+/* 본문 */
+.common-main {
+  flex: 1;
+  padding: 32px;
+  min-width: 0;
+}
+
+.common-tab {
+  display: none;
+}
+
+.common-tab.is-active {
+  display: block;
 }
 
 /* 카드 */
 .common-card {
   background: var(--color-card);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 20px;
 }
