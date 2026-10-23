@@ -184,7 +184,7 @@ def home_right_html(alerts, ad, steps, demo):
   <div class="home-sub">오늘</div>
   <div class="home-num">x{mult:.1f}</div>
   <div class="home-sub">{reason}</div>
-  <div class="home-sub home-gap-sm">{"⑤ 광고 타이밍 추천값" if linked else "임시 규칙 (⑤ 광고 타이밍 연결 전)"}</div>
+  <div class="home-sub home-gap-sm">{"④ 광고 타이밍 추천값" if linked else "임시 규칙 (④ 광고 타이밍 연결 전)"}</div>
 
   <div class="home-float home-time">
     <div class="home-label">단계별 진행</div>

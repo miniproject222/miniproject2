@@ -20,7 +20,8 @@
 ## 작업 시작
 
 1. 첫 작업 전에 `README.md`와 `RULES.md`를 확인한다.
-2. 담당 모듈 코드(`home`, `report`, `hypothesis`, `media`, `solution`, `weather` 중 하나)를 확인한다.
+2. 담당 모듈 코드(`home`, `report`, `hypothesis`, `media`, `weather` 중 하나)를 확인한다.
+   - 솔루션 제안은 `media` 모듈에 포함된다. (이전 `solution` 모듈은 삭제됨)
    - 현재 대화에서 이미 확인된 정보는 다시 묻지 않는다.
    - 요청에 모듈 폴더나 파일이 분명히 나오면 그 모듈로 본다.
    - 새 대화에서 모듈을 알 수 없으면 확인한다.
@@ -91,7 +92,6 @@
       "Edit(/modules/report/**)",
       "Edit(/modules/hypothesis/**)",
       "Edit(/modules/media/**)",
-      "Edit(/modules/solution/**)",
       "Edit(/modules/weather/**)"
     ]
   }
