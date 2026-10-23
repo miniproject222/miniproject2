@@ -4,9 +4,11 @@
 
 | 파일 | 내용 |
 |---|---|
-| `media_main.html` | 화면 (`<section id="media-section">` 하나) |
+| `media_page.py` | 화면 + 기능 (`media_render()` 함수 하나) |
 | `media_style.css` | 디자인 (class는 `media-`로 시작) |
-| `media_script.js` | 화면 기능 (`Media` 객체, `Media.init()`) |
-| `media_server.py` | 서버 기능 (주소는 `/media/...`) |
 | `images/` | media에서만 쓰는 이미지 |
 | `data/` | media에서만 쓰는 데이터 |
+
+- 위젯 `key`, `st.session_state` 키는 `media-`로 시작합니다. (예: `key="media-btn-search"`)
+- 다른 탭과 데이터 주고받기: `store_set("media", ...)` / `store_get("다른모듈")`
+- Supabase 표 이름은 `media_`로 시작합니다. (예: `media_result`)

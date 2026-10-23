@@ -4,9 +4,11 @@
 
 | 파일 | 내용 |
 |---|---|
-| `hypothesis_main.html` | 화면 (`<section id="hypothesis-section">` 하나) |
+| `hypothesis_page.py` | 화면 + 기능 (`hypothesis_render()` 함수 하나) |
 | `hypothesis_style.css` | 디자인 (class는 `hypothesis-`로 시작) |
-| `hypothesis_script.js` | 화면 기능 (`Hypothesis` 객체, `Hypothesis.init()`) |
-| `hypothesis_server.py` | 서버 기능 (주소는 `/hypothesis/...`) |
 | `images/` | hypothesis에서만 쓰는 이미지 |
 | `data/` | hypothesis에서만 쓰는 데이터 |
+
+- 위젯 `key`, `st.session_state` 키는 `hypothesis-`로 시작합니다. (예: `key="hypothesis-btn-search"`)
+- 다른 탭과 데이터 주고받기: `store_set("hypothesis", ...)` / `store_get("다른모듈")`
+- Supabase 표 이름은 `hypothesis_`로 시작합니다. (예: `hypothesis_result`)
