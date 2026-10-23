@@ -21,7 +21,7 @@
 
 ```
 modules/report/
-├── README.md               # 모듈 설명
+├── report.md               # 모듈 설명
 ├── report_main.html        # 화면
 ├── report_style.css        # 디자인
 ├── report_script.js        # 화면 기능
