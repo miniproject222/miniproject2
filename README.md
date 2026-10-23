@@ -55,7 +55,7 @@ marketing-dashboard/
 │
 └── modules/                        # ⭐ 각자 자기 폴더만 수정
     ├── home/                       # 홈
-    │   ├── README.md
+    │   ├── home.md
     │   ├── home_main.html          # 화면
     │   ├── home_style.css          # 디자인
     │   ├── home_script.js          # 화면 기능
@@ -64,7 +64,7 @@ marketing-dashboard/
     │   └── data/                   # 홈에서만 쓰는 데이터
     │
     ├── report/                     # 1. 분석 리포트
-    │   ├── README.md
+    │   ├── report.md
     │   ├── report_main.html
     │   ├── report_style.css
     │   ├── report_script.js
@@ -74,7 +74,7 @@ marketing-dashboard/
     │   └── data/
     │
     ├── hypothesis/                 # 2. 가설 수립
-    │   ├── README.md
+    │   ├── hypothesis.md
     │   ├── hypothesis_main.html
     │   ├── hypothesis_style.css
     │   ├── hypothesis_script.js
@@ -83,7 +83,7 @@ marketing-dashboard/
     │   └── data/
     │
     ├── media/                      # 3. 매체 제작
-    │   ├── README.md
+    │   ├── media.md
     │   ├── media_main.html
     │   ├── media_style.css
     │   ├── media_script.js
@@ -92,7 +92,7 @@ marketing-dashboard/
     │   └── data/
     │
     ├── solution/                   # 3-1. 솔루션 제안
-    │   ├── README.md
+    │   ├── solution.md
     │   ├── solution_main.html
     │   ├── solution_style.css
     │   ├── solution_script.js
@@ -101,7 +101,7 @@ marketing-dashboard/
     │   └── data/
     │
     └── weather/                    # 4. 날씨 광고 타이밍
-        ├── README.md
+        ├── weather.md
         ├── weather_main.html
         ├── weather_style.css
         ├── weather_script.js
