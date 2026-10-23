@@ -1,13 +1,13 @@
 /* 공통 디자인 (PM) - 모듈에서는 아래 변수만 사용합니다 */
-/* 기본 색(버튼, 배경, 글자)은 .streamlit/config.toml의 [theme]과 같은 값입니다 */
+/* 값은 design.md의 THEME(ui_theme.py)과 .streamlit/config.toml의 [theme]과 같습니다 */
 :root {
-  --color-primary: #3b6ef5;
-  --color-bg: #f4f6fa;
-  --color-card: #ffffff;
-  --color-text: #1f2430;
-  --color-sub: #6b7280;
-  --color-border: #e5e7eb;
-  --radius: 12px;
+  --color-primary: #504E76;
+  --color-bg: #FDF8E2;
+  --color-card: #FFFFFF;
+  --color-text: #504E76;
+  --color-sub: #8C8AA8;
+  --color-border: #EFEDE0;
+  --radius: 18px;
   --font-main: "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
 

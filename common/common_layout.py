@@ -31,6 +31,7 @@ def layout_load_css():
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 
+# 지금은 app.py가 알약형 탭(st.tabs)으로 화면을 구성합니다 (design.md). 아래는 사이드바 메뉴 방식이 필요할 때 사용
 def layout_run():
     st.set_page_config(page_title="마케팅 솔루션 대시보드", page_icon="📊", layout="wide")
     layout_load_css()
