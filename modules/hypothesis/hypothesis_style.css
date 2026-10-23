@@ -1,10 +1,232 @@
 /* 2. 가설 수립 - class는 hypothesis- 로 시작, 색상은 공통 변수만 사용 */
+
+.hypothesis-head {
+  margin-bottom: 20px;
+}
+
+.hypothesis-title {
+  margin: 0 0 4px;
+}
+
+.hypothesis-head-desc {
+  margin: 0;
+  color: var(--color-sub);
+}
+
 .hypothesis-card {
   background: var(--color-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 20px;
+  margin-bottom: 16px;
+}
+
+.hypothesis-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.hypothesis-card-title {
+  margin: 0;
+  font-size: 16px;
 }
 
 .hypothesis-desc {
   color: var(--color-sub);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* 리포트에 분석된 문제가 아직 없을 때 */
+.hypothesis-empty-card {
+  text-align: center;
+  padding: 36px 20px;
+}
+
+.hypothesis-empty-icon {
+  font-size: 28px;
+  margin: 0 0 8px;
+}
+
+.hypothesis-empty-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.hypothesis-empty-card .hypothesis-desc {
+  margin: 0 0 16px;
+}
+
+.hypothesis-btn-ghost {
+  padding: 10px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.hypothesis-btn-ghost:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* 리포트 핵심 문제 + 가설 카드 (가설은 1개만 만듭니다) */
+.hypothesis-problem-card {
+  transition: border-color 0.15s ease;
+}
+
+.hypothesis-problem-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.hypothesis-factor-badge {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hypothesis-factor-internal {
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-card));
+  color: var(--color-primary);
+}
+
+.hypothesis-factor-external {
+  background: color-mix(in srgb, var(--color-sub) 18%, var(--color-card));
+  color: var(--color-sub);
+}
+
+.hypothesis-problem-title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.hypothesis-problem-desc {
+  margin: 0 0 16px;
+  color: var(--color-sub);
+  line-height: 1.6;
+}
+
+/* 자동 생성 영역 */
+.hypothesis-generated {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.hypothesis-generated-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--color-sub);
+}
+
+.hypothesis-btn-regenerate {
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.hypothesis-btn-regenerate:hover {
+  text-decoration: underline;
+}
+
+.hypothesis-btn-regenerate:disabled {
+  color: var(--color-sub);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.hypothesis-generated-text {
+  width: 100%;
+  resize: vertical;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-card);
+  color: var(--color-text);
+  font: inherit;
+  line-height: 1.6;
+}
+
+.hypothesis-generated-text:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.hypothesis-generated-text.is-loading {
+  color: var(--color-sub);
+}
+
+.hypothesis-generated-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.hypothesis-generated-status {
+  font-size: 12px;
+  color: var(--color-sub);
+}
+
+.hypothesis-btn-save {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: var(--color-card);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hypothesis-btn-save:hover {
+  opacity: 0.9;
+}
+
+.hypothesis-btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hypothesis-btn-save.is-saved {
+  background: color-mix(in srgb, var(--color-primary) 15%, var(--color-card));
+  color: var(--color-primary);
+}
+
+.hypothesis-saved-note {
+  margin: 10px 0 0;
+  color: var(--color-primary);
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .hypothesis-generated-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hypothesis-btn-save {
+    width: 100%;
+  }
 }

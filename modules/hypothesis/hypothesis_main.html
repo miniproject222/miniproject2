@@ -1,6 +1,52 @@
 <section id="hypothesis-section">
-  <h2 class="hypothesis-title">2. 가설 수립</h2>
+  <header class="hypothesis-head">
+    <h2 class="hypothesis-title">2. 가설 수립</h2>
+    <p class="hypothesis-head-desc">1번 분석 리포트의 문제를 바탕으로 가설 1개를 자동으로 만들어 드려요.</p>
+  </header>
+
   <div class="hypothesis-card">
-    <p class="hypothesis-desc">문제 해결 가설 제안 (현지 특성 반영)</p>
+    <div class="hypothesis-card-head">
+      <h3 class="hypothesis-card-title">📋 분석 리포트 문제 요약</h3>
+    </div>
+    <p id="hypothesis-report-summary" class="hypothesis-desc">분석 리포트 탭에서 먼저 문제를 분석해 주세요.</p>
+  </div>
+
+  <div id="hypothesis-empty" class="hypothesis-card hypothesis-empty-card" hidden>
+    <p class="hypothesis-empty-icon">🧭</p>
+    <p class="hypothesis-empty-title">아직 분석된 문제가 없어요</p>
+    <p class="hypothesis-desc">1. 분석 리포트 탭에서 문제를 분석하면, 그 결과로 가설이 자동으로 만들어져요.</p>
+    <button id="hypothesis-btn-sample" type="button" class="hypothesis-btn-ghost">
+      예시 데이터로 먼저 테스트하기
+    </button>
+  </div>
+
+  <div id="hypothesis-problem-card" class="hypothesis-card hypothesis-problem-card" hidden>
+    <div class="hypothesis-problem-head">
+      <span id="hypothesis-factor-badge" class="hypothesis-factor-badge"></span>
+      <h4 id="hypothesis-problem-title" class="hypothesis-problem-title"></h4>
+    </div>
+    <p id="hypothesis-problem-desc" class="hypothesis-problem-desc"></p>
+
+    <div class="hypothesis-generated">
+      <div class="hypothesis-generated-label">
+        <span>🤖 분석 결과를 바탕으로 자동 생성된 가설</span>
+        <button id="hypothesis-btn-regenerate" type="button" class="hypothesis-btn-regenerate">
+          ↻ 다시 생성
+        </button>
+      </div>
+      <textarea
+        id="hypothesis-generated-text"
+        class="hypothesis-generated-text"
+        rows="2"
+        placeholder="가설을 만드는 중..."
+      ></textarea>
+      <div class="hypothesis-generated-actions">
+        <span id="hypothesis-generated-status" class="hypothesis-generated-status"></span>
+        <button id="hypothesis-btn-save" type="button" class="hypothesis-btn-save">가설 저장</button>
+      </div>
+      <p id="hypothesis-saved-note" class="hypothesis-saved-note" hidden>
+        ✅ 이 가설이 저장됐어요. 다음 탭(매체 제작 등)에서 이 가설을 사용해요.
+      </p>
+    </div>
   </div>
 </section>
