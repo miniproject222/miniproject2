@@ -12,14 +12,14 @@ from modules.weather.weather_page import weather_render
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
-# 탭 목록: 순서대로 사이드바에 표시됩니다
+# 탭 목록: 작업 순서대로 표시됩니다 (홈 → ① 문제 분석 → ② 가설 → ③ 광고 소재 → ④ 솔루션 → ⑤ 광고 타이밍)
 LAYOUT_TABS = [
     {"code": "home", "label": "홈", "icon": "🏠", "render": home_render},
-    {"code": "report", "label": "1. 분석 리포트", "icon": "📈", "render": report_render},
-    {"code": "hypothesis", "label": "2. 가설 수립", "icon": "💡", "render": hypothesis_render},
-    {"code": "media", "label": "3. 매체 제작", "icon": "🎬", "render": media_render},
-    {"code": "solution", "label": "3-1. 솔루션 제안", "icon": "🧩", "render": solution_render},
-    {"code": "weather", "label": "4. 날씨 광고 타이밍", "icon": "🌦️", "render": weather_render},
+    {"code": "report", "label": "문제 분석", "icon": "①", "render": report_render},
+    {"code": "hypothesis", "label": "가설 세우기", "icon": "②", "render": hypothesis_render},
+    {"code": "media", "label": "광고 소재 제작", "icon": "③", "render": media_render},
+    {"code": "solution", "label": "솔루션 제안", "icon": "④", "render": solution_render},
+    {"code": "weather", "label": "광고 타이밍", "icon": "⑤", "render": weather_render},
 ]
 
 

@@ -2,7 +2,7 @@
 /* 값은 design.md의 THEME(ui_theme.py)과 .streamlit/config.toml의 [theme]과 같습니다 */
 :root {
   --color-primary: #504E76;
-  --color-bg: #FDF8E2;
+  --color-bg: #F5F6FB;
   --color-card: #FFFFFF;
   --color-text: #504E76;
   --color-sub: #8C8AA8;
@@ -17,6 +17,95 @@
   font-size: 18px;
   font-weight: 700;
   color: var(--color-text);
+}
+
+/* 왼쪽 세로 아이콘 줄: app.py의 최상위 탭(st.tabs)을 화면 왼쪽에 고정
+   (모듈 안에서 쓰는 st.tabs에는 적용되지 않도록 최상위 경로만 지정) */
+:root {
+  --common-rail-w: 100px;
+}
+
+/* 아이콘 줄 폭만큼 본문을 오른쪽으로 밀고 그만큼 좁힘 */
+[data-testid="stAppViewContainer"] {
+  box-sizing: border-box;
+  padding-left: var(--common-rail-w);
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 999990;
+  width: var(--common-rail-w);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  box-sizing: border-box;
+  padding: 88px 10px 20px;
+  overflow-y: auto;
+  background: var(--color-card);
+  border-right: 1px solid var(--color-border);
+}
+
+/* 맨 위 로고 (보라색 고리) */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"]::before {
+  content: "";
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  margin-left: -16px;
+  box-sizing: border-box;
+  border: 7px solid var(--color-primary);
+  border-radius: 50%;
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"] {
+  height: auto;
+  min-height: 66px;
+  justify-content: center;
+  padding: 8px 4px !important;
+  border-radius: 14px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--color-sub) !important;
+}
+
+/* 아이콘은 윗줄, 이름은 아랫줄 (이름의 띄어쓰기는 app.py에서 줄바꿈 없는 공백으로 바꿔 둠) */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"] p {
+  width: min-content;
+  margin: 0 auto;
+  white-space: normal;
+  word-break: keep-all;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  color: inherit !important;
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"] p::first-letter {
+  font-size: 20px;
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:hover {
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent) !important;
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"][aria-selected="true"] {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent) !important;
+  color: var(--color-primary) !important;
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"][aria-selected="true"] p {
+  font-weight: 700;
+}
+
+/* 세로 줄에서는 필요 없는 탭 밑줄과 좌우 스크롤 화살표 숨기기 */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"] > div:not([data-testid]),
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div:not(:has([role="tablist"])) {
+  display: none;
 }
 
 /* 카드 */
