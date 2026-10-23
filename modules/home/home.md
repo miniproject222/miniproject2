@@ -4,9 +4,11 @@
 
 | 파일 | 내용 |
 |---|---|
-| `home_main.html` | 화면 (`<section id="home-section">` 하나) |
+| `home_page.py` | 화면 + 기능 (`home_render()` 함수 하나) |
 | `home_style.css` | 디자인 (class는 `home-`로 시작) |
-| `home_script.js` | 화면 기능 (`Home` 객체, `Home.init()`) |
-| `home_server.py` | 서버 기능 (주소는 `/home/...`) |
 | `images/` | home에서만 쓰는 이미지 |
 | `data/` | home에서만 쓰는 데이터 |
+
+- 위젯 `key`, `st.session_state` 키는 `home-`로 시작합니다. (예: `key="home-btn-search"`)
+- 다른 탭과 데이터 주고받기: `store_set("home", ...)` / `store_get("다른모듈")`
+- Supabase 표 이름은 `home_`로 시작합니다. (예: `home_result`)
