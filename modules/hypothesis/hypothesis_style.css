@@ -1,0 +1,10 @@
+/* 2. 가설 수립 - class는 hypothesis- 로 시작, 색상은 공통 변수만 사용 */
+.hypothesis-card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.hypothesis-desc {
+  color: var(--color-sub);
+}

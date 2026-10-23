@@ -1,0 +1,10 @@
+/* 1. 분석 리포트 - class는 report- 로 시작, 색상은 공통 변수만 사용 */
+.report-card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.report-desc {
+  color: var(--color-sub);
+}

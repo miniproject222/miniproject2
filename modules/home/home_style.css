@@ -1,0 +1,10 @@
+/* 홈 - class는 home- 로 시작, 색상은 공통 변수만 사용 */
+.home-card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.home-desc {
+  color: var(--color-sub);
+}

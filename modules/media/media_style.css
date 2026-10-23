@@ -1,0 +1,10 @@
+/* 3. 매체 제작 - class는 media- 로 시작, 색상은 공통 변수만 사용 */
+.media-card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.media-desc {
+  color: var(--color-sub);
+}

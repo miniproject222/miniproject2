@@ -1,0 +1,10 @@
+/* 4. 날씨 광고 타이밍 - class는 weather- 로 시작, 색상은 공통 변수만 사용 */
+.weather-card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.weather-desc {
+  color: var(--color-sub);
+}

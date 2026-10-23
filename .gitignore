@@ -1,0 +1,8 @@
+.env
+venv/
+__pycache__/
+.vscode/
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
