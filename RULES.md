@@ -104,7 +104,7 @@ PM이 파일 구조 전체를 **빈 파일로 미리 만들어** `develop`에 �
 import streamlit as st
 
 
-def report_render():   # 사이드바에서 이 탭을 열 때마다 실행됩니다
+def report_render():   # 왼쪽 아이콘 줄에서 이 탭을 열 때마다 실행됩니다
     st.header("1. 분석 리포트")
     ... 화면과 기능 전부 ...
 ```

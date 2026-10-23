@@ -65,7 +65,7 @@ matplotlib>=3.8
 
 | 토큰 | 값 | 용도 |
 |---|---|---|
-| `bg` | `#FDF8E2` | 페이지 배경 |
+| `bg` | `#F5F6FB` | 페이지 배경 (연한 회보라, `.streamlit/config.toml`·`common_style.css`의 `--color-bg`와 같은 값) |
 | `card` | `#FFFFFF` | 카드 배경 |
 | `text` | `#504E76` | 제목·본문·숫자 |
 | `muted` | `#8C8AA8` | 라벨·보조 설명 (다크 보라를 밝힌 파생색) |
@@ -101,13 +101,14 @@ Pretendard (CDN), 없으면 Noto Sans KR
 ## 4. 레이아웃
 
 ```
-┌──────────┬───────────────────────────────────────────────┐
-│          │ 페이지 제목 / 설명                            │
-│ 사이드바 │ (홈) (퍼널 분석) (경쟁·팝업) (A/B 테스트)      │ ← 알약형 탭
-│ - 온도   ├─────────────┬─────────────────┬──────────────┤
-│   토글   │  좌측 카드   │   독일 지도      │  우측 카드    │ ← hero_layout (1 : 2 : 1)
-│ - 실시간 │  KPI · 목록  │  (+ 지역별 온도) │  예측 · 진행  │
-└──────────┴─────────────┴─────────────────┴──────────────┘
+┌──────┬────────────────────────────────────────────────────┐
+│ (로고)│ 페이지 제목 / 설명                                 │
+│ 🏠 홈 ├─────────────┬──────────────────┬───────────────┤
+│ ①    │  좌측 카드   │    독일 지도      │   우측 카드    │ ← hero_layout (1 : 2 : 1)
+│ ②    │  KPI · 목록  │  (+ 지역별 온도)  │   예측 · 진행  │
+│ ③ ④ ⑤│             │                  │               │
+└──────┴─────────────┴──────────────────┴───────────────┘
+  ↑ 왼쪽 세로 아이콘 줄 (app.py의 st.tabs를 common_style.css가 왼쪽에 고정)
 ```
 
 - 지도가 필요한 탭: `ui.hero_layout(left, right, temps=..., key="탭별_고유키")`
@@ -142,11 +143,13 @@ Pretendard (CDN), 없으면 Noto Sans KR
 
 **표시 모드**
 
-| 사이드바 설정 | 화면 |
+| `germany_visual(temps=...)` | 화면 |
 |---|---|
-| 지역별 온도 OFF | 독일 지도 이미지만 (`st.image`) |
-| 지역별 온도 ON | 이미지 + 16개 지역 온도 원 (샘플값) |
-| + 실시간 기온 ON | Open-Meteo 현재 기온, 실패 시 샘플값으로 자동 대체 |
+| `temps=None` (기본값, `st.session_state["temps"]`) | 독일 지도 이미지만 (`st.image`) |
+| `temps=ui.sample_state_temperatures()` | 이미지 + 16개 지역 온도 원 (샘플값) |
+| `temps=ui.fetch_state_temperatures()` | Open-Meteo 현재 기온 (실패하면 빈 리스트 → 샘플값으로 대체) |
+
+> 사이드바의 온도 토글은 없앴습니다. 기온이 필요한 탭은 탭 안에서 위 함수를 직접 불러 `temps=`로 넘깁니다.
 
 **기준 지점**: 16개 주의 대표 도시 1곳씩. 대부분 주도이고, 지도에서 Berlin과 겹치는 Brandenburg는 Cottbus, Wiesbaden과 겹치는 Rheinland-Pfalz는 Koblenz를 씁니다.
 
@@ -158,7 +161,7 @@ Pretendard (CDN), 없으면 Noto Sans KR
 **추후 확장 방향**
 - 주 경계 면 자체를 온도 색으로 칠하는 방식(choropleth)은 `assets/germany_states.geojson`의 `name` 속성(예: `Bayern`)을 키로 연결하면 됩니다.
 - 기온 데이터는 Open-Meteo `current=temperature_2m` 외에, 성수기 분석용으로 `archive-api.open-meteo.com`의 과거 일별 최고기온(`temperature_2m_max`)을 쓰면 "폭염일수 × 판매량" 분석으로 연결할 수 있습니다.
-- Open-Meteo는 비상업 무료이며, 화면에 `Weather data by Open-Meteo.com` 표기가 필요합니다(앱 사이드바에 자동 표기). 상업 서비스로 전환하면 유료 키가 필요합니다.
+- Open-Meteo는 비상업 무료이며, 화면에 `Weather data by Open-Meteo.com` 표기가 필요합니다(기온을 보여 주는 탭 안에 표기). 상업 서비스로 전환하면 유료 키가 필요합니다.
 
 ---
 
