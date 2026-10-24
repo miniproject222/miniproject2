@@ -8,13 +8,19 @@ import math
 from datetime import date
 from pathlib import Path
 
+import streamlit as st
+
 from modules.report.report_competitor import (
+    REPORT_SEORI_PROXY, report_seori_assumption,
     report_competitor_checklist, report_competitor_criteria, report_competitor_load, report_competitor_merge,
     report_competitor_slim, report_competitor_tests, report_external_factors, report_internal_factors,
     report_hypothesis_problems, report_key_problems, report_marketing_rules, report_position_kpis, report_team_handoff,
 )
+from modules.report.report_ab import report_ab_daily
+from modules.report.report_review import report_cooling_sales, report_review_analysis
+from common.common_store import store_get
 from modules.report.report_ga4 import report_ga4_fetch, report_ga4_ready
-from modules.report.report_keepa import report_keepa_products, report_keepa_snapshot, report_keepa_usage
+from modules.report.report_keepa import report_keepa_detail, report_keepa_products, report_keepa_snapshot, report_keepa_usage
 from modules.report.report_sqp import report_sqp_analyze, report_sqp_handoff
 
 REPORT_AB_FILE = Path(__file__).resolve().parent / "data" / "report_ab_tests.json"
@@ -46,14 +52,40 @@ def report_ab_result(ab):
             "z": z, "p": p, "significant": p < 0.05, "winner": b["name"] if rb > ra else a["name"]}
 
 
+def report_add_keepa_detail(data, rivals):
+    """Keepa 상세(같은 조회 응답)의 쿠폰·월 구매 배지 → 경쟁사 신호(④), 상세페이지 특징 문구 → 경쟁사 프로필(③),
+    수수료 → 서리 Amazon 순수익 추정. 상세 조회가 없는 상품은 건너뜁니다."""
+    detail = report_keepa_detail().get("items", {})
+    by_brand = {r["brand"]: detail.get(r.get("asin") or "") for r in rivals}
+    for sig in data["competitor_signals"]:
+        d = by_brand.get(sig["brand"])
+        if d:
+            sig["coupon"] = d["coupons"]                       # 쿠폰 횟수·최대 할인율·마지막 쿠폰·지금 진행 여부
+            sig["monthly_sold"] = d["monthly_sold"][-1] if d["monthly_sold"] else None
+    for prof in data["competitor_profiles"]:
+        d = by_brand.get(prof["brand"])
+        if d:
+            prof["listing_features"], prof["listing_images"] = d["features"], d["images"]
+    fees = [d["fees"] for d in detail.values() if d and d["fees"]["fba_eur"]]
+    seori = data["seori_profile"]
+    price = seori.get("amazon_price")
+    if fees and price:
+        ref = sorted(f["referral_pct"] for f in fees)[len(fees) // 2]
+        fba = sorted(f["fba_eur"] for f in fees)[len(fees) // 2]
+        net = price / 1.19 - price * ref / 100 - fba     # 부가세 19% 제외 - 판매 수수료 - FBA 배송비 (원가·광고비 전)
+        seori["amazon_fees"] = {"price": price, "vat_pct": 19, "referral_pct": ref, "fba_eur": fba, "net_before_cost": round(net, 2),
+                                "basis": "경쟁사 3곳 Keepa 수수료 중앙값 (Herlag는 FBA 정보 없음) · 원가·광고비 전 추정"}
+
+
 def report_load_data():
     """화면에 필요한 실제 데이터를 한 번에 돌려줍니다."""
     snapshot = report_keepa_snapshot()
     usage = report_keepa_usage()
     keepa_time = snapshot["fetched_at"] if snapshot else ""
-    rivals = report_competitor_merge(report_competitor_load(), report_keepa_products(),
+    loaded = report_competitor_load()                        # 판매 순위 상위 2개사 + 서리(가정 3위)
+    rivals = report_competitor_merge(loaded, report_keepa_products([r["brand"] for r in loaded] + [REPORT_SEORI_PROXY]),
                                      snapshot["items"] if snapshot else None)
-    criteria = report_competitor_criteria()
+    criteria = report_competitor_criteria([r["brand"] for r in loaded if r["kind"] != "자사"])
     checklist = report_competitor_checklist()
     tests = report_competitor_tests()
     last = f"Keepa 마지막 조회: {keepa_time}" if snapshot else "Keepa 조회값 없음"
@@ -62,6 +94,7 @@ def report_load_data():
     data = {
         "period": date.today().strftime("%Y-%m"),
         "keepa_status": f"{last} · 토큰 사용 {usage['used']}/{usage['budget']}",
+        "seori_proxy": REPORT_SEORI_PROXY,                       # 서리 판매 실적에 쓰는 가정 브랜드
         "competitors_full": rivals,                               # 화면 경쟁사 비교표
         "competitors": report_competitor_slim(rivals),            # 홈·가설 탭용 간단 표
         "criteria": criteria,                                     # 경쟁우위 항목별 점수
@@ -74,9 +107,25 @@ def report_load_data():
         "ga4": None,                                              # GA4 연결 시 {"funnel", "utm"}
         "source_error": "",
     }
+    data["seori_profile"]["certs"] = checklist          # 서리 인증·규제 현황 (가정 반영)
+    data["seori_profile"]["tests"] = tests              # 서리 완제품 시험 결과 (가정 반영)
+    assume = report_seori_assumption() or {}
+    data["seori_profile"]["data_check"] = assume.get("data_check", [])   # 국내 기업 데이터 사용 가능 여부
+    data["seori_profile"]["body_temp"] = assume.get("body_temp", {})     # 체감(피부 표면) vs 실제 체온
+    data["seori_profile"]["finished_qmax_ref"] = assume.get("finished_qmax_ref", {})   # 국내 다른 기업 완제품 Q-max 비교
+    data["ad_claims"] = assume.get("ad_claims", {})   # 나중에 광고에 넣을 서리 문구 (③ 광고 소재)
+    data["seori_profile"]["ad_check"] = assume.get("ad_check", {})   # Q-max 0.207 광고 사용 가능 여부 (가상 광고 O, 실제 광고 X)
+    data["cooling_sales"] = report_cooling_sales()   # 냉감패드 실적만 (하위 카테고리·여름 순위)
+    report_add_keepa_detail(data, rivals)
+    data["review_analysis"] = report_review_analysis(rivals, snapshot["items"] if snapshot else None, keepa_time)
     data["position_key_problems"] = report_key_problems(data["internal"], data["external"])
     data["key_problems"] = data["position_key_problems"]
     data["problems"] = report_hypothesis_problems(data["key_problems"], data["internal"], data["external"], rivals)
+    ra = data["review_analysis"]
+    if ra:   # 리뷰 문제에 분석 결과(지표·목표·근거)를 붙여 가설 탭에서 바로 쓰게 합니다
+        for p in data["key_problems"] + data["problems"]:
+            if p.get("group") == "신뢰":
+                p["metric"], p["target_value"], p["analysis"] = ra["metric"], ra["target"], ra["findings"]
 
     # 검색어 클릭 분석 (문제 시나리오.md): 있으면 문제 도출·다른 탭 문제의 맨 앞을 이 결과로 바꿉니다
     data["sqp"] = report_sqp_analyze(rivals, snapshot["items"] if snapshot else None)
@@ -85,6 +134,11 @@ def report_load_data():
         sqp_problems, sqp_key_problems, data["sqp_store"] = report_sqp_handoff(data["sqp"], rivals)
         data["key_problems"] = sqp_key_problems
         data["problems"] = sqp_problems + data["problems"]
+    # 해결안 A/B: ③ 탭 결과를 매일 아침 한 번 분석 (store "report"의 ab_daily)
+    saved = store_get("report")
+    data["ab_daily"] = report_ab_daily(saved, report_utm_rows)
+    # 직접 올린 A/B 결과 파일 (바로 분석): 이번 접속에서 올린 값 > 저장된 값
+    data["ab_upload"] = st.session_state.get("report-ab-upload") or ((saved or {}).get("ab_upload") if isinstance(saved, dict) else None)
     if report_ga4_ready():
         try:
             ga4 = report_ga4_fetch()

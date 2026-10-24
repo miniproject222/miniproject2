@@ -26,7 +26,7 @@ REPORT_SQP_INTENT_GAP = 10.0      # 클릭된 상품 중앙 가격이 우리보�
 REPORT_SQP_HEAT_TEMP = 28.0       # 폭염일: 5개 도시 평균 최고기온
 REPORT_SQP_HEAT_DAYS = 3          # 폭염일이 이만큼 있는 주를 '폭염 주'로 표시
 REPORT_SQP_ROLES = {              # 경쟁 제품 역할 (Keepa 조회값이 있는 브랜드)
-    "Novilla": "같은 자리 경쟁자", "RIBECO Germany": "같은 자리 경쟁자", "Paradies": "프리미엄 기준",
+    "Mara Vital": "같은 자리 경쟁자", "RIBECO Germany": "같은 자리 경쟁자",   # 냉감패드 실적 1·2위 (2026 여름 순위, Keepa 상세)
 }
 REPORT_SQP_TYPE_DIRECTION = {
     "소재 개선": "메인 이미지·제목 A/B (③ 광고 소재)",
