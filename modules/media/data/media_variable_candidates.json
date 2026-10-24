@@ -1,0 +1,61 @@
+{
+  "sets": [
+    {
+      "hypothesis": "만약 메인 이미지를 펼친 패드의 냉감 원단 질감과 두께가 보이는 각도로 바꾸면, 저가 제품과의 품질 차이가 바로 보여서, 'kühlende matratzenauflage' 검색에서 클릭 점유율 ÷ 노출 점유율이 0.63배에서 0.8배 이상으로 오를 것이다.",
+      "note": "**두께와 원단 질감을 변수 두 개로 나누지 않는 이유**: 가설이 말하는 원인은 '품질 차이가 안 보인다' 하나이고, 사진 한 장에 둘 다 담깁니다. Manage Your Experiments는 한 번에 두 안(A/B)만 비교하므로, 둘을 따로 보려면 이 테스트가 끝난 뒤 B 안에서 다시 나눠 테스트합니다.",
+      "variables": [
+        {
+          "name": "메인 이미지 촬영 구도",
+          "kind": "main_image",
+          "if_match": true,
+          "b_options": [
+            {
+              "label": "45도 모서리 들기",
+              "b": "펼친 패드를 45도 위에서, 모서리를 살짝 들어 두께와 냉감 원단 결이 보이게",
+              "ref_prompt": "Product photo reference, white seamless background, a cooling mattress pad 90x200 cm laid flat, camera 45 degrees above, one corner gently lifted to show the edge thickness and the knitted cooling fabric texture, soft even studio light, no text, no props"
+            },
+            {
+              "label": "반 접어 단면 보이기",
+              "b": "펼친 패드의 한쪽 끝을 반쯤 접어 올려, 30도 앞에서 단면 두께와 냉감 원단 결이 함께 보이게",
+              "ref_prompt": "Product photo reference, white seamless background, a cooling mattress pad 90x200 cm laid flat with one end folded back halfway, camera 30 degrees above from the front, the folded edge shows the cross-section thickness and the knitted cooling fabric texture, soft even studio light, no text, no props"
+            },
+            {
+              "label": "손으로 눌러 두께 보이기",
+              "rule_break": "메인 이미지에는 제품 말고 손·소품 금지",
+              "fallback": "서브 이미지"
+            },
+            {
+              "label": "원단만 크게 찍은 클로즈업",
+              "rule_break": "두께가 빠지고 제품 85% 이상 기준에 걸림",
+              "fallback": "서브 이미지"
+            },
+            {
+              "label": "두께 숫자·화살표 표기",
+              "rule_break": "메인 이미지에는 텍스트 금지",
+              "fallback": "서브 이미지"
+            },
+            {
+              "label": "AI로 만든 침실 연출 장면",
+              "rule_break": "메인 이미지는 실제 사진만",
+              "fallback": "스폰서드 브랜드 광고"
+            }
+          ]
+        },
+        {
+          "name": "제목 앞 문구 (OEKO-TEX·두께)",
+          "kind": "title",
+          "if_match": false,
+          "fallback": "다음 테스트",
+          "reason": "가설의 If가 아님 (대안 가설)"
+        },
+        {
+          "name": "가격·쿠폰",
+          "kind": "price",
+          "if_match": false,
+          "fallback": "고정 요소",
+          "reason": "가설과 무관"
+        }
+      ]
+    }
+  ]
+}
