@@ -10,8 +10,6 @@
 import json
 from pathlib import Path
 
-from modules.media.media_variable import MEDIA_VARIABLE_KPI
-
 MEDIA_HANDOFF_DIR = Path(__file__).resolve().parent
 MEDIA_HANDOFF_FILES = {
     "plan": MEDIA_HANDOFF_DIR / "data" / "media_handoff_plan.json",
@@ -20,13 +18,14 @@ MEDIA_HANDOFF_FILES = {
 }
 MEDIA_HANDOFF_SLOT = "{slot}"   # 기본 프롬프트 안의 빈칸 표시
 
-# 1단계 → 2단계: A/B 테스트 설계 예시. 1단계가 media_handoff_set_plan()으로 저장하면 그 값이 대신 쓰입니다.
+# 1단계 → 2단계: A/B 테스트 설계 기본값. 1단계(media_variable.py)가 1번 리포트 값으로 덮어쓴 뒤
+# '가설 불러오기'를 마친 화면에서 media_handoff_set_plan()으로 자동 저장하면 그 값이 대신 쓰입니다.
 MEDIA_HANDOFF_PLAN = {
     "query": "kühlende matratzenauflage",          # 검색어
     "variable": "메인 이미지 촬영 구도",              # 독립 변수 (바꾸는 것 1개)
     "a": "접힌 패드 (위에서 찍은 사진)",              # A · 대조군 (지금 그대로)
     "b": "펼친 패드를 45도 위에서, 모서리를 살짝 들어 두께와 냉감 원단 결이 보이게",   # B · 실험군
-    "kpi": MEDIA_VARIABLE_KPI,                     # 종속 변수 이름 (노출 대비 클릭률 = 클릭 점유율 ÷ 노출 점유율)
+    "kpi": "노출 대비 클릭률",                      # 종속 변수 이름 (= 클릭 점유율 ÷ 노출 점유율, media_variable.py도 이 값을 씀)
     "kpi_now": 0.63,                               # 지금 값 (배)
     "kpi_goal": 0.8,                               # 목표 값 (배 이상)
     "cvr_tolerance": 0.5,                          # 안전장치: B의 CVR이 A보다 이만큼(%p) 넘게 떨어지면 B 실패

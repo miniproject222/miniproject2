@@ -107,8 +107,17 @@
 
 /* 넓은 화면: '가설 불러오기' 버튼을 페이지 제목 줄 오른쪽 끝으로 올리고,
    가설 콜아웃·빈 카드는 하위 탭 바와 같은 줄(위쪽 끝 맞춤) 오른쪽 자리만큼만 차지
-   (500px = 하위 탭 바 폭 + 여유, 음수 여백은 실제 화면에서 잰 값. 제목·탭 이름이 바뀌면 맞춰야 함) */
+   (--media-tabbar-w = 하위 탭 바가 차지할 최대 폭. 탭 이름이 길어져도 탭 바는 이 폭 안에서 가로 스크롤되어
+    오른쪽 콜아웃과 겹치지 않음. 음수 여백은 실제 화면에서 잰 값. 제목이 바뀌면 맞춰야 함) */
 @media (min-width: 768px) {
+  .st-key-media-root {
+    --media-tabbar-w: 560px;
+  }
+
+  .st-key-media-step [role="tablist"] {
+    max-width: var(--media-tabbar-w);
+  }
+
   .st-key-media-hypo-load-row {
     position: relative;
     z-index: 1;
@@ -121,22 +130,49 @@
   }
 
   .st-key-media-hypo-empty {
-    width: calc(100% - 500px) !important;
+    width: calc(100% - var(--media-tabbar-w) - 24px) !important;
     margin-left: auto;
     margin-top: -78px;
   }
 
-  /* 불러온 뒤: [핵심 요약 | 가설 콜아웃] 한 줄을 끌어올려 콜아웃 위쪽 끝을 탭 바와 맞춤 */
+  /* 불러온 뒤: [핵심 요약 | 가설 콜아웃] 한 줄을 끌어올려 콜아웃 위쪽 끝을 탭 바와 맞춤.
+     두 칸 높이를 같게 늘려(stretch) 왼쪽 요약 카드 아래 끝과 오른쪽 콜아웃 아래 끝을 맞춤 */
   .st-key-media-hypo-top {
     margin-top: -78px;
     gap: 24px;
     flex-wrap: nowrap !important;
-    align-items: flex-start;
+    align-items: stretch;
+  }
+
+  .st-key-media-hypo-top > [data-testid="stLayoutWrapper"] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 짧은 쪽이 남은 높이를 채움: 요약 카드는 내용 세로 가운데, 콜아웃은 파란 상자 자체가 늘어남 */
+  .st-key-media-hypo-summary,
+  .st-key-media-hypo-callout,
+  .st-key-media-hypo-callout > [data-testid="stElementContainer"] {
+    flex: 1 1 auto;
+  }
+
+  .st-key-media-hypo-summary {
+    justify-content: center;
+  }
+
+  .st-key-media-hypo-callout [data-testid="stAlert"],
+  .st-key-media-hypo-callout [data-testid="stAlertContainer"] {
+    height: 100%;
+  }
+
+  .st-key-media-hypo-callout [data-testid="stAlertContainer"] {
+    display: flex;
+    align-items: center;
   }
 
   /* 왼쪽 요약은 탭 바 폭만큼, 탭 바 아래에서 시작 (폭은 Streamlit이 감싸는 stLayoutWrapper에 줌) */
   .st-key-media-hypo-top > [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-summary) {
-    flex: 0 0 476px !important;
+    flex: 0 0 var(--media-tabbar-w) !important;
   }
 
   .st-key-media-hypo-top > [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-callout) {
@@ -171,6 +207,11 @@
 .st-key-media-hypo-summary p {
   font-size: 14px;
   line-height: 1.9;
+}
+
+/* [요약 | 콜아웃] 줄 바로 아래 구분선 (media_variable.py key="media-hypo-divider") - 기본 hr 여백 2em 제거 */
+.st-key-media-hypo-divider hr {
+  margin: 0 0 4px;
 }
 
 /* 불러오기 전 빈 상태 카드 */
