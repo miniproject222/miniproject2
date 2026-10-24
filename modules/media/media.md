@@ -7,7 +7,7 @@
 |---|---|
 | `media_page.py` | 화면 + 기능 (`media_render()` 함수 하나). `MEDIA_STEPS`로 하위 탭(`st.tabs(key="media-step", on_change="rerun")`)을 만들고 선택된 단계만 그림, 이전/다음 버튼은 `st.session_state["media-step"]`을 바꿔 단계 이동 |
 | `media_solution.py` | 하위 탭 ④ 솔루션 제안 (`media_solution_section()`) |
-| `media_variable.py` | 하위 탭 ① 가설에서 변수 도출(`media_variable_step()`): 위에 2번 가설 탭이 저장한 가설(`store_get("hypothesis")`)을 콜아웃에 If/Because/Then 배지로 표시 (없으면 기준 가설, 다르면 경고, `media_variable_hypothesis_step()`), 아래에 후보 변수를 가설 연결·아마존 메인 이미지 규칙·테스트 도구 기준으로 걸러 독립 변수 1개(메인 이미지 촬영 구도)와 통제·종속 변수를 정함 (`media_variable_derive_step()`) |
+| `media_variable.py` | 하위 탭 ① 가설에서 변수 도출(`media_variable_step()`): 오른쪽 위 '가설 불러오기' 버튼을 누르기 전에는 점선 빈 카드만 보이고, 누르면 스피너(1.2초)·토스트 뒤 아래 내용이 떠오르며 나타남 (버튼은 '다시 불러오기'로 바뀜). 위에 2번 가설 탭이 저장한 가설(`store_get("hypothesis")`)을 콜아웃에 If/Because/Then 배지로 표시 (없으면 기준 가설, 다르면 경고, `media_variable_hypothesis_step()`), 아래에 후보 변수를 가설 연결·아마존 메인 이미지 규칙·테스트 도구 기준으로 걸러 독립 변수 1개(메인 이미지 촬영 구도)와 통제·종속 변수를 정함 (`media_variable_derive_step()`) |
 | `media_ab.py` | 메인 이미지 A/B (루트 `문제 시나리오.md`): 하위 탭 ② A/B 소재 준비(`media_ab_plan_step()`: `report["sqp"]`로 A(현재)/B(제안) 안, 메인 이미지 규칙, 촬영 브리프 다운로드, Manage Your Experiments 안내) · 하위 탭 ③ 결과·판정(`media_ab_result_step()`: CTR 승자 + CVR 안전장치, 적용 전후 CAC) |
 | `data/media_ab_result_dummy_202610.json` | A/B 결과 더미 (가상, 실제 테스트 결과가 나오면 교체) |
 | `media_style.css` | 디자인 (class는 `media-`로 시작). 3번 탭이 열린 동안만 페이지 위·양옆 여백 축소, 이 탭 버튼 글자색, 하위 탭 알약형 스타일 |

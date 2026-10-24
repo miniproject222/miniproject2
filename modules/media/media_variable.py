@@ -1,9 +1,13 @@
 # 3. 매체 제작 > 가설에서 변수 도출
 # 2번 탭이 저장한 가설(store "hypothesis")을 받아 If/Because/Then으로 나누고,
 # 바꿀 수 있는 후보 중 A/B로 돌릴 변수 하나를 고릅니다. 3번 탭의 하위 탭 ①(가설에서 변수 도출)에서 부릅니다.
+import time
+
 import streamlit as st
 
 from common.common_store import store_get
+
+MEDIA_VARIABLE_LOAD_SECONDS = 1.2   # '가설 불러오기' 연출 시간 (실제 불러오기는 즉시 끝남)
 
 # 담당자가 정한 기준 가설. 아래 후보·선정 표는 이 문장 기준이고,
 # ② 탭에 아직 저장된 가설이 없으면 이 문장을 대신 씁니다.
@@ -77,9 +81,8 @@ def media_variable_hypothesis_step():
     text, status = media_variable_hypothesis()
     media_variable_callout(text)
     st.caption(f"가설 구조 · {MEDIA_VARIABLE_TEMPLATE}")
-    if status == "none":
-        st.caption("2번 가설 탭에 저장된 가설이 없어 기준 가설을 대신 보여 줍니다. 2번 탭에서 가설을 저장하면 여기에 바로 반영됩니다.")
-    elif status == "other":
+    # status == "none"(2번 탭 저장 전)이면 기준 가설을 그대로 보여 줍니다. '가설 불러오기' 연출과 맞도록 따로 안내하지 않습니다.
+    if status == "other":
         st.warning("2번 가설 탭에 저장된 가설이 기준 가설과 다릅니다. 아래 후보·선정 표는 기준 가설 기준이라, "
                    "2번 탭에서 '이 가설 문장을 위 칸에 넣기'로 기준 가설을 저장하거나 표를 새 가설에 맞게 바꿔야 합니다.")
         with st.expander("기준 가설 보기", expanded=False):
@@ -110,9 +113,35 @@ def media_variable_derive_step():
                "둘을 따로 보려면 이 테스트가 끝난 뒤 B 안에서 다시 나눠 테스트합니다.")
 
 
+def _media_variable_start_load() -> None:
+    """'가설 불러오기' 버튼 콜백. 다음 화면 그리기에서 불러오는 연출(스피너)을 보여 주도록 표시만 해 둡니다."""
+    st.session_state["media-hypo-loading"] = True
+
+
 def media_variable_step():
-    """하위 탭 ① 가설에서 변수 도출: 위에 가져온 가설, 아래에 후보 걸러내기·단일 변수 선정. 반드시 media_render() 안에서 부릅니다."""
-    st.markdown("**2번 가설 탭에서 가져온 가설**")
-    media_variable_hypothesis_step()
-    st.divider()
-    media_variable_derive_step()
+    """하위 탭 '가설에서 변수 도출': 오른쪽 위 '가설 불러오기' 버튼 → 가설 콜아웃 → 후보 걸러내기·단일 변수 선정.
+    반드시 media_render() 안에서 부릅니다."""
+    loading = st.session_state.pop("media-hypo-loading", False)
+    loaded = loading or st.session_state.get("media-hypo-loaded", False)
+    with st.container(horizontal=True, horizontal_alignment="right", key="media-hypo-load-row"):
+        st.button("↻ 다시 불러오기" if loaded else "📥 가설 불러오기", key="media-btn-hypo-load",
+                  type="secondary" if loaded else "primary", on_click=_media_variable_start_load)
+
+    # 버튼을 누른 직후 한 번만: 2번 탭에서 가져오는 것처럼 잠깐 스피너를 보여 준 뒤 가설을 표시
+    if loading:
+        with st.spinner("2번 가설 탭에서 가설을 불러오는 중…"):
+            time.sleep(MEDIA_VARIABLE_LOAD_SECONDS)
+        st.session_state["media-hypo-loaded"] = True
+        st.toast("가설을 불러왔어요", icon="📥")
+
+    if not loaded:
+        with st.container(border=True, key="media-hypo-empty"):
+            st.markdown("**아직 불러온 가설이 없어요**")
+            st.caption("오른쪽 위 '가설 불러오기'를 누르면 2번 가설 탭의 가설을 가져와 A/B로 바꿀 변수를 도출해요.")
+        return
+
+    # key="media-hypo-box": media_style.css의 나타나는 애니메이션(.st-key-media-hypo-box)
+    with st.container(key="media-hypo-box"):
+        media_variable_hypothesis_step()
+        st.divider()
+        media_variable_derive_step()
