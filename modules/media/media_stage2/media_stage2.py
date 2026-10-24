@@ -11,6 +11,7 @@ import streamlit as st
 import ui_theme as ui
 from modules.media.media_handoff import media_handoff_plan, media_handoff_set_result
 
+MEDIA_S2_TAB_LABEL = "결과·판정"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
 MEDIA_S2_DIR = Path(__file__).resolve().parent   # 2단계 폴더 (data/ 경로 만들 때 사용)
 MEDIA_S2_FILE = MEDIA_S2_DIR / "data" / "media_ab_result_dummy_202610.json"
 
@@ -37,7 +38,7 @@ def media_s2_judge(result, cvr_tolerance):
 
 
 def media_stage2_render():
-    """하위 탭 '결과·판정': 가상 결과 + 판정 (승자는 CTR, CVR은 안전장치) + 적용 전후 CAC.
+    """2단계 하위 탭(이름은 MEDIA_S2_TAB_LABEL): 가상 결과 + 판정 (승자는 CTR, CVR은 안전장치) + 적용 전후 CAC.
     반드시 media_render() 안에서 부릅니다."""
     plan = media_handoff_plan()
     if not MEDIA_S2_FILE.exists():

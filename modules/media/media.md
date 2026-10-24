@@ -13,6 +13,7 @@
 
 - 공용 파일(`media_page.py`, `media_handoff.py`, `media_style.css`, `media.md`, `media_prompt.md`, `CLAUDE.md`)은 1단계 담당자만 고칩니다.
 - 연결 지점: `media_page.py`가 하위 탭에서 `media_stage2_render()`, `media_stage3_render()`만 부릅니다.
+- 2·3단계 하위 탭 이름은 각 단계 파일의 `MEDIA_S2_TAB_LABEL`, `MEDIA_S3_TAB_LABEL`에서 정하고 `media_page.py`가 가져다 씁니다. 단계 담당자가 직접 바꿉니다.
 - 단계 사이 데이터: `media_handoff.py` (1→2 `media_handoff_plan()`, 2→3 `media_handoff_set_result()` / `media_handoff_result()`). 앞 단계 값이 없으면 예시 값이 와서 각자 먼저 개발할 수 있습니다.
 - 단계 폴더의 CSS(`media_stage2_style.css`, `media_stage3_style.css`)는 공통 로더가 읽지 않아 `media_page.py`의 `media_load_stage_css()`가 넣습니다.
 - 각 단계의 기능 명세·AI 안내·프롬프트 기록은 단계 폴더의 `media_stageN.md`, `CLAUDE.md`, `media_stageN_prompt.md`에 있습니다.
