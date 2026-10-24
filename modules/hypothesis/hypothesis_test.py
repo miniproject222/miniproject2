@@ -23,7 +23,14 @@ from modules.hypothesis.hypothesis_page import (  # noqa: E402
     hypothesis_build_sentence,
     hypothesis_has_batchim,
     hypothesis_pick_action,
+    hypothesis_pick_candidates,
+    hypothesis_pick_problem,
     hypothesis_pick_sensitivity,
+    hypothesis_resolve_sentence,
+)
+from modules.hypothesis.hypothesis_scenario import (  # noqa: E402
+    hypothesis_scenario_problem2_sentence,
+    hypothesis_scenario_sentence,
 )
 
 _ok = 0
@@ -54,7 +61,8 @@ def _new_apptest() -> AppTest:
 
 
 # ─────────────────────────────────────────────
-# 1. 핵심 흐름: 빈 상태 → 샘플 → 생성 → 저장 → 수정 → 되돌리기
+# 1. 핵심 흐름: 빈 상태 → 샘플 → 가설 1/2/3 탭(근거를 쭉 읽음) → 선택(저장) → 다른 후보로 재선택
+#    (가설 문장을 따로 수정하는 칸은 없앴습니다 — 근거를 읽고 "이 가설 선택하기"만 누릅니다)
 # ─────────────────────────────────────────────
 def test_core_flow() -> None:
     at = _new_apptest()
@@ -64,33 +72,44 @@ def test_core_flow() -> None:
 
     at.button(key="hypothesis-btn-sample").click().run()
     check(not at.exception, "[핵심] 샘플 클릭 후 예외 없음")
-    check(any("경쟁사 가격 인하" in m.value for m in at.markdown), "[핵심] 문제 제목(problems[0])이 표시됨")
-
-    draft = at.text_area(key="hypothesis-draft-text").value
-    check(bool(draft), "[핵심] 가설 문장이 비어있지 않음")
-    check(len(draft) < 260, f"[핵심] 가설 문장 길이가 적정함 ({len(draft)}자)")
-    check("Amazon.de" in draft, "[핵심] target이 문장에 들어감")
+    check(any("경쟁사 가격 인하" in m.value for m in at.markdown), "[핵심] 가설 1(문제 1)의 제목이 표시됨")
+    check([t.label for t in at.tabs] == ["가설 1", "가설 2", "가설 3"], "[핵심] SAMPLE_REPORT 문제 3개가 가설 1/2/3 탭으로 뜸")
+    check(
+        any("아직 선택한 가설이 없어요" in m.value for m in at.markdown),
+        "[핵심] 처음에는 '지금 선택된 가설' 칸이 비어있다고 안내함",
+    )
     check(any("📍" in m.value and "현지 특성" in m.value for m in at.markdown), "[핵심] 현지 특성 줄 표시")
     check(any("💬" in m.value and "경쟁사 부정 리뷰" in m.value for m in at.markdown), "[핵심] 경쟁사 부정 리뷰 줄 표시")
+    check(
+        any("가설 근거" in m.value for m in at.markdown),
+        "[핵심] 가설 근거 표 제목이 펼치지 않아도 바로 보임 (경쟁사 부정 리뷰 바로 아래)",
+    )
+    check(
+        [b.label for b in at.button if b.key and b.key.startswith("hypothesis-btn-save-")] == ["이 가설 선택하기"] * 3,
+        "[핵심] '되돌리기' 버튼 없이 가설 후보마다 '이 가설 선택하기' 버튼 1개만 있음",
+    )
 
-    at.button(key="hypothesis-btn-save").click().run()
-    check(at.button(key="hypothesis-btn-save").label == "✓ 저장됨", "[핵심] 저장 후 버튼 라벨 변경")
+    expected_text = hypothesis_build_sentence(SAMPLE_REPORT["problems"][0])
+    at.button(key="hypothesis-btn-save-0").click().run()
+    check(at.button(key="hypothesis-btn-save-0").label == "✓ 선택됨", "[핵심] 선택 후 버튼 라벨 변경")
+    check(at.button(key="hypothesis-btn-save-0").disabled, "[핵심] 이미 선택된 가설의 버튼은 다시 못 누르게 비활성화")
     saved = at.session_state["store-hypothesis"]
     check(isinstance(saved, dict), "[핵심] 저장된 hypothesis가 dict 1개 (배열 아님)")
     check(saved.get("hypothesis") == saved.get("text"), "[핵심] home_data.py가 기대하는 'hypothesis' 키도 같이 저장됨")
+    check(saved.get("text") == expected_text, "[핵심] 저장된 문장이 hypothesis_build_sentence() 결과와 정확히 같음")
+    check(
+        any(expected_text in m.value for m in at.markdown),
+        "[핵심] '지금 선택된 가설' 칸에 선택한 문장이 그대로 보임",
+    )
 
-    at.text_area(key="hypothesis-draft-text").set_value("   ").run()
-    check(at.button(key="hypothesis-btn-save").disabled, "[핵심] 공백만 입력하면 저장 버튼 비활성화")
-
-    at.text_area(key="hypothesis-draft-text").set_value("수정된 문장 테스트").run()
-    check(at.button(key="hypothesis-btn-save").label == "가설 저장", "[핵심] 다시 수정하면 저장 버튼 활성화")
-    check(at.text_area(key="hypothesis-draft-text").value != draft, "[핵심] 직접 수정하면 원래 자동 생성 문장과 달라짐")
-
-    # "↺ 자동 생성 문장으로 되돌리기" 버튼: 다른 안을 보여주는 게 아니라, 손으로 고친 내용을
-    # 원래 자동 생성 문장(draft)으로 되돌리는 용도입니다 (1번 분석 결과 = 가설 1개라는 전제와 일치).
-    at.button(key="hypothesis-btn-reset").click().run()
-    check(not at.exception, "[핵심] 되돌리기 클릭 후 예외 없음 (StreamlitWidgetAlreadyInstantiatedError 재발 방지)")
-    check(at.text_area(key="hypothesis-draft-text").value == draft, "[핵심] 되돌리기를 누르면 수정 전 자동 생성 문장과 정확히 같아짐")
+    # 가설 2를 선택하면, "선택된 가설"이 가설 2로 바뀌고 가설 1의 버튼은 다시 "선택하기"로
+    # 풀려야 함 (최종 저장은 항상 1개만 — 가설은 1개를 "고르는" 것이지 여러 개를 동시에 저장하지 않음)
+    expected_text2 = hypothesis_build_sentence(SAMPLE_REPORT["problems"][1])
+    at.button(key="hypothesis-btn-save-1").click().run()
+    check(at.button(key="hypothesis-btn-save-1").label == "✓ 선택됨", "[핵심] 가설 2를 선택하면 가설 2 버튼이 '선택됨'으로 바뀜")
+    check(at.button(key="hypothesis-btn-save-0").label == "이 가설 선택하기", "[핵심] 가설 2를 선택하면 가설 1 버튼은 '선택됨'에서 풀림")
+    saved2 = at.session_state["store-hypothesis"]
+    check(saved2.get("text") == expected_text2, "[핵심] 최종 저장된 hypothesis가 가설 2 문장으로 바뀜 (가설은 항상 1개만 최종 저장)")
 
 
 # ─────────────────────────────────────────────
@@ -115,7 +134,7 @@ def test_defensive() -> None:
     at.session_state["store-hypothesis"] = "예전에 남은 이상한 값"
     at.run()
     check(not at.exception, "[방어] 저장된 hypothesis가 dict가 아니어도 예외 없음")
-    check(at.button(key="hypothesis-btn-save").label == "가설 저장", "[방어] 이상한 저장값은 '저장됨'으로 치지 않음")
+    check(at.button(key="hypothesis-btn-save-0").label == "이 가설 선택하기", "[방어] 이상한 저장값은 '선택됨'으로 치지 않음")
 
 
 # ─────────────────────────────────────────────
@@ -136,8 +155,14 @@ def test_home_data_compat() -> None:
     at.session_state["store-report"] = home_demo_report
     at.run()
     check(not at.exception, "[호환] home_data.py의 실제 HOME_DEMO를 그대로 넣어도 예외 없음")
-    draft = at.text_area(key="hypothesis-draft-text").value
-    check("장바구니" in draft or "배송비" in draft, "[호환] HOME_DEMO의 첫 번째 문제(장바구니 이탈) 기준으로 생성됨")
+    check(
+        any("장바구니" in m.value for m in at.markdown),
+        "[호환] HOME_DEMO의 첫 번째 문제(장바구니 이탈)가 가설 1 제목으로 표시됨",
+    )
+    expected = hypothesis_build_sentence(home_demo_report["problems"][0])
+    at.button(key="hypothesis-btn-save-0").click().run()
+    saved = at.session_state["store-hypothesis"]
+    check(saved.get("text") == expected, "[호환] 가설 1을 선택하면 장바구니 이탈 문제 기준 문장이 저장됨")
 
 
 # ─────────────────────────────────────────────
@@ -387,6 +412,180 @@ def test_new_categories() -> None:
         check_sentence_quality(p["title"], s)
 
 
+# ─────────────────────────────────────────────
+# 7-2. 검색어 클릭 문제(시나리오) 섹션: 팀원이 추가한 hypothesis_scenario.py가
+#      report["sqp"]가 있을 때 예외 없이 접기(expander) 구조로 뜨는지, 버튼 글씨
+#      안 보임 버그(hypothesis_style.css)가 같이 수정됐는지 확인
+# ─────────────────────────────────────────────
+SQP_SAMPLE = {
+    "query": "kühlende matratzenauflage", "ratio": 0.63, "kpi_goal": 0.8,
+    "source": "검색 클릭 가상 SQP", "cart_rate_ours": 16.4, "cart_rate_market": 17.1,
+    "price_gap": 5, "listing": {"main_image": "위에서 찍은 사진", "price": 64.99},
+    "problem2": {"heat_temp": 28, "query": "kühlmatte bett", "imp_share": 6.9,
+                 "goal_imp_share": 9.0, "month": "6월", "extra_clicks": 265},
+}
+
+
+def test_scenario_section() -> None:
+    # SAMPLE_REPORT 문제들은 sqp_type이 없어서 이 sqp와 무관함 → 그래도 가설 후보마다
+    # "가설 근거" 표 제목은 뜨되(hypothesis_generic_evidence_section, 규칙 기반 근거 — 이제
+    # 펼치기가 아니라 바로 보이는 형태), sqp 전용 "KPI 표" expander는 뜨면 안 됨
+    # (엉뚱한 근거를 끌어오지 않음)
+    report = dict(SAMPLE_REPORT)
+    report["sqp"] = SQP_SAMPLE
+    at = _new_apptest()
+    at.session_state["store-report"] = report
+    at.run()
+    check(not at.exception, "[시나리오] sqp가 있는 report를 넣어도 예외 없음")
+    md_values = [m.value for m in at.markdown]
+    check(
+        sum("가설 근거" in v for v in md_values) == len(SAMPLE_REPORT["problems"]),
+        f"[시나리오] 모든 가설 후보에 근거 표 제목이 하나씩 바로 뜸 (실제: {sum('가설 근거' in v for v in md_values)}개)",
+    )
+    expander_labels = [e.label for e in at.get("expander")]
+    check(
+        not any("KPI 표" in lb for lb in expander_labels),
+        "[시나리오] 어떤 가설 후보도 이 sqp와 무관하면 sqp 전용 'KPI 표' expander는 안 뜸 (엉뚱한 근거 섞임 방지)",
+    )
+    check(
+        not any("대안 가설" in v for v in md_values),
+        "[시나리오] '대안 가설 보기' 섹션은 제거됨",
+    )
+
+    s = hypothesis_scenario_sentence(SQP_SAMPLE)
+    check(s.startswith("만약 ") and s.endswith("것이다."), "[시나리오] 소재 개선 가설 문장도 '만약~것이다.' 템플릿을 따름")
+    s2 = hypothesis_scenario_problem2_sentence(SQP_SAMPLE["problem2"])
+    check(s2.startswith("만약 ") and s2.endswith("것이다."), "[시나리오] 노출 확대 가설 문장도 '만약~것이다.' 템플릿을 따름")
+
+    # report에 sqp가 없어도(일반적인 경우) 가설 후보마다 규칙 기반 근거 표는 그대로 바로 보임
+    at2 = _new_apptest()
+    at2.session_state["store-report"] = SAMPLE_REPORT
+    at2.run()
+    check(not at2.exception, "[시나리오] sqp가 없는 report는 예외 없음")
+    md_values2 = [m.value for m in at2.markdown]
+    check(
+        sum("가설 근거" in v for v in md_values2) == len(SAMPLE_REPORT["problems"]),
+        "[시나리오] sqp가 없어도 가설 후보마다 규칙 기반 근거 표는 그대로 바로 보임",
+    )
+
+
+# ─────────────────────────────────────────────
+# 7-3. 실제 report가 "검색어 클릭 문제"를 problems[0]으로 보내면서(report_sqp.py) 드러난 버그:
+#      그 문제에 대해 hypothesis_page.py가 키워드만 보고 다시(더 부정확하게) 가설을 만들어
+#      hypothesis_scenario.py의 "문제 1 가설" 카드와 서로 다른 문장 2개가 동시에 보였음.
+#      "가설은 항상 1개"여야 하므로, sqp가 있으면 그 쪽 문장을 그대로 유일한 답으로 써야 함.
+# ─────────────────────────────────────────────
+SQP_MAIN_PROBLEM = {
+    "title": "'kühlende matratzenauflage' 검색에서 보이는 만큼 안 눌림 (클릭 ÷ 노출 0.63배)",
+    "type": "내부", "level": "높음", "group": "검색 클릭",
+    "detail": "검색량이 가장 많은 'kühlende matratzenauflage'에서 노출 점유율 9.0%에 비해 클릭 점유율이 5.7%였다.",
+    "target": "amazon.de 'kühlende matratzenauflage' 검색 결과",
+    "metric": "클릭 점유율 ÷ 노출 점유율",
+    "local_context": "온라인 쇼핑객의 54%가 구매 전 리뷰를 확인한다 (2021). (독일 DB SHP-006)",
+    "competitor_review": "Novilla Q-max 미공개 (경쟁사 DB 약점, 실제 리뷰 원문 아님)",
+    "sqp_type": "소재 개선", "query": "kühlende matratzenauflage",
+}
+SQP_INTENT_MISMATCH_PROBLEM = {
+    "title": "'kühltopper'는 검색 의도가 다름 (클릭된 상품 중앙 가격 €79.99)",
+    "type": "내부", "level": "중간", "group": "검색 클릭",
+    "detail": "배수 1.8배지만 클릭된 상품이 우리보다 €30 비싼 두꺼운 토퍼라 가설 없이 광고 제외 키워드로 처리 (가상 SQP)",
+    "sqp_type": "제외 검토", "query": "kühltopper",
+}
+
+
+SQP_EXPANSION_PROBLEM = {
+    "title": "'kühlmatte bett'는 잘 눌리는데 덜 보임 (노출 점유율 6.9%, 배수 1.27배)",
+    "type": "내부", "level": "중간", "group": "검색 클릭",
+    "detail": "노출 점유율을 9%로 올리면 6월에만 약 265회 클릭 증가 예상. 소재보다 광고 예산 문제라 소재 외 문제로 분류 (가상 SQP)",
+    "sqp_type": "노출 확대", "query": "kühlmatte bett",
+}
+
+
+def test_sqp_single_hypothesis() -> None:
+    sqp_store = SQP_SAMPLE | {"query": "kühlende matratzenauflage", "ratio": 0.63, "kpi_goal": 0.8}
+
+    # (1) sqp 쿼리가 일치하면("소재 개선"), 규칙 기반으로 다시 만들지 않고
+    # hypothesis_scenario_sentence()를 그대로 씀
+    resolved = hypothesis_resolve_sentence(SQP_MAIN_PROBLEM, sqp_store)
+    check(
+        resolved == hypothesis_scenario_sentence(sqp_store),
+        "[시나리오 통합] sqp가 일치하면 hypothesis_scenario.py의 문장을 그대로 유일한 가설로 씀 (키워드 기반 재생성 안 함)",
+    )
+    rule_based = hypothesis_build_sentence(SQP_MAIN_PROBLEM)
+    check(
+        resolved != rule_based,
+        "[시나리오 통합] (참고) 키워드 기반 문장과는 실제로 다름 — 그래서 둘 다 보이면 '가설 2개'처럼 보였던 것",
+    )
+
+    # (1-1) "노출 확대" 문제도 sqp["problem2"]와 쿼리가 일치하면 그 전용 문장을 그대로 씀
+    resolved2 = hypothesis_resolve_sentence(SQP_EXPANSION_PROBLEM, sqp_store)
+    check(
+        resolved2 == hypothesis_scenario_problem2_sentence(sqp_store["problem2"]),
+        "[시나리오 통합] '노출 확대' 문제도 sqp.problem2가 일치하면 그 전용 문장을 그대로 유일한 가설로 씀",
+    )
+
+    # (2) sqp가 없거나 쿼리가 다른 문제면, 평소처럼 규칙 기반으로 만듦 (하위 호환)
+    check(
+        hypothesis_resolve_sentence(SQP_MAIN_PROBLEM, None) == rule_based,
+        "[시나리오 통합] sqp가 없으면 평소처럼 규칙 기반 문장을 씀",
+    )
+    other_sqp = SQP_SAMPLE | {"query": "다른 검색어"}
+    check(
+        hypothesis_resolve_sentence(SQP_MAIN_PROBLEM, other_sqp) == rule_based,
+        "[시나리오 통합] sqp의 query가 문제의 query와 다르면 규칙 기반 문장을 씀 (엉뚱한 근거를 끌어오지 않음)",
+    )
+
+    # (3) '검색 클릭' 문제도 (sqp 없이) 규칙 기반만으로 만들 때, 더 이상 안 맞는 기본값(타깃 맞춤
+    # 프로모션)이 아니라 그럴듯한 액션이 나와야 함 (sqp_type별)
+    action, _ = hypothesis_pick_action(
+        SQP_MAIN_PROBLEM["detail"], False, "", SQP_MAIN_PROBLEM["title"], "검색 클릭",
+    )
+    check("메인 이미지" in action, "[시나리오 통합] '안 눌림'(소재 개선) 문제는 메인 이미지 관련 액션으로 분류됨")
+
+    # (4) report_sqp.py가 "가설 없이 광고 제외 키워드로 처리"라고 명시한 문제(검색 의도 다름)는
+    # 후보 목록에서 아예 빠져야 함 (hypothesis_pick_problem/candidates 둘 다 확인)
+    report = {"problems": [SQP_INTENT_MISMATCH_PROBLEM, SQP_MAIN_PROBLEM]}
+    picked = hypothesis_pick_problem(report)
+    check(
+        picked is not None and picked.get("title") == SQP_MAIN_PROBLEM["title"],
+        "[시나리오 통합] '가설 없이' 문제가 맨 앞이어도 건너뛰고 다음 문제를 고름",
+    )
+    candidates = hypothesis_pick_candidates(report)
+    check(
+        all("가설 없이" not in str(c.get("detail") or "") for c in candidates),
+        "[시나리오 통합] 가설 후보 목록에도 '가설 없이' 문제는 전혀 안 들어감",
+    )
+
+    # (5) 화면 전체로도 확인: problems[0]이 sqp와 정확히 일치하는 실제 report 모양을 넣으면,
+    # 가설 1·2를 각각 선택했을 때 hypothesis_scenario_sentence()/_problem2_sentence()와
+    # 정확히 같은 문장이 저장되고(화면에는 가설 문장 자체가 아니라 근거 표만 바로 보임),
+    # sqp 전용 'KPI 표' expander는 소재 개선(가설 1) 탭에만 뜸
+    report_full = {"problems": [SQP_MAIN_PROBLEM, SQP_EXPANSION_PROBLEM], "sqp": sqp_store}
+    at = _new_apptest()
+    at.session_state["store-report"] = report_full
+    at.run()
+    check(not at.exception, "[시나리오 통합] 실제 모양(검색 클릭 문제 2개 + 일치하는 sqp)을 넣어도 예외 없음")
+
+    at.button(key="hypothesis-btn-save-0").click().run()
+    saved = at.session_state["store-hypothesis"]
+    check(saved.get("text") == resolved, "[시나리오 통합] 가설 1을 선택하면 hypothesis_scenario_sentence()와 정확히 같은 문장이 저장됨")
+
+    at.button(key="hypothesis-btn-save-1").click().run()
+    saved2 = at.session_state["store-hypothesis"]
+    check(saved2.get("text") == resolved2, "[시나리오 통합] 가설 2를 선택하면 hypothesis_scenario_problem2_sentence()와 정확히 같은 문장이 저장됨")
+
+    expander_labels = [e.label for e in at.get("expander")]
+    check(
+        sum("KPI 표" in lb for lb in expander_labels) == 1,
+        f"[시나리오 통합] sqp 전용 'KPI 표' expander는 소재 개선(가설 1) 탭에만 1개 뜸 (실제: {sum('KPI 표' in lb for lb in expander_labels)}개)",
+    )
+    md_values = [m.value for m in at.markdown]
+    check(
+        sum("가설 근거" in v for v in md_values) == 2,
+        f"[시나리오 통합] 가설 1·2 탭에 각각 근거 표 제목이 하나씩, 총 2개만 바로 뜸 (실제: {sum('가설 근거' in v for v in md_values)}개)",
+    )
+
+
 def test_realistic_sweep() -> None:
     for p in REALISTIC_PROBLEMS:
         try:
@@ -410,6 +609,8 @@ if __name__ == "__main__":
     test_regression_bugs()
     test_deterministic()
     test_new_categories()
+    test_scenario_section()
+    test_sqp_single_hypothesis()
     test_realistic_sweep()
 
     print(f"\n총 {_ok + _fail}개 중 통과 {_ok}개, 실패 {_fail}개")
