@@ -6,6 +6,7 @@
 |---|---|
 | `hypothesis_page.py` | 화면 + 기능 (`hypothesis_render()` 함수 하나) |
 | `hypothesis_style.css` | 디자인 (class는 `hypothesis-`로 시작) |
+| `hypothesis_test.py` | 자체 테스트 (200개). `python modules/hypothesis/hypothesis_test.py`로 실행 |
 | `images/` | hypothesis에서만 쓰는 이미지 |
 | `data/` | hypothesis에서만 쓰는 데이터 |
 
@@ -50,3 +51,11 @@ store_set("report", {
 2. 생성된 문장은 화면에서 바로 수정할 수 있고, "가설 저장"을 누르면 `store_set("hypothesis", {...})`로 **가설 1개(dict)만** 저장되어 media, solution, home 탭이 읽을 수 있습니다. 저장되는 dict에는 `home_data.py`가 기대하는 `"hypothesis"` 키와, 더 구체적인 `"text"`/`"target"`/`"metric"`/`"type"`/`"local_context"`/`"competitor_review"` 키가 함께 들어갑니다.
 3. 리포트의 맨 앞 문제(`report["problems"][0]`)가 바뀌면 자동으로 새 가설을 다시 만듭니다. 같은 문제가 유지되는 동안에는 이미 만든 가설(수정한 내용 포함)을 그대로 보여줍니다.
 4. `problems`가 리스트가 아니거나, 원소가 dict가 아니거나, `title`이 없는 등 모양이 예상과 달라도 화면이 깨지지 않습니다 (`hypothesis_pick_problem()`이 안전하게 걸러냅니다).
+5. `hypothesis_build_sentence()`는 **같은 문제면 항상 같은 문장**을 돌려줍니다 (무작위 요소 없음). "1번 분석 결과 → 최적 가설 1개"라는 전제상, 같은 문제에 여러 후보가 있는 게 아니라 정해진 답 1개가 있어야 하기 때문입니다. "↺ 자동 생성 문장으로 되돌리기" 버튼도 "다른 안을 보여주는" 게 아니라, textarea에서 손으로 고친 내용을 원래 자동 생성 문장으로 되돌리는 용도입니다.
+
+### 코드 고칠 때마다 꼭 돌려볼 것
+
+```
+python modules/hypothesis/hypothesis_test.py
+```
+pytest 같은 추가 설치 없이 Streamlit 내장 테스트 도구만 씁니다. 핵심 흐름, 방어적 처리, home_data.py 호환, 문법/키워드 회귀, 결정성(같은 입력 → 같은 결과), MODO 독일 사업 실전 시나리오 20개까지 총 200개를 확인합니다. 전부 통과해야 안전합니다.

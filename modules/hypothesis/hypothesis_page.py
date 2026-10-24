@@ -84,22 +84,12 @@ def hypothesis_shorten(text: str, limit: int = 40) -> str:
     return text[:limit].rstrip() + "…"
 
 
-def hypothesis_build_sentence(problem: dict) -> str:
-    """
-    1번 분석 결과(문제)로 가설 문장을 만듭니다. (AI 연동 전까지는 규칙 기반으로 채웁니다)
-    형식: 만약 [타깃/지점]에 [구체적인 액션]을 적용한다면,
-          [이유/고객 심리] 때문에 [측정 가능한 지표/KPI]가 [얼마나] 개선될 것이다
-    """
-    # report 쪽 값이 문자열이 아니거나(숫자 등) 아예 없을 수도 있으니 전부 str로 안전하게 바꿔 둡니다
-    target = str(problem.get("target") or "독일 전체 고객")
-    kpi = str(problem.get("metric") or "매출")
-    desc = str(problem.get("detail") or problem.get("title") or "")
-    is_external = problem.get("type") == "외부"
-    local_context = str(problem.get("local_context") or "").strip()
-    competitor_review = str(problem.get("competitor_review") or "").strip()
-
-    # action은 "~을 적용한다면"에 자연스럽게 붙도록 명사형으로 끝냅니다
-    # (예: "노출한다"처럼 완결된 문장으로 끝내면 "노출한다을 적용한다면"처럼 비문이 됩니다)
+def hypothesis_pick_action(desc: str, is_external: bool, competitor_review: str) -> tuple[str, str]:
+    """문제 설명(desc)을 보고 액션 문구와 목표 변화량(%)을 고릅니다. 같은 입력이면 항상 같은
+    결과를 돌려줍니다 (무작위 요소 없음) — 분석 결과에서 나온 "하나의 가설"이라는 전제와 맞게,
+    같은 문제에 대해 여러 후보 중 하나를 고르는 게 아니라 항상 같은 답을 내야 하기 때문입니다.
+    action은 "~을 적용한다면"에 자연스럽게 붙도록 항상 명사형으로 끝냅니다
+    (예: "노출한다"처럼 완결된 문장으로 끝내면 "노출한다을 적용한다면"처럼 비문이 됩니다)."""
     action = "타깃 맞춤 프로모션 집중 노출"
     amount = "8%" if is_external else "10%"
 
@@ -157,14 +147,38 @@ def hypothesis_build_sentence(problem: dict) -> str:
         action = "반품 사유 설문과 사이즈·색상 맞춤 교환 가이드 제공"
         amount = "8%"
 
-    # "외부" 요인이라고 전부 경쟁사 비교 문제는 아닙니다 (환율, 광고 플랫폼, 시장 트렌드 등도 외부 요인).
-    # 경쟁사와 직접 관련 있을 때만(경쟁사 부정 리뷰가 있거나, 설명에 "경쟁사"가 나올 때) 그렇게 표현합니다.
+    return action, amount
+
+
+def hypothesis_pick_sensitivity(desc: str, is_external: bool, competitor_review: str) -> str:
+    """이유 문장에 쓸 "~에 민감하게 반응할 가능성이 크기" 앞부분을 고릅니다.
+    "외부" 요인이라고 전부 경쟁사 비교 문제는 아닙니다 (환율, 광고 플랫폼, 시장 트렌드 등도 외부 요인).
+    경쟁사와 직접 관련 있을 때만(경쟁사 부정 리뷰가 있거나, 설명에 "경쟁사"가 나올 때) 그렇게 표현합니다."""
     if competitor_review or "경쟁사" in desc:
-        sensitivity = "독일 경쟁사 대비 우리 혜택"
-    elif is_external:
-        sensitivity = "외부 시장 상황"
-    else:
-        sensitivity = "해당 요인"
+        return "독일 경쟁사 대비 우리 혜택"
+    if is_external:
+        return "외부 시장 상황"
+    return "해당 요인"
+
+
+def hypothesis_build_sentence(problem: dict) -> str:
+    """
+    1번 분석 결과(문제)로 가설 문장을 만듭니다. (AI 연동 전까지는 규칙 기반으로 채웁니다)
+    형식: 만약 [타깃/지점]에 [구체적인 액션]을 적용한다면,
+          [이유/고객 심리] 때문에 [측정 가능한 지표/KPI]가 [얼마나] 개선될 것이다
+    같은 problem이면 항상 같은 문장을 돌려줍니다 (무작위 요소 없음). 1번 분석 결과에서 나온
+    "가설 1개"라는 전제상, 같은 문제에 여러 후보가 있는 게 아니라 하나의 답이 있어야 하기 때문입니다.
+    """
+    # report 쪽 값이 문자열이 아니거나(숫자 등) 아예 없을 수도 있으니 전부 str로 안전하게 바꿔 둡니다
+    target = str(problem.get("target") or "독일 전체 고객")
+    kpi = str(problem.get("metric") or "매출")
+    desc = str(problem.get("detail") or problem.get("title") or "")
+    is_external = problem.get("type") == "외부"
+    local_context = str(problem.get("local_context") or "").strip()
+    competitor_review = str(problem.get("competitor_review") or "").strip()
+
+    action, amount = hypothesis_pick_action(desc, is_external, competitor_review)
+    sensitivity = hypothesis_pick_sensitivity(desc, is_external, competitor_review)
 
     # local_context가 있으면 "현지 특성 반영" 요구사항대로 이유에 항상 포함시킵니다.
     # detail(desc)은 바로 위 caption에 이미 그대로 보여주고 있으므로, 문장이 너무 길어지지
@@ -208,8 +222,11 @@ def hypothesis_problem_key(problem: dict) -> str:
     return f"{problem.get('title', '')}|{problem.get('detail', '')}"
 
 
-def _hypothesis_handle_regenerate(problem: dict) -> None:
-    """'다시 생성' 버튼의 on_click 콜백. 위젯이 그려지기 전에 실행되므로 안전하게 덮어쓸 수 있습니다."""
+def _hypothesis_handle_reset(problem: dict) -> None:
+    """'자동 생성 문장으로 되돌리기' 버튼의 on_click 콜백. hypothesis_build_sentence()는 같은 problem에
+    항상 같은 문장을 돌려주므로(결정적), 이 버튼은 "다른 안을 보여주는" 게 아니라 textarea에서 손으로
+    고친 내용을 원래 자동 생성 문장으로 되돌리는 용도입니다. 위젯이 그려지기 전에 실행되므로
+    session_state를 안전하게 덮어쓸 수 있습니다."""
     st.session_state["hypothesis-draft-text"] = hypothesis_build_sentence(problem)
 
 
@@ -304,7 +321,7 @@ def hypothesis_render():
             label_visibility="collapsed",
         )
         # AI가 아직 연결되지 않아서 항상 규칙 기반입니다. AI 연동 후에는 source를 받아 문구를 바꾸면 됩니다.
-        st.caption("✏️ 규칙 기반으로 자동 작성된 문장이에요. 자유롭게 고친 뒤 저장하세요.")
+        st.caption("✏️ 규칙 기반으로 자동 작성된 문장이에요. 자유롭게 고쳐서 저장하세요.")
 
         saved = store_get("hypothesis")
         saved = saved if isinstance(saved, dict) else None
@@ -313,13 +330,16 @@ def hypothesis_render():
 
         c1, c2 = st.columns([1, 1])
         with c1:
+            # "다른 안을 보여주는" 버튼이 아닙니다 — 1번 분석 결과에서 나온 가설은 하나뿐이어야
+            # 하므로, 이 버튼은 손으로 고친 내용을 원래 자동 생성 문장으로 되돌리기만 합니다
+            # (hypothesis_build_sentence는 같은 문제면 항상 같은 문장을 돌려줍니다).
             # text_area가 이미 그려진 뒤에 같은 키(session_state["hypothesis-draft-text"])를
             # 직접 덮어쓰면 StreamlitWidgetAlreadyInstantiatedError가 나므로, 위젯이 만들어지기
             # 전에 실행되는 on_click 콜백에서 값을 바꿉니다.
             st.button(
-                "↻ 다시 생성",
-                key="hypothesis-btn-regenerate",
-                on_click=_hypothesis_handle_regenerate,
+                "↺ 자동 생성 문장으로 되돌리기",
+                key="hypothesis-btn-reset",
+                on_click=_hypothesis_handle_reset,
                 args=(problem,),
                 type="secondary",
                 width="stretch",
