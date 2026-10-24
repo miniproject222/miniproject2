@@ -1,6 +1,6 @@
 # 3. 매체 제작 > 메인 이미지 A/B (문제 시나리오.md '가설과 소재 연결')
 # 1번 리포트의 검색어 클릭 분석(store "report"의 sqp)과 2번 가설(store "hypothesis")을 읽어
-# 메인 이미지 A/B 안, 촬영 브리프, Manage Your Experiments 안내, 판정 규칙을 보여 줍니다. 3번 탭의 하위 탭 ③(A/B 소재 준비)·④(결과·판정)에서 부릅니다.
+# 메인 이미지 A/B 안, 촬영 브리프, Manage Your Experiments 안내, 판정 규칙을 보여 줍니다. 3번 탭의 하위 탭 ②(A/B 소재 준비)·③(결과·판정)에서 부릅니다.
 import json
 import math
 from pathlib import Path
@@ -69,7 +69,7 @@ def media_ab_sqp():
 
 
 def media_ab_plan_step():
-    """하위 탭 ③ A/B 소재 준비: A/B 안, 메인 이미지 규칙, 촬영 브리프, 테스트 도구. 반드시 media_render() 안에서 부릅니다.
+    """하위 탭 ② A/B 소재 준비: A/B 안, 메인 이미지 규칙, 촬영 브리프, 테스트 도구. 반드시 media_render() 안에서 부릅니다.
     가설은 하위 탭 ①에서 이미 보여 주므로 여기서는 다시 보여 주지 않습니다."""
     sqp = media_ab_sqp()
     if not sqp:
@@ -120,7 +120,7 @@ def media_ab_plan_step():
                     "cooling fabric texture, soft even studio light, no text, no props", language=None)
 
 def media_ab_result_step():
-    """하위 탭 ④ 결과·판정: 가상 결과 + 판정 (승자는 CTR, CVR은 안전장치) + 적용 전후 CAC."""
+    """하위 탭 ③ 결과·판정: 가상 결과 + 판정 (승자는 CTR, CVR은 안전장치) + 적용 전후 CAC."""
     if not MEDIA_AB_FILE.exists():
         st.caption("A/B 결과 파일이 아직 없어요. 테스트가 끝나면 data/ 폴더에 결과를 넣어 주세요.")
         return

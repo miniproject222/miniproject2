@@ -11,7 +11,7 @@
 
 /* 3번 탭(광고 소재·솔루션 = 최상위 탭 줄의 4번째)을 연 동안만 페이지 위·양옆 여백을 줄임
    (다른 탭에는 적용되지 않음. 탭 순서가 바뀌면 nth-of-type 숫자를 맞춰야 함)
-   weather_style.css의 "5번째 탭 선택" 규칙이 이 탭의 하위 탭 ⑤에도 걸리므로, 같은 속성을 !important로 다시 정함 */
+   weather_style.css의 "5번째 탭 선택" 규칙이 다른 탭 안의 하위 탭에도 걸릴 수 있어, 같은 속성을 !important로 다시 정함 */
 @media (min-width: 768px) {
   [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(4)[aria-selected="true"]) {
     max-width: 1400px !important;

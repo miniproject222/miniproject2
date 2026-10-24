@@ -1,6 +1,6 @@
 # 3. 매체 제작 > 가설에서 변수 도출
 # 2번 탭이 저장한 가설(store "hypothesis")을 받아 If/Because/Then으로 나누고,
-# 바꿀 수 있는 후보 중 A/B로 돌릴 변수 하나를 고릅니다. 3번 탭의 하위 탭 ①(가설 확인)·②(변수 도출)에서 부릅니다.
+# 바꿀 수 있는 후보 중 A/B로 돌릴 변수 하나를 고릅니다. 3번 탭의 하위 탭 ①(가설에서 변수 도출)에서 부릅니다.
 import streamlit as st
 
 from common.common_store import store_get
@@ -73,21 +73,21 @@ def media_variable_listing() -> tuple[str, str]:
 
 
 def media_variable_hypothesis_step():
-    """하위 탭 ① 가설 확인: ② 탭에서 가져온 가설 콜아웃. 반드시 media_render() 안에서 부릅니다."""
+    """2번 가설 탭에서 가져온 가설 콜아웃 (media_variable_step()의 윗부분)."""
     text, status = media_variable_hypothesis()
     media_variable_callout(text)
     st.caption(f"가설 구조 · {MEDIA_VARIABLE_TEMPLATE}")
     if status == "none":
-        st.caption("② 가설 탭에 저장된 가설이 없어 기준 가설을 대신 보여 줍니다. ② 탭에서 가설을 저장하면 여기에 바로 반영됩니다.")
+        st.caption("2번 가설 탭에 저장된 가설이 없어 기준 가설을 대신 보여 줍니다. 2번 탭에서 가설을 저장하면 여기에 바로 반영됩니다.")
     elif status == "other":
-        st.warning("② 탭에 저장된 가설이 기준 가설과 다릅니다. 다음 단계의 후보·선정 표는 기준 가설 기준이라, "
-                   "② 탭에서 '이 가설 문장을 위 칸에 넣기'로 기준 가설을 저장하거나 표를 새 가설에 맞게 바꿔야 합니다.")
+        st.warning("2번 가설 탭에 저장된 가설이 기준 가설과 다릅니다. 아래 후보·선정 표는 기준 가설 기준이라, "
+                   "2번 탭에서 '이 가설 문장을 위 칸에 넣기'로 기준 가설을 저장하거나 표를 새 가설에 맞게 바꿔야 합니다.")
         with st.expander("기준 가설 보기", expanded=False):
             media_variable_callout(MEDIA_VARIABLE_HYPOTHESIS)
 
 
 def media_variable_derive_step():
-    """하위 탭 ② 가설에서 변수 도출: 후보 변수 걸러내기 → 단일 변수 선정. 반드시 media_render() 안에서 부릅니다."""
+    """후보 변수 걸러내기 → 단일 변수 선정 (media_variable_step()의 아랫부분)."""
     current, price = media_variable_listing()
     c1, c2 = st.columns([1, 1], gap="medium")
     with c1:
@@ -108,3 +108,11 @@ def media_variable_derive_step():
     st.caption("두께와 원단 질감을 변수 두 개로 나누지 않는 이유: 가설이 말하는 원인은 '품질 차이가 안 보인다' 하나이고, "
                "모서리를 든 사진 한 장에 둘 다 담깁니다. Manage Your Experiments는 한 번에 두 안(A/B)만 비교하므로, "
                "둘을 따로 보려면 이 테스트가 끝난 뒤 B 안에서 다시 나눠 테스트합니다.")
+
+
+def media_variable_step():
+    """하위 탭 ① 가설에서 변수 도출: 위에 가져온 가설, 아래에 후보 걸러내기·단일 변수 선정. 반드시 media_render() 안에서 부릅니다."""
+    st.markdown("**2번 가설 탭에서 가져온 가설**")
+    media_variable_hypothesis_step()
+    st.divider()
+    media_variable_derive_step()

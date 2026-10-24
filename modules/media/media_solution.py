@@ -6,7 +6,7 @@ import ui_theme as ui
 
 
 def media_solution_section():
-    """'솔루션 제안' 영역을 그립니다. 3번 탭의 하위 탭 ⑤에서 부릅니다 (탭 이름이 제목 역할)."""
+    """'솔루션 제안' 영역을 그립니다. 3번 탭의 하위 탭 ④에서 부릅니다 (탭 이름이 제목 역할)."""
     st.caption("매체 외에 실행할 수 있는 솔루션 제안")
 
     ui.progress_list(

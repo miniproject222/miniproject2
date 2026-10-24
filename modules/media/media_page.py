@@ -6,17 +6,16 @@ import streamlit as st
 import ui_theme as ui
 from modules.media.media_ab import media_ab_plan_step, media_ab_result_step
 from modules.media.media_solution import media_solution_section
-from modules.media.media_variable import media_variable_derive_step, media_variable_hypothesis_step
+from modules.media.media_variable import media_variable_step
 
 MEDIA_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경로 만들 때 사용)
 
 # 하위 탭(단계): (탭 이름, 화면 함수). 순서대로 '다음 단계' 버튼으로 넘어갑니다.
 MEDIA_STEPS = [
-    ("① 가설 확인", media_variable_hypothesis_step),
-    ("② 가설에서 변수 도출", media_variable_derive_step),
-    ("③ A/B 소재 준비", media_ab_plan_step),
-    ("④ 결과·판정", media_ab_result_step),
-    ("⑤ 솔루션 제안", media_solution_section),
+    ("① 가설에서 변수 도출", media_variable_step),
+    ("② A/B 소재 준비", media_ab_plan_step),
+    ("③ 결과·판정", media_ab_result_step),
+    ("④ 솔루션 제안", media_solution_section),
 ]
 
 
@@ -43,7 +42,7 @@ def media_render():
     """'3. 매체 제작' 탭을 열 때마다 실행됩니다. 화면은 전부 이 함수 안에서 그립니다."""
     # key="media-root": media_style.css가 이 탭 안의 간격만 줄이도록 범위를 정하는 class (.st-key-media-root)
     with st.container(key="media-root"):
-        ui.page_header("3. 매체 제작", "② 가설 → 변수 도출 → A/B 소재 → 결과 → 솔루션, 단계별로 넘어가요")
+        ui.page_header("3. 매체 제작", "가설에서 변수 도출 → A/B 소재 → 결과 → 솔루션, 단계별로 넘어가요")
         tabs = st.tabs([label for label, _ in MEDIA_STEPS], key="media-step", on_change="rerun")
         for i, (tab, (_, render)) in enumerate(zip(tabs, MEDIA_STEPS)):
             if tab.open:   # 선택된 단계만 그립니다
