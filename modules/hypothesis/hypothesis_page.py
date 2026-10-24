@@ -84,77 +84,131 @@ def hypothesis_shorten(text: str, limit: int = 40) -> str:
     return text[:limit].rstrip() + "…"
 
 
-def hypothesis_pick_action(desc: str, is_external: bool, competitor_review: str) -> tuple[str, str]:
-    """문제 설명(desc)을 보고 액션 문구와 목표 변화량(%)을 고릅니다. 같은 입력이면 항상 같은
-    결과를 돌려줍니다 (무작위 요소 없음) — 분석 결과에서 나온 "하나의 가설"이라는 전제와 맞게,
-    같은 문제에 대해 여러 후보 중 하나를 고르는 게 아니라 항상 같은 답을 내야 하기 때문입니다.
+def hypothesis_pick_action(
+    desc: str,
+    is_external: bool,
+    competitor_review: str,
+    title: str = "",
+    group: str = "",
+) -> tuple[str, str]:
+    """문제 제목(title)·설명(desc)을 보고 액션 문구와 목표 변화량(%)을 고릅니다. 같은 입력이면
+    항상 같은 결과를 돌려줍니다 (무작위 요소 없음) — 분석 결과에서 나온 "하나의 가설"이라는
+    전제와 맞게, 같은 문제에 대해 여러 후보 중 하나를 고르는 게 아니라 항상 같은 답을 내야
+    하기 때문입니다.
     action은 "~을 적용한다면"에 자연스럽게 붙도록 항상 명사형으로 끝냅니다
-    (예: "노출한다"처럼 완결된 문장으로 끝내면 "노출한다을 적용한다면"처럼 비문이 됩니다)."""
+    (예: "노출한다"처럼 완결된 문장으로 끝내면 "노출한다을 적용한다면"처럼 비문이 됩니다).
+
+    group: report가 문제 분류(예: "경쟁사", "날씨")를 같이 주면 그걸 우선 씁니다. 없으면(예: 샘플
+    데이터) is_external로 대신 판단합니다. (실제 데이터로 검증하며 추가 — 아래 참고)
+    """
+    # title + detail을 합쳐서 찾습니다. detail은 수치·인용 위주라 키워드가 없을 때가 많고,
+    # title이 오히려 더 핵심 키워드(인증, 시험, 채널 등)를 담고 있는 경우가 많습니다.
+    search = f"{title} {desc}"
     action = "타깃 맞춤 프로모션 집중 노출"
     amount = "8%" if is_external else "10%"
 
-    # report가 competitor_review를 명시적으로 줬으면 키워드 추측 대신 그 내용을 그대로 반영합니다
-    # (독일에 진출한 경쟁사의 부정 리뷰를 우리 홍보 포인트로 활용 — 기획서 요구사항)
-    if competitor_review:
+    # "경쟁사" 그룹일 때만(그룹 정보가 없으면 외부 요인일 때만) competitor_review를 액션에 반영합니다.
+    # report가 모든 문제에 같은 competitor_review를 채워 보낼 수도 있어서(실제로 그렇습니다),
+    # "값이 있으면 무조건 최우선"으로 두면 PayPal 결제 문제 같은 것도 "경쟁사 리뷰 대응"으로
+    # 잘못 나옵니다. 그 문제가 진짜 경쟁사 비교 문제일 때만 쓰도록 좁힙니다.
+    is_competitor_problem = (group == "경쟁사") if group else is_external
+    if competitor_review and is_competitor_problem:
         review_short = hypothesis_shorten(competitor_review, 26)
         action = f'"{review_short}" 등 독일 경쟁사 부정 리뷰 대응 홍보 콘텐츠 노출'
         amount = "8%"
     # "이탈/장바구니"를 "배송"보다 먼저 확인합니다. "장바구니 이탈" 문제의 설명 안에도
     # "배송비" 같은 단어가 곁다리로 섞여 있을 수 있는데, 그런 경우까지 "배송 지연" 액션으로
     # 잘못 분류되지 않도록 더 구체적인 키워드(이탈/장바구니)를 우선합니다.
-    elif "이탈" in desc or "장바구니" in desc:
+    elif "이탈" in search or "장바구니" in search:
         action = "장바구니 단계에서 배송비를 미리 안내하는 화면 노출"
         amount = "9%"
     # ("배송 지연 리뷰"처럼 설명에 "리뷰"가 섞여 있어도, 내부 문제면 경쟁사 리뷰 대응이 아니라
-    # 그 내부 문제에 맞는 액션을 고르기 위해 "배송"을 "리뷰" 체크보다 먼저 둡니다)
-    elif "배송" in desc:
+    # 그 내부 문제에 맞는 액션을 고르기 위해 "배송"을 "리뷰" 체크보다 먼저 둡니다.
+    # "물류"도 배송과 이어지는 문제라 같이 묶습니다 — 예: "독일 물류 거점 없음")
+    elif "배송" in search or "물류" in search:
         action = "배송 현황을 안내하는 알림과 배송 지연 보상 쿠폰 제공"
         amount = "10%"
-    elif "품절" in desc or "재고" in desc:
+    elif "품절" in search or "재고" in search:
         action = "품절 임박 상품 묶음 할인 우선 노출"
         amount = "10%"
-    elif any(w in desc for w in ("날씨", "폭염", "한파", "우천")):
+    # "비시즌/열대야"처럼 계절·시기 문제는 지금 날씨가 아니라 "비수기"라는 뜻이라
+    # 날씨 카테고리와 액션을 다르게 둡니다 (광고 빈도 조정이 아니라 비수기 수요 평준화).
+    elif any(w in search for w in ("비시즌", "비수기", "열대야", "성수기")):
+        action = "비수기 전용 번들·선주문 프로모션으로 수요 평준화"
+        amount = "10%"
+    elif any(w in search for w in ("날씨", "폭염", "한파", "우천")):
         action = "날씨 상황에 맞춘 광고 노출 빈도 자동 조정"
         amount = "15%"
-    elif "신규" in desc or "유입" in desc:
+    # "신뢰"(리뷰가 아예 없는 신규 브랜드 등)는 "신규 고객 유입"과는 다른 문제라
+    # (유입은 이미 되는데 신뢰가 없어서 전환이 안 되는 경우) 따로 둡니다.
+    elif "신뢰" in search or "리뷰 0" in search:
+        action = "체험단·얼리버드 리뷰 확보 캠페인으로 초기 신뢰 구축"
+        amount = "10%"
+    elif "신규" in search or "유입" in search:
         action = "신규 고객 대상 첫 구매 할인 쿠폰 노출"
         amount = "10%"
     # 경쟁사(외부) 관련 리뷰/후기 언급일 때만 "경쟁사 리뷰 대응" 액션을 씁니다.
     # (is_external 조건이 없으면, 우리 제품 자체의 배송/품질 리뷰를 언급한 내부 문제도
     # 엉뚱하게 "경쟁사 리뷰를 겨냥한 홍보"로 오해하는 문장이 나옵니다)
-    elif is_external and ("리뷰" in desc or "후기" in desc):
+    elif is_external and ("리뷰" in search or "후기" in search):
         action = "경쟁사의 부정 리뷰 내용을 우리 서비스 강점과 비교하는 홍보 콘텐츠 노출"
         amount = "8%"
-    elif "재방문" in desc or "재구매" in desc:
+    elif "재방문" in search or "재구매" in search:
         action = "재구매 고객 전용 할인 쿠폰 발송"
         amount = "12%"
-    elif "품질" in desc or "불만" in desc or "평점" in desc:
+    elif "품질" in search or "불만" in search or "평점" in search:
         action = "품질 개선 공지와 무상 교환·보증 혜택 안내"
         amount = "8%"
-    elif "결제" in desc or "수단" in desc:
+    # "인증/규제"와 "시험"은 둘 다 출시 요건과 관련 있지만 액션이 달라서 분리합니다
+    # (인증 서류 확보 vs 성능 시험 결과 공개). "인증"을 먼저 확인합니다 — 시험성적서도
+    # 인증 문제의 설명에 같이 언급되는 경우가 많아서, 순서가 바뀌면 인증 문제가 시험
+    # 카테고리로 잘못 분류됩니다.
+    elif "인증" in search or "규제" in search:
+        action = "필수 인증·시험성적서 확보 로드맵을 투명하게 공개"
+        amount = "8%"
+    elif "시험" in search or "검증" in search:
+        action = "Q-max·세탁내구 등 공개 시험 결과 콘텐츠로 성능 입증"
+        amount = "8%"
+    elif "채널" in search:
+        action = "신규 판매 채널(Otto, Kaufland 등) 입점 확대 안내"
+        amount = "9%"
+    elif "결제" in search or "수단" in search:
         action = "독일 선호 결제수단(Klarna 등) 추가 지원 안내"
         amount = "9%"
-    elif any(w in desc for w in ("인지도", "바이럴", "참여율")):
+    elif any(w in search for w in ("인지도", "바이럴", "참여율")):
         action = "후기·스토리 중심 브랜드 콘텐츠 캠페인 노출"
         amount = "7%"
-    elif "환율" in desc:
+    elif "환율" in search:
         action = "환율 변동과 무관한 고정가 번들 상품 프로모션 노출"
         amount = "8%"
-    elif "고객센터" in desc or "응답" in desc:
+    elif "고객센터" in search or "응답" in search:
         action = "자주 묻는 질문 자동 응답과 고객센터 응답 시간 단축 안내"
         amount = "8%"
-    elif "반품" in desc:
+    elif "반품" in search:
         action = "반품 사유 설문과 사이즈·색상 맞춤 교환 가이드 제공"
+        amount = "8%"
+    # "가격" 격차 문제는 경쟁사 비교와 맞물릴 때가 많아 가장 뒤쪽(그 앞의 더 구체적인
+    # 카테고리에 안 걸렸을 때만)에 둡니다.
+    elif "가격" in search:
+        action = "가격대별 번들·구성으로 체감 가격 차이 완화"
         amount = "8%"
 
     return action, amount
 
 
-def hypothesis_pick_sensitivity(desc: str, is_external: bool, competitor_review: str) -> str:
+def hypothesis_pick_sensitivity(
+    desc: str,
+    is_external: bool,
+    competitor_review: str,
+    group: str = "",
+) -> str:
     """이유 문장에 쓸 "~에 민감하게 반응할 가능성이 크기" 앞부분을 고릅니다.
     "외부" 요인이라고 전부 경쟁사 비교 문제는 아닙니다 (환율, 광고 플랫폼, 시장 트렌드 등도 외부 요인).
-    경쟁사와 직접 관련 있을 때만(경쟁사 부정 리뷰가 있거나, 설명에 "경쟁사"가 나올 때) 그렇게 표현합니다."""
-    if competitor_review or "경쟁사" in desc:
+    경쟁사와 직접 관련 있을 때만(group이 "경쟁사"일 때, 또는 group 정보가 없고 설명에 "경쟁사"가
+    나올 때) 그렇게 표현합니다. (group이 없을 때 competitor_review만 보고 판단하면
+    hypothesis_pick_action()과 같은 이유로 틀릴 수 있어 "경쟁사" 텍스트 매칭으로 바꿨습니다)"""
+    is_competitor_problem = (group == "경쟁사") if group else "경쟁사" in desc
+    if is_competitor_problem:
         return "독일 경쟁사 대비 우리 혜택"
     if is_external:
         return "외부 시장 상황"
@@ -172,13 +226,15 @@ def hypothesis_build_sentence(problem: dict) -> str:
     # report 쪽 값이 문자열이 아니거나(숫자 등) 아예 없을 수도 있으니 전부 str로 안전하게 바꿔 둡니다
     target = str(problem.get("target") or "독일 전체 고객")
     kpi = str(problem.get("metric") or "매출")
-    desc = str(problem.get("detail") or problem.get("title") or "")
+    title = str(problem.get("title") or "")
+    desc = str(problem.get("detail") or title or "")
     is_external = problem.get("type") == "외부"
+    group = str(problem.get("group") or "").strip()
     local_context = str(problem.get("local_context") or "").strip()
     competitor_review = str(problem.get("competitor_review") or "").strip()
 
-    action, amount = hypothesis_pick_action(desc, is_external, competitor_review)
-    sensitivity = hypothesis_pick_sensitivity(desc, is_external, competitor_review)
+    action, amount = hypothesis_pick_action(desc, is_external, competitor_review, title, group)
+    sensitivity = hypothesis_pick_sensitivity(desc, is_external, competitor_review, group)
 
     # local_context가 있으면 "현지 특성 반영" 요구사항대로 이유에 항상 포함시킵니다.
     # detail(desc)은 바로 위 caption에 이미 그대로 보여주고 있으므로, 문장이 너무 길어지지

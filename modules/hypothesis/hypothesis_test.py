@@ -189,6 +189,34 @@ def test_regression_bugs() -> None:
     s = hypothesis_build_sentence(long_problem)
     check(len(s) < 260, f"[회귀] 아주 긴 local_context/competitor_review가 들어와도 문장이 260자 미만으로 유지됨 ({len(s)}자)")
 
+    # report(1번)가 실제로 모든 문제에 같은 competitor_review를 채워 보내서(실데이터 확인됨),
+    # group이 "경쟁사"가 아닌 문제까지 전부 "경쟁사 부정 리뷰 대응"으로 잘못 나오던 버그.
+    # (예: PayPal 결제 문제가 group="플랫폼"인데도 경쟁사 리뷰 대응 액션이 나왔던 실제 사례)
+    same_competitor_review = (
+        "Novilla Q-max 미공개 / RIBECO 냉감 성능 수치 근거 없음 · "
+        "Amazon 평점 Novilla 3.6 (경쟁사 DB 약점, Keepa 평점)"
+    )
+    paypal_problem = {
+        "title": "Amazon.de 일반 PayPal 결제 불가", "type": "외부", "group": "플랫폼",
+        "detail": "Amazon.de는 일반 PayPal 결제를 받지 않습니다.",
+        "competitor_review": same_competitor_review,
+    }
+    action, _ = hypothesis_pick_action(
+        paypal_problem["detail"], True, same_competitor_review,
+        paypal_problem["title"], paypal_problem["group"],
+    )
+    check("경쟁사 부정 리뷰" not in action, "[회귀] group이 '경쟁사'가 아니면 competitor_review가 있어도 경쟁사 리뷰 대응 액션으로 가지 않음")
+    check("결제" in action, "[회귀] PayPal 결제 문제는 결제수단 지원 액션으로 분류됨")
+    s = hypothesis_build_sentence(paypal_problem)
+    check("경쟁사 부정 리뷰" not in s, "[회귀] hypothesis_build_sentence()도 group 기준으로 같은 competitor_review를 걸러냄")
+
+    # group == "경쟁사"면 (키워드가 안 걸려도) 여전히 competitor_review를 액션에 반영해야 함
+    action, _ = hypothesis_pick_action(
+        "90일 평균 €29.41 → 현재 €25.66", True, same_competitor_review,
+        "Novilla 가격 13% 인하", "경쟁사",
+    )
+    check("경쟁사 부정 리뷰" in action, "[회귀] group='경쟁사'면 competitor_review가 액션에 반영됨")
+
 
 # ─────────────────────────────────────────────
 # 6. 가설은 "1번 분석 결과에서 나온 답 1개"여야 하므로, 같은 문제면 항상 같은 문장이어야 함
@@ -329,6 +357,36 @@ REALISTIC_PROBLEMS = [
 ]
 
 
+# ─────────────────────────────────────────────
+# 7-1. report(1번)의 실제 competitor_review 전역 중복 이슈를 겪은 뒤 새로 추가한 카테고리들
+#      (modules/report/report_competitor.py가 실제로 만들어 보내는 group/제목 패턴 기준)
+# ─────────────────────────────────────────────
+NEW_CATEGORY_PROBLEMS = [
+    {"title": "출시 필수 인증·규제 6건 미착수", "type": "내부", "group": "인증·규제",
+     "detail": "OEKO-TEX Standard 100 등 인증이 아직 없습니다.", "expect": "인증"},
+    {"title": "완제품 시험 7건 결과 없음", "type": "내부", "group": "시험",
+     "detail": "접촉냉감 Q-max 시험값이 없습니다.", "expect": "시험"},
+    {"title": "판매 채널 2개 (경쟁사 최다 5개)", "type": "내부", "group": "채널",
+     "detail": "Amazon.de, 자사몰 외 채널이 없습니다.", "expect": "채널"},
+    {"title": "리뷰 0건 (신규 브랜드)", "type": "내부", "group": "신뢰",
+     "detail": "경쟁사 Novilla 310건 대비 리뷰가 없습니다.", "expect": "신뢰"},
+    {"title": "10월 비시즌 (여름 전용 제품)", "type": "외부", "group": "날씨",
+     "detail": "수요는 열대야가 많은 6~8월에 집중됩니다.", "expect": "비수기"},
+    {"title": "㎡당 가격이 최저가 경쟁사의 5.5배", "type": "내부", "group": "가격",
+     "detail": "서리 €44.4 vs Novilla €8.0.", "expect": "가격"},
+]
+
+
+def test_new_categories() -> None:
+    for p in NEW_CATEGORY_PROBLEMS:
+        action, _ = hypothesis_pick_action(
+            p["detail"], p["type"] == "외부", "", p["title"], p["group"],
+        )
+        check(p["expect"] in action, f"[신규카테고리:{p['title']}] 기대 키워드 '{p['expect']}'가 액션에 들어감 (실제: {action})")
+        s = hypothesis_build_sentence(p)
+        check_sentence_quality(p["title"], s)
+
+
 def test_realistic_sweep() -> None:
     for p in REALISTIC_PROBLEMS:
         try:
@@ -351,6 +409,7 @@ if __name__ == "__main__":
     test_home_data_compat()
     test_regression_bugs()
     test_deterministic()
+    test_new_categories()
     test_realistic_sweep()
 
     print(f"\n총 {_ok + _fail}개 중 통과 {_ok}개, 실패 {_fail}개")

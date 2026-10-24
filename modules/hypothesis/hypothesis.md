@@ -6,7 +6,7 @@
 |---|---|
 | `hypothesis_page.py` | 화면 + 기능 (`hypothesis_render()` 함수 하나) |
 | `hypothesis_style.css` | 디자인 (class는 `hypothesis-`로 시작) |
-| `hypothesis_test.py` | 자체 테스트 (200개). `python modules/hypothesis/hypothesis_test.py`로 실행 |
+| `hypothesis_test.py` | 자체 테스트 (258개). `python modules/hypothesis/hypothesis_test.py`로 실행 |
 | `images/` | hypothesis에서만 쓰는 이미지 |
 | `data/` | hypothesis에서만 쓰는 데이터 |
 
@@ -34,6 +34,7 @@ store_set("report", {
             "metric": "전환율",                 # 선택, 없으면 "매출"로 대체됨
             "local_context": "독일 소비자는 가격 비교 사이트와 리뷰를 꼼꼼히 확인하는 시장",   # 선택, 현지(독일) 특성
             "competitor_review": "독일에 진출한 경쟁 냉감패드 브랜드 리뷰에 '냉감이 금방 사라진다'는 부정 리뷰 다수",   # 선택
+            "group": "경쟁사",                  # 선택, 문제 분류 (아래 "group과 competitor_review" 참고)
         },
         # ... 문제가 더 있으면 이어서 추가. 가장 중요한 문제를 맨 앞(0번)에 놔 주세요.
     ],
@@ -41,13 +42,14 @@ store_set("report", {
 ```
 
 - 우리 제품은 **독일 시장의 냉감패드(MODO)**이므로, `target`은 독일 고객/도시/채널(Amazon.de 등) 기준으로, `competitor_review`는 **독일에 진출한 유사 제품(냉감패드) 경쟁사**의 부정 리뷰 기준으로 채워 주세요. "강남점", "국내 배달앱" 같은 한국 매장형 예시는 이 프로젝트와 안 맞습니다.
-- `local_context`(현지 특성), `competitor_review`(경쟁사 부정 리뷰)는 **값이 있으면 가설 문장에 항상 반영됩니다** (기획서의 "현지 특성 반영", "경쟁사 부정 리뷰를 홍보 포인트로 활용" 요구사항). 값이 없으면 `detail`에 "리뷰" 같은 단어가 있을 때만 규칙 기반으로 추측하니, 되도록 두 값을 채워서 넘겨주세요.
+- `local_context`(현지 특성)는 **값이 있으면 가설 문장에 항상 반영됩니다** (기획서의 "현지 특성 반영" 요구사항).
+- **`group`과 `competitor_review`**: 실제 report 데이터는 `competitor_review`를 **문제 12개 전부에 같은 값**으로 채워 보냅니다(경쟁사 DB 공통 요약이라 문제별로 다르지 않음). 그래서 가설 탭은 "`competitor_review` 값이 있으면 무조건 경쟁사 리뷰 대응 액션"으로 쓰지 않고, **`group`이 `"경쟁사"`일 때만** `competitor_review`를 액션에 반영합니다. `group`이 없으면(샘플 데이터 등) `type == "외부"`로 대신 판단합니다. `group`이 `"경쟁사"`가 아닌 문제(예: `"플랫폼"`, `"가격"`, `"채널"`)는 `competitor_review`가 채워져 있어도 무시하고, `title`/`detail` 키워드로 더 적합한 액션을 고릅니다.
 
 이 모양이 아직 안 정해졌다면, 2번 탭의 "예시 데이터로 먼저 테스트하기" 버튼으로 먼저 동작을 확인할 수 있습니다 (`hypothesis_page.py`의 `SAMPLE_REPORT`, home_data.py의 실제 샘플 문제를 독일 시장 기준으로 보강한 내용입니다).
 
 ### 가설 자동 생성 방식
 
-1. `report["problems"]`의 **맨 앞(0번) 문제**를 읽어 `hypothesis_build_sentence()`가 규칙 기반으로 가설 문장을 바로 만듭니다. (AI 사용 도구/키가 아직 정해지지 않아서, 지금은 AI 호출 없이도 항상 동작하도록 규칙 기반으로만 구현했습니다. AI가 정해지면 `hypothesis_build_sentence()` 위쪽의 TODO 주석 자리에 연결하면 됩니다.)
+1. `report["problems"]`의 **맨 앞(0번) 문제**를 읽어 `hypothesis_build_sentence()`가 규칙 기반으로 가설 문장을 바로 만듭니다. (AI 사용 도구/키가 아직 정해지지 않아서, 지금은 AI 호출 없이도 항상 동작하도록 규칙 기반으로만 구현했습니다. AI가 정해지면 `hypothesis_build_sentence()` 위쪽의 TODO 주석 자리에 연결하면 됩니다.) 액션은 `title`+`detail`을 합쳐 키워드로 고르며, 경쟁사/배송·물류/품절·재고/비수기/날씨/신뢰·리뷰0/신규유입/재구매/품질/인증·규제/시험·검증/채널/결제/인지도/환율/고객센터/반품/가격 순으로 더 구체적인 카테고리를 먼저 확인합니다.
 2. 생성된 문장은 화면에서 바로 수정할 수 있고, "가설 저장"을 누르면 `store_set("hypothesis", {...})`로 **가설 1개(dict)만** 저장되어 media, solution, home 탭이 읽을 수 있습니다. 저장되는 dict에는 `home_data.py`가 기대하는 `"hypothesis"` 키와, 더 구체적인 `"text"`/`"target"`/`"metric"`/`"type"`/`"local_context"`/`"competitor_review"` 키가 함께 들어갑니다.
 3. 리포트의 맨 앞 문제(`report["problems"][0]`)가 바뀌면 자동으로 새 가설을 다시 만듭니다. 같은 문제가 유지되는 동안에는 이미 만든 가설(수정한 내용 포함)을 그대로 보여줍니다.
 4. `problems`가 리스트가 아니거나, 원소가 dict가 아니거나, `title`이 없는 등 모양이 예상과 달라도 화면이 깨지지 않습니다 (`hypothesis_pick_problem()`이 안전하게 걸러냅니다).
@@ -58,4 +60,4 @@ store_set("report", {
 ```
 python modules/hypothesis/hypothesis_test.py
 ```
-pytest 같은 추가 설치 없이 Streamlit 내장 테스트 도구만 씁니다. 핵심 흐름, 방어적 처리, home_data.py 호환, 문법/키워드 회귀, 결정성(같은 입력 → 같은 결과), MODO 독일 사업 실전 시나리오 20개까지 총 200개를 확인합니다. 전부 통과해야 안전합니다.
+pytest 같은 추가 설치 없이 Streamlit 내장 테스트 도구만 씁니다. 핵심 흐름, 방어적 처리, home_data.py 호환, 문법/키워드 회귀, `group` 기준 competitor_review 게이팅 회귀, 결정성(같은 입력 → 같은 결과), 신규 카테고리(인증/시험/채널/신뢰/비수기/가격), MODO 독일 사업 실전 시나리오 20개까지 총 258개를 확인합니다. 전부 통과해야 안전합니다.
