@@ -99,6 +99,74 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* 넓은 화면: '가설 불러오기' 버튼을 페이지 제목 줄 오른쪽 끝으로 올리고,
+   가설 콜아웃·빈 카드는 하위 탭 바와 같은 줄(위쪽 끝 맞춤) 오른쪽 자리만큼만 차지
+   (500px = 하위 탭 바 폭 + 여유, 음수 여백은 실제 화면에서 잰 값. 제목·탭 이름이 바뀌면 맞춰야 함) */
+@media (min-width: 768px) {
+  .st-key-media-hypo-load-row {
+    position: relative;
+    z-index: 1;
+    margin-top: -119px;
+    pointer-events: none;   /* 줄 전체가 탭 바를 덮으므로 클릭은 버튼만 받음 */
+  }
+
+  .st-key-media-hypo-load-row button {
+    pointer-events: auto;
+  }
+
+  .st-key-media-hypo-empty {
+    width: calc(100% - 500px) !important;
+    margin-left: auto;
+    margin-top: -78px;
+  }
+
+  /* 불러온 뒤: [핵심 요약 | 가설 콜아웃] 한 줄을 끌어올려 콜아웃 위쪽 끝을 탭 바와 맞춤 */
+  .st-key-media-hypo-top {
+    margin-top: -78px;
+    gap: 24px;
+    flex-wrap: nowrap !important;
+    align-items: flex-start;
+  }
+
+  /* 왼쪽 요약은 탭 바 폭만큼, 탭 바 아래에서 시작 (폭은 Streamlit이 감싸는 stLayoutWrapper에 줌) */
+  .st-key-media-hypo-top > [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-summary) {
+    flex: 0 0 476px !important;
+  }
+
+  .st-key-media-hypo-top > [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-callout) {
+    flex: 1 1 0 !important;
+    min-width: 0;
+  }
+
+  .st-key-media-hypo-summary {
+    margin-top: 58px;
+  }
+}
+
+/* 좁은 화면: 가설 콜아웃을 먼저, 요약은 그 아래 전체 폭 */
+@media (max-width: 767.98px) {
+  .st-key-media-hypo-top > [data-testid="stLayoutWrapper"] {
+    flex: 1 1 100% !important;
+  }
+
+  .st-key-media-hypo-top > [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-summary) {
+    order: 2;
+  }
+}
+
+/* 가설 핵심 요약 (독립 변수·KPI) 작은 카드 */
+.st-key-media-hypo-summary {
+  padding: 10px 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.st-key-media-hypo-summary p {
+  font-size: 14px;
+  line-height: 1.9;
+}
+
 /* 불러오기 전 빈 상태 카드 */
 .st-key-media-hypo-empty {
   border-style: dashed !important;

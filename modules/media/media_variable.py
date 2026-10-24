@@ -18,8 +18,9 @@ MEDIA_VARIABLE_HYPOTHESIS = (
 )
 # 가설 콜아웃 각 줄 앞에 붙는 배지 (Streamlit 마크다운 배지 문법)
 MEDIA_VARIABLE_BADGES = [":blue-badge[If]", ":violet-badge[Because]", ":green-badge[Then]"]
-MEDIA_VARIABLE_TEMPLATE = ("만약 [타깃/지점]에 [구체적인 액션]을 적용한다면(If), [이유/고객 심리] 때문에(Because), "
-                           "[측정 가능한 지표/KPI]가 [얼마나] 개선될 것이다(Then).")
+# KPI 이름: 가설 문장(2번 탭과 같은 원문)은 그대로 두고, 화면에 보일 때만 쉬운 이름으로 바꿉니다
+MEDIA_VARIABLE_KPI_RAW = "클릭 점유율 ÷ 노출 점유율"
+MEDIA_VARIABLE_KPI = "노출 대비 클릭률"
 
 # 후보 변수: (후보, 판정, 이유) · 기준은 가설의 If와 연결, 아마존 메인 이미지 규칙, Manage Your Experiments로 테스트 가능
 MEDIA_VARIABLE_CANDIDATES = [
@@ -38,7 +39,14 @@ def media_variable_hypothesis() -> tuple[str, str]:
     text = str(saved.get("text") or "").strip() if isinstance(saved, dict) else ""
     if not text:
         return MEDIA_VARIABLE_HYPOTHESIS, "none"
-    return text, ("same" if text == MEDIA_VARIABLE_HYPOTHESIS else "other")
+    # KPI를 원래 이름으로 쓰든 쉬운 이름으로 쓰든 같은 가설로 봅니다
+    same = media_variable_kpi_name(text) == media_variable_kpi_name(MEDIA_VARIABLE_HYPOTHESIS)
+    return text, ("same" if same else "other")
+
+
+def media_variable_kpi_name(text: str) -> str:
+    """화면 표시용: 'A ÷ B' KPI 표현을 쉬운 이름(노출 대비 클릭률)으로 바꿉니다."""
+    return text.replace(MEDIA_VARIABLE_KPI_RAW, MEDIA_VARIABLE_KPI)
 
 
 def media_variable_split(text: str) -> list[str] | None:
@@ -57,6 +65,7 @@ def media_variable_split(text: str) -> list[str] | None:
 def media_variable_callout(text: str) -> None:
     """가설 콜아웃(st.info). If / Because / Then을 배지 붙은 줄로 나누고, Then(KPI)은 굵게 표시합니다.
     나눌 수 없는 문장은 한 덩어리로 보여 줍니다."""
+    text = media_variable_kpi_name(text)
     parts = media_variable_split(text)
     if parts:
         parts[2] = f"**{parts[2]}**"
@@ -79,8 +88,13 @@ def media_variable_listing() -> tuple[str, str]:
 def media_variable_hypothesis_step():
     """2번 가설 탭에서 가져온 가설 콜아웃 (media_variable_step()의 윗부분)."""
     text, status = media_variable_hypothesis()
-    media_variable_callout(text)
-    st.caption(f"가설 구조 · {MEDIA_VARIABLE_TEMPLATE}")
+    # 넓은 화면: 왼쪽(하위 탭 바 아래 빈자리)에 핵심 요약, 오른쪽(탭 바와 같은 줄)에 가설 콜아웃 (media_style.css)
+    with st.container(horizontal=True, key="media-hypo-top"):
+        with st.container(key="media-hypo-summary"):
+            st.markdown(":violet-badge[독립 변수] 메인 이미지 촬영 구도 (접힌 → 펼친 패드)  \n"
+                        f":green-badge[KPI] {MEDIA_VARIABLE_KPI} 0.63배 → **0.8배 이상**")
+        with st.container(key="media-hypo-callout"):
+            media_variable_callout(text)
     # status == "none"(2번 탭 저장 전)이면 기준 가설을 그대로 보여 줍니다. '가설 불러오기' 연출과 맞도록 따로 안내하지 않습니다.
     if status == "other":
         st.warning("2번 가설 탭에 저장된 가설이 기준 가설과 다릅니다. 아래 후보·선정 표는 기준 가설 기준이라, "
@@ -106,7 +120,8 @@ def media_variable_derive_step():
                     "| **B · 실험군** | 같은 패드를 펼쳐 45도 위에서, 한쪽 모서리를 살짝 들어 두께와 냉감 원단 결이 보이게 |\n"
                     f"| **통제 변수 (고정)** | 같은 제품·색상, 흰 배경, 같은 조명과 보정, 제품 85% 이상 · 제목, 가격 {price}, 쿠폰 없음, "
                     "불릿, A+ 콘텐츠, 서브 이미지, 광고 입찰 |\n"
-                    "| **종속 변수 (메인 KPI)** | 클릭 점유율 ÷ 노출 점유율 (= 시장 대비 CTR) 0.63배 → 0.8배 이상 |\n"
+                    f"| **종속 변수 (메인 KPI)** | {MEDIA_VARIABLE_KPI} 0.63배 → 0.8배 이상 "
+                    f"(= {MEDIA_VARIABLE_KPI_RAW}, 시장 대비 CTR) |\n"
                     "| **안전장치** | CVR(단위 세션 비율)이 A보다 0.5%p 넘게 떨어지면 B 실패 |")
     st.caption("두께와 원단 질감을 변수 두 개로 나누지 않는 이유: 가설이 말하는 원인은 '품질 차이가 안 보인다' 하나이고, "
                "모서리를 든 사진 한 장에 둘 다 담깁니다. Manage Your Experiments는 한 번에 두 안(A/B)만 비교하므로, "
