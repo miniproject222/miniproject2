@@ -1,29 +1,70 @@
 # 3. 매체 제작 + 솔루션 제안
+# 3단계로 나눠 동시에 개발합니다. 이 파일은 1단계 담당자(공용 파일)만 고칩니다.
+#   1단계 가설에서 변수 도출 ~ A/B 소재 준비: media_variable.py, media_ab.py
+#   2단계 결과·판정: media_stage2/ (media_stage2_render())
+#   3단계 솔루션 제안: media_stage3/ (media_stage3_render())
+#   단계 사이 데이터: media_handoff.py
 from pathlib import Path
 
 import streamlit as st
 
 import ui_theme as ui
-from modules.media.media_ab import media_ab_section
-from modules.media.media_solution import media_solution_section
+from modules.media.media_ab import media_ab_plan_step
+from modules.media.media_stage2.media_stage2 import media_stage2_render
+from modules.media.media_stage3.media_stage3 import media_stage3_render
+from modules.media.media_variable import media_variable_step
 
 MEDIA_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경로 만들 때 사용)
+# 공통 로더(layout_load_css)는 media_style.css만 읽으므로, 단계 폴더의 CSS는 여기서 읽어 넣습니다
+MEDIA_STAGE_CSS = [MEDIA_DIR / "media_stage2" / "media_stage2_style.css",
+                   MEDIA_DIR / "media_stage3" / "media_stage3_style.css"]
+
+# 하위 탭(단계): (탭 이름, 화면 함수). 순서대로 '다음 단계' 버튼으로 넘어갑니다.
+MEDIA_STEPS = [
+    ("가설에서 변수 도출", media_variable_step),
+    ("A/B 소재 준비", media_ab_plan_step),
+    ("결과·판정", media_stage2_render),
+    ("솔루션 제안", media_stage3_render),
+]
+
+
+def _media_go_step(label: str) -> None:
+    """'이전/다음 단계' 버튼 콜백. 하위 탭(key="media-step")의 선택을 바꿉니다 (위젯이 그려지기 전에 실행됨)."""
+    st.session_state["media-step"] = label
+
+
+def media_load_stage_css() -> None:
+    """2·3단계 폴더의 CSS를 화면에 넣습니다 (파일이 없거나 비어 있으면 건너뜀)."""
+    css = "\n".join(p.read_text(encoding="utf-8") for p in MEDIA_STAGE_CSS if p.exists())
+    if css.strip():
+        # key="media-stage-css": media_style.css가 이 칸을 숨겨 화면에 빈 간격이 생기지 않게 함 (style은 그대로 적용됨)
+        with st.container(key="media-stage-css"):
+            st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
+
+def media_step_nav(i: int) -> None:
+    """하위 탭 맨 아래 이전/다음 단계 버튼 (이전은 왼쪽, 다음은 오른쪽)."""
+    align = "right" if i == 0 else ("left" if i == len(MEDIA_STEPS) - 1 else "distribute")
+    with st.container(horizontal=True, horizontal_alignment=align, key=f"media-step-nav-{i}"):
+        if i > 0:
+            prev = MEDIA_STEPS[i - 1][0]
+            st.button(f"← {prev}", key=f"media-btn-step-prev-{i}", type="secondary",
+                      on_click=_media_go_step, args=(prev,))
+        if i < len(MEDIA_STEPS) - 1:
+            nxt = MEDIA_STEPS[i + 1][0]
+            st.button(f"다음: {nxt} →", key=f"media-btn-step-next-{i}", type="primary",
+                      on_click=_media_go_step, args=(nxt,))
 
 
 def media_render():
     """'3. 매체 제작' 탭을 열 때마다 실행됩니다. 화면은 전부 이 함수 안에서 그립니다."""
-    ui.page_header("3. 매체 제작", "가설 2개 → 프롬프트 2개 → 결과물 2개 (프롬프트 다듬기)")
-
-    c1, c2 = st.columns(2)
-    for col, name in ((c1, "A"), (c2, "B")):
-        with col:
-            with st.container(border=True):
-                st.markdown(f"**프롬프트 {name}**")
-                st.text_area(f"프롬프트 {name}", key=f"media-prompt-{name}", label_visibility="collapsed")
-                st.markdown(f"**결과물 {name}** (생성 결과가 들어갈 자리)")
-
-    # 메인 이미지 A/B (media_ab.py): 1번 리포트의 검색어 클릭 분석이 있을 때만 표시
-    media_ab_section()
-
-    # 매체 외 솔루션 제안 (media_solution.py)
-    media_solution_section()
+    media_load_stage_css()
+    # key="media-root": media_style.css가 이 탭 안의 간격만 줄이도록 범위를 정하는 class (.st-key-media-root)
+    with st.container(key="media-root"):
+        ui.page_header("3. 매체 제작", "가설에서 변수 도출 → A/B 소재 → 결과 → 솔루션, 단계별로 넘어가요")
+        tabs = st.tabs([label for label, _ in MEDIA_STEPS], key="media-step", on_change="rerun")
+        for i, (tab, (_, render)) in enumerate(zip(tabs, MEDIA_STEPS)):
+            if tab.open:   # 선택된 단계만 그립니다
+                with tab:
+                    render()
+                    media_step_nav(i)
