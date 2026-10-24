@@ -38,3 +38,53 @@
 .st-key-media-root .stDownloadButton button p {
   color: var(--color-card) !important;
 }
+
+/* 하위 탭 (media_page.py의 st.tabs key="media-step") - 둥근 알약형 단계 선택 바 */
+.st-key-media-step [role="tablist"] {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  gap: 4px;
+  padding: 4px;
+  overflow-x: auto;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+
+.st-key-media-step [role="tab"] {
+  height: auto;
+  padding: 7px 18px !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--color-sub) !important;
+  transition: background 0.2s, color 0.2s;
+}
+
+.st-key-media-step [role="tab"] p {
+  font-size: 14px;
+  white-space: nowrap;
+  color: inherit !important;
+}
+
+.st-key-media-step [role="tab"]:hover {
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent) !important;
+  color: var(--color-primary) !important;
+}
+
+.st-key-media-step [role="tab"][aria-selected="true"] {
+  background: var(--color-primary) !important;
+  color: var(--color-card) !important;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.st-key-media-step [role="tab"][aria-selected="true"] p {
+  font-weight: 600;
+  color: var(--color-card) !important;
+}
+
+/* 기본 탭의 각진 선택 표시 숨김 (선택 표시는 위 알약 배경이 대신함) */
+.st-key-media-step [role="tab"] .react-aria-SelectionIndicator {
+  display: none;
+}

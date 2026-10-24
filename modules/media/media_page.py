@@ -12,10 +12,10 @@ MEDIA_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경�
 
 # 하위 탭(단계): (탭 이름, 화면 함수). 순서대로 '다음 단계' 버튼으로 넘어갑니다.
 MEDIA_STEPS = [
-    ("① 가설에서 변수 도출", media_variable_step),
-    ("② A/B 소재 준비", media_ab_plan_step),
-    ("③ 결과·판정", media_ab_result_step),
-    ("④ 솔루션 제안", media_solution_section),
+    ("가설에서 변수 도출", media_variable_step),
+    ("A/B 소재 준비", media_ab_plan_step),
+    ("결과·판정", media_ab_result_step),
+    ("솔루션 제안", media_solution_section),
 ]
 
 
