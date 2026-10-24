@@ -9,11 +9,12 @@ import streamlit as st
 import ui_theme as ui
 from modules.media.media_handoff import media_handoff_result
 
+MEDIA_S3_TAB_LABEL = "솔루션 제안"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
 MEDIA_S3_DIR = Path(__file__).resolve().parent   # 3단계 폴더 (data/ 경로 만들 때 사용)
 
 
 def media_stage3_render():
-    """하위 탭 '솔루션 제안' (탭 이름이 제목 역할). 반드시 media_render() 안에서 부릅니다."""
+    """3단계 하위 탭(이름은 MEDIA_S3_TAB_LABEL, 탭 이름이 제목 역할). 반드시 media_render() 안에서 부릅니다."""
     result = media_handoff_result()   # 2단계 판정 결과 (아직 없으면 예시 값, result["sample"] == True)
     st.caption("매체 외에 실행할 수 있는 솔루션 제안")
 

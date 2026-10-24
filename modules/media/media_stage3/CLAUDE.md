@@ -9,6 +9,7 @@
 - 기능 명세는 `media_stage3.md`를 읽고 따릅니다.
 - 함수는 `media_s3_`, 위젯 key·session_state 키·CSS class는 `media-s3-`로 시작합니다.
 - 진입 함수 `media_stage3_render()`의 이름은 바꾸지 않습니다.
+- 하위 탭 이름은 `media_stage3.py`의 `MEDIA_S3_TAB_LABEL`에서 바꿉니다. 폴더·함수·key 이름은 탭 이름이 바뀌어도 그대로 둡니다.
 - 2단계 판정 결과는 `media_handoff_result()`로 읽습니다 (`modules/media/media_handoff.py`). 결과가 아직 없으면 예시 값(`sample: True`)이 옵니다.
 
 ## 프롬프트 기록 (필수)
