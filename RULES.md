@@ -41,11 +41,12 @@ modules/report/
 | 홈 | `home` | `modules/home/` |
 | 1. 분석 리포트 | `report` | `modules/report/` |
 | 2. 가설 수립 | `hypothesis` | `modules/hypothesis/` |
-| 3. 매체 제작 | `media` | `modules/media/` |
-| 3-1. 솔루션 제안 | `solution` | `modules/solution/` |
+| 3. 매체 제작 + 솔루션 제안 | `media` | `modules/media/` |
 | 4. 날씨 광고 타이밍 | `weather` | `modules/weather/` |
 
 모듈 코드는 파일명, 함수명, 위젯 key, class, Supabase 표 이름 앞에 붙이는 이름입니다. **이름이 겹치지 않게 해 주는 가장 중요한 규칙**입니다.
+
+> 솔루션 제안은 별도 모듈(`solution`)이 아니라 `media` 모듈 안에서 작업합니다. 파일은 `modules/media/media_solution.py`, 이름은 모두 `media`로 시작합니다. (예: `key="media-solution-..."`, 표 `media_solution`)
 
 ---
 
@@ -94,7 +95,7 @@ st.session_state["result"] = result
 
 ### 규칙 1. PM이 뼈대를 먼저 올린다
 PM이 파일 구조 전체를 **빈 파일로 미리 만들어** `develop`에 올립니다.
-- `common/common_layout.py`에는 6개 탭(`모듈코드_render` 함수)이 모두 연결되어 있습니다.
+- `common/common_layout.py`에는 5개 탭(`모듈코드_render` 함수)이 모두 연결되어 있습니다.
 
 팀원은 이 뼈대를 받은 뒤 자기 폴더의 파일 **내용만 채웁니다.** 그래서 공용 파일을 건드릴 일이 없습니다.
 
@@ -167,9 +168,9 @@ if not report:
 
 | 키 | 저장하는 탭 | 읽는 탭 |
 |---|---|---|
-| `report` | report | hypothesis, media, solution |
-| `hypothesis` | hypothesis | media, solution |
-| `solution` | solution | home |
+| `report` | report | hypothesis, media |
+| `hypothesis` | hypothesis | media |
+| `media` | media (매체 결과 + 솔루션) | home |
 | `weather` | weather | home |
 
 - 값은 dict, list, 문자열, 숫자만 넣습니다. DataFrame은 `df.to_dict("records")`로 바꿔서 넣습니다.
@@ -234,8 +235,6 @@ WEATHER_API_KEY = "your_weather_api_key_here"
 # ===== hypothesis =====
 
 # ===== media =====
-
-# ===== solution =====
 
 # ===== weather =====
 
@@ -346,7 +345,7 @@ main                        ← 최종 완성본 = 배포 (합쳐지면 Streamli
       ├── feature/report-download
       ├── feature/hypothesis-review
       ├── feature/media-prompt
-      ├── feature/solution-list
+      ├── feature/media-solution-list
       └── feature/weather-ad-frequency
 ```
 
@@ -392,7 +391,7 @@ main                        ← 최종 완성본 = 배포 (합쳐지면 Streamli
 
 - **본인 담당 폴더(`modules/내모듈/`)의 파일만** 수정합니다.
 - `app.py`, `common/`, `.streamlit/config.toml` 같은 **공용 파일은 PM만** 수정합니다.
-  - PM이 6개 모듈을 처음부터 다 연결해 두었기 때문에 팀원이 공용 파일을 고칠 일은 거의 없습니다.
+  - PM이 5개 모듈을 처음부터 다 연결해 두었기 때문에 팀원이 공용 파일을 고칠 일은 거의 없습니다.
   - 공용 파일에 꼭 추가할 내용이 있으면 직접 고치지 말고 PM에게 요청합니다.
   - 여러 명이 공용 파일 "맨 아래"에 동시에 코드를 덧붙이면 Git은 같은 줄을 고친 것으로 보고 충돌이 납니다. 그래서 덧붙이기도 PM이 합니다.
 - 예외: `requirements.txt`, `.streamlit/secrets.toml.example`은 정해진 자리에 **한 줄 추가만** 할 수 있습니다.
@@ -522,3 +521,4 @@ indent_size = 4
 | 2026-10-23 | README 파일 구조 기준으로 수정 (routers/, assets/, data/processed/ 삭제 → 모듈 폴더 안의 `_server.py`, `images/`, `data/`), 보안 및 환경 변수 관리 예시 추가, 파일 및 코드 작성 규칙 추가 | 000 |
 | 2026-10-23 | 모듈 설명 파일 이름 변경 (`README.md` → `모듈코드.md`) | 000 |
 | 2026-10-23 | **Streamlit + Supabase 구조로 전환**: `모듈코드_page.py` / `모듈코드_render()` 규칙, 위젯 key 규칙, `store_get/store_set`, `common_db` 사용 규칙, `.env` → `.streamlit/secrets.toml` + Streamlit Cloud Secrets, main 자동 배포 반영 | 000 |
+| 2026-10-23 | `solution` 모듈을 `media`로 합침: 모듈 코드 표, store 키 표, secrets 칸, 브랜치 예시, 탭 개수(6 → 5) 수정 | 000 |
