@@ -8,3 +8,174 @@
 .media-desc {
   color: var(--color-sub);
 }
+
+/* 3번 탭(광고 소재·솔루션 = 최상위 탭 줄의 4번째)을 연 동안만 페이지 위·양옆 여백을 줄임
+   (다른 탭에는 적용되지 않음. 탭 순서가 바뀌면 nth-of-type 숫자를 맞춰야 함)
+   weather_style.css의 "5번째 탭 선택" 규칙이 다른 탭 안의 하위 탭에도 걸릴 수 있어, 같은 속성을 !important로 다시 정함 */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(4)[aria-selected="true"]) {
+    max-width: 1400px !important;
+    padding: 1rem 2.5rem 3rem !important;
+  }
+}
+/* 2·3단계 CSS를 넣는 칸 (media_page.py의 media_load_stage_css) - 칸은 숨기고 style만 적용 */
+.st-key-media-stage-css,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-stage-css) {
+  display: none;
+}
+
+.st-key-media-root .ui-caption {
+  margin-bottom: 6px;
+}
+
+.st-key-media-root [data-baseweb="tab-panel"] {
+  padding-top: 0.75rem;
+}
+
+/* 하위 탭 맨 아래 이전/다음 단계 버튼 줄 */
+[class*="st-key-media-step-nav-"] {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* 공통 p 글자색(진한 보라)이 버튼 배경과 같아 글자가 안 보이는 문제 → 이 탭 버튼만 흰 글자 */
+.st-key-media-root .stButton button p,
+.st-key-media-root .stDownloadButton button p {
+  color: var(--color-card) !important;
+}
+
+/* 하위 탭 (media_page.py의 st.tabs key="media-step") - 둥근 알약형 단계 선택 바 */
+.st-key-media-step [role="tablist"] {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  gap: 4px;
+  padding: 4px;
+  overflow-x: auto;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+
+.st-key-media-step [role="tab"] {
+  height: auto;
+  padding: 7px 18px !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--color-sub) !important;
+  transition: background 0.2s, color 0.2s;
+}
+
+.st-key-media-step [role="tab"] p {
+  font-size: 14px;
+  white-space: nowrap;
+  color: inherit !important;
+}
+
+.st-key-media-step [role="tab"]:hover {
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent) !important;
+  color: var(--color-primary) !important;
+}
+
+.st-key-media-step [role="tab"][aria-selected="true"] {
+  background: var(--color-primary) !important;
+  color: var(--color-card) !important;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.st-key-media-step [role="tab"][aria-selected="true"] p {
+  font-weight: 600;
+  color: var(--color-card) !important;
+}
+
+/* 기본 탭의 각진 선택 표시 숨김 (선택 표시는 위 알약 배경이 대신함) */
+.st-key-media-step [role="tab"] .react-aria-SelectionIndicator {
+  display: none;
+}
+
+/* '가설 불러오기' (media_variable.py) - 불러온 가설·변수 도출이 아래에서 살짝 떠오르며 나타남 */
+.st-key-media-hypo-box {
+  animation: media-fade-up 0.45s ease-out;
+}
+
+@keyframes media-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 넓은 화면: '가설 불러오기' 버튼을 페이지 제목 줄 오른쪽 끝으로 올리고,
+   가설 콜아웃·빈 카드는 하위 탭 바와 같은 줄(위쪽 끝 맞춤) 오른쪽 자리만큼만 차지
+   (500px = 하위 탭 바 폭 + 여유, 음수 여백은 실제 화면에서 잰 값. 제목·탭 이름이 바뀌면 맞춰야 함) */
+@media (min-width: 768px) {
+  .st-key-media-hypo-load-row {
+    position: relative;
+    z-index: 1;
+    margin-top: -119px;
+    pointer-events: none;   /* 줄 전체가 탭 바를 덮으므로 클릭은 버튼만 받음 */
+  }
+
+  .st-key-media-hypo-load-row button {
+    pointer-events: auto;
+  }
+
+  .st-key-media-hypo-empty {
+    width: calc(100% - 500px) !important;
+    margin-left: auto;
+    margin-top: -78px;
+  }
+
+  /* 불러온 뒤: [핵심 요약 | 가설 콜아웃] 한 줄을 끌어올려 콜아웃 위쪽 끝을 탭 바와 맞춤 */
+  .st-key-media-hypo-top {
+    margin-top: -78px;
+    gap: 24px;
+    flex-wrap: nowrap !important;
+    align-items: flex-start;
+  }
+
+  /* 왼쪽 요약은 탭 바 폭만큼, 탭 바 아래에서 시작 (폭은 Streamlit이 감싸는 stLayoutWrapper에 줌) */
+  .st-key-media-hypo-top > [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-summary) {
+    flex: 0 0 476px !important;
+  }
+
+  .st-key-media-hypo-top > [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-callout) {
+    flex: 1 1 0 !important;
+    min-width: 0;
+  }
+
+  .st-key-media-hypo-summary {
+    margin-top: 58px;
+  }
+}
+
+/* 좁은 화면: 가설 콜아웃을 먼저, 요약은 그 아래 전체 폭 */
+@media (max-width: 767.98px) {
+  .st-key-media-hypo-top > [data-testid="stLayoutWrapper"] {
+    flex: 1 1 100% !important;
+  }
+
+  .st-key-media-hypo-top > [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-summary) {
+    order: 2;
+  }
+}
+
+/* 가설 핵심 요약 (독립 변수·KPI) 작은 카드 */
+.st-key-media-hypo-summary {
+  padding: 10px 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.st-key-media-hypo-summary p {
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+/* 불러오기 전 빈 상태 카드 */
+.st-key-media-hypo-empty {
+  border-style: dashed !important;
+  background: var(--color-bg);
+  text-align: center;
+}

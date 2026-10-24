@@ -5,7 +5,15 @@ import streamlit as st
 
 import ui_theme as ui
 from common.common_store import store_get, store_set
-from modules.hypothesis.hypothesis_scenario import hypothesis_scenario_section
+from modules.hypothesis.hypothesis_scenario import (
+    hypothesis_scenario_evidence_section,
+    hypothesis_scenario_problem2_evidence_section,
+    hypothesis_scenario_problem2_sentence,
+    hypothesis_scenario_sentence,
+    hypothesis_scenario_table,
+)
+
+HYPOTHESIS_MAX_CANDIDATES = 3   # "가설 1/2/3" 하부 탭 개수 상한
 
 HYPOTHESIS_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경로 만들 때 사용)
 
@@ -117,6 +125,16 @@ def hypothesis_pick_action(
         review_short = hypothesis_shorten(competitor_review, 26)
         action = f'"{review_short}" 등 독일 경쟁사 부정 리뷰 대응 홍보 콘텐츠 노출'
         amount = "8%"
+    # report_sqp.py(검색어 클릭 분석)가 만든 문제는 group="검색 클릭"으로 옵니다. 이 중 "소재
+    # 개선" 문제는 hypothesis_render()가 report["sqp"] 원본으로 hypothesis_scenario_sentence()의
+    # 더 구체적인 문장(메인 이미지 각도 등)을 우선 쓰므로 보통 여기까지 안 오지만, sqp 원본이
+    # 없거나 쿼리가 안 맞는 등 그 경로를 못 탈 때를 대비해 그럴듯한 기본값을 만들어 둡니다.
+    elif group == "검색 클릭" and ("안 눌림" in search or "눌리게" in search):
+        action = "메인 이미지를 두께·냉감 원단 질감이 보이는 각도로 교체"
+        amount = "27%"
+    elif group == "검색 클릭" and "덜 보임" in search:
+        action = "더운 날 위주로 입찰가를 올려 노출 점유율 확대"
+        amount = "20%"
     # "이탈/장바구니"를 "배송"보다 먼저 확인합니다. "장바구니 이탈" 문제의 설명 안에도
     # "배송비" 같은 단어가 곁다리로 섞여 있을 수 있는데, 그런 경우까지 "배송 지연" 액션으로
     # 잘못 분류되지 않도록 더 구체적인 키워드(이탈/장바구니)를 우선합니다.
@@ -216,14 +234,12 @@ def hypothesis_pick_sensitivity(
     return "해당 요인"
 
 
-def hypothesis_build_sentence(problem: dict) -> str:
-    """
-    1번 분석 결과(문제)로 가설 문장을 만듭니다. (AI 연동 전까지는 규칙 기반으로 채웁니다)
-    형식: 만약 [타깃/지점]에 [구체적인 액션]을 적용한다면,
-          [이유/고객 심리] 때문에 [측정 가능한 지표/KPI]가 [얼마나] 개선될 것이다
-    같은 problem이면 항상 같은 문장을 돌려줍니다 (무작위 요소 없음). 1번 분석 결과에서 나온
-    "가설 1개"라는 전제상, 같은 문제에 여러 후보가 있는 게 아니라 하나의 답이 있어야 하기 때문입니다.
-    """
+def hypothesis_build_components(problem: dict) -> dict:
+    """가설 문장을 이루는 조각(타깃/액션/이유/KPI/증가율)을 따로 돌려줍니다.
+    hypothesis_build_sentence()가 이 조각들을 문장 하나로 합치고, 가설 후보 탭의
+    "가설 근거" 표(hypothesis_generic_evidence_section)는 같은 조각을 표로 풀어서
+    보여줍니다 — 문장과 표가 서로 다른 로직으로 각자 만들어지면 내용이 어긋날 수 있어서,
+    반드시 이 한 군데에서만 조각을 계산합니다."""
     # report 쪽 값이 문자열이 아니거나(숫자 등) 아예 없을 수도 있으니 전부 str로 안전하게 바꿔 둡니다
     target = str(problem.get("target") or "독일 전체 고객")
     kpi = str(problem.get("metric") or "매출")
@@ -242,49 +258,113 @@ def hypothesis_build_sentence(problem: dict) -> str:
     # 않게 여기서는 다시 인용하지 않습니다.
     if local_context:
         context_short = hypothesis_shorten(local_context, 50)
-        reason = f"{context_short} 때문에 고객이 {sensitivity}에 민감하게 반응할 가능성이 크기"
+        reason_fragment = f"{context_short} 때문에 고객이 {sensitivity}에 민감하게 반응할 가능성이 크기"
     else:
         # desc(detail)가 "~했습니다." 처럼 이미 완결된 문장으로 끝나는 경우가 많아서,
         # 마침표 뒤에 바로 "로"를 붙이면 "습니다.로"처럼 비문이 됩니다. 끝의 문장부호를 떼어내고 붙입니다.
         desc_for_reason = (desc or "분석 결과").rstrip(". !?。")
-        reason = f"{desc_for_reason}로 미루어 볼 때 고객이 {sensitivity}에 민감하게 반응할 가능성이 크기"
+        reason_fragment = f"{desc_for_reason}로 미루어 볼 때 고객이 {sensitivity}에 민감하게 반응할 가능성이 크기"
 
-    action_particle = hypothesis_particle(action, "을", "를")
-    kpi_particle = hypothesis_particle(kpi, "이", "가")
+    return {"target": target, "kpi": kpi, "action": action, "amount": amount, "reason_fragment": reason_fragment}
 
+
+def hypothesis_build_sentence(problem: dict) -> str:
+    """
+    1번 분석 결과(문제)로 가설 문장을 만듭니다. (AI 연동 전까지는 규칙 기반으로 채웁니다)
+    형식: 만약 [타깃/지점]에 [구체적인 액션]을 적용한다면,
+          [이유/고객 심리] 때문에 [측정 가능한 지표/KPI]가 [얼마나] 개선될 것이다
+    같은 problem이면 항상 같은 문장을 돌려줍니다 (무작위 요소 없음). 같은 후보에 여러
+    버전이 있는 게 아니라 하나의 답이 있어야 하기 때문입니다.
+    """
+    c = hypothesis_build_components(problem)
+    action_particle = hypothesis_particle(c["action"], "을", "를")
+    kpi_particle = hypothesis_particle(c["kpi"], "이", "가")
     return (
-        f"만약 {target}에 {action}{action_particle} 적용한다면, "
-        f"{reason} 때문에 {kpi}{kpi_particle} {amount} 개선될 것이다."
+        f"만약 {c['target']}에 {c['action']}{action_particle} 적용한다면, "
+        f"{c['reason_fragment']} 때문에 {c['kpi']}{kpi_particle} {c['amount']} 개선될 것이다."
     )
     # TODO(AI 연동): AI 사용 도구/키가 정해지면, 여기서 먼저 AI 호출을 시도하고
     # 실패하거나 준비 전이면 지금처럼 규칙 기반 문장으로 대체하도록 바꿉니다.
 
 
-def hypothesis_pick_problem(report: dict | None) -> dict | None:
-    """report["problems"](리스트)에서 가설을 만들 문제 1개를 고릅니다.
-    맨 앞(0번)을 가장 중요한 문제로 보고 그것을 씁니다. 모양이 이상해도 절대 죽지 않게 방어합니다."""
+def hypothesis_generic_evidence_section(problem: dict) -> None:
+    """sqp(검색어 클릭 분석) 근거가 없는 — 즉 규칙 기반으로 문장을 만든 — 가설 후보 탭에도,
+    '소재 개선'/'노출 확대' 탭과 같은 형식(타깃·액션·이유·KPI·테스트 방법)의 근거 표를
+    경쟁사 부정 리뷰 줄 바로 아래, 펼치지 않아도 바로 읽히는 형태로 보여줍니다 (사용자가
+    쭉 훑어보고 맨 아래에서 선택). 가설 문장을 만들 때 쓴 것과 똑같은 조각
+    (hypothesis_build_components)을 표로 풀어서 보여주므로, 문장과 표의 내용이 서로
+    어긋나지 않습니다."""
+    c = hypothesis_build_components(problem)
+    kpi_particle = hypothesis_particle(c["kpi"], "이", "가")
+    st.markdown("**📋 가설 근거 · 실행 방법** (타깃 · 액션 · 이유 · KPI · 테스트 방법)")
+    st.markdown(hypothesis_scenario_table([
+        ("타깃", c["target"]),
+        ("액션 (If)", c["action"]),
+        ("이유 (Because)", f"{c['reason_fragment']} 때문입니다."),
+        ("결과 (Then) KPI", f"{c['kpi']}{kpi_particle} {c['amount']} 개선"),
+        ("테스트 방법", f"A/B 테스트로 적용 전/후 {c['kpi']} 비교"),
+    ]))
+    st.caption("규칙 기반으로 자동 구성된 근거예요. 실제 실행 전에 내용을 검토해 주세요.")
+
+
+def hypothesis_resolve_sentence(problem: dict, sqp: dict | None) -> str:
+    """가설 문장은 각 후보마다 항상 1개여야 합니다. '검색 클릭' 문제(소재 개선 · 노출 확대
+    유형) 중에는, report의 sqp 원본 데이터(메인 이미지·장바구니 전환율, 또는 기온·입찰 등)로
+    hypothesis_scenario.py가 이미 더 구체적이고 근거 있는 문장을 만들어 둡니다. 그 경우 여기서
+    (제목/설명 키워드만 보고) 다시 만들면 같은 문제에 서로 다른 문장 2개가 생겨 "가설 1개"
+    원칙이 깨지므로, 그 문장을 그대로 유일한 가설로 씁니다. sqp가 없거나 문제가 다른 검색어를
+    가리키면(쿼리 불일치) 평소처럼 규칙 기반으로 만듭니다."""
+    if isinstance(sqp, dict):
+        if (
+            problem.get("sqp_type") == "소재 개선"
+            and sqp.get("query")
+            and sqp.get("query") == problem.get("query")
+        ):
+            return hypothesis_scenario_sentence(sqp)
+        p2 = sqp.get("problem2")
+        if (
+            problem.get("sqp_type") == "노출 확대"
+            and isinstance(p2, dict)
+            and p2.get("query")
+            and p2.get("query") == problem.get("query")
+        ):
+            return hypothesis_scenario_problem2_sentence(p2)
+    return hypothesis_build_sentence(problem)
+
+
+def hypothesis_pick_candidates(report: dict | None, limit: int = HYPOTHESIS_MAX_CANDIDATES) -> list[dict]:
+    """report["problems"](리스트)에서 가설 후보를 최대 `limit`개 고릅니다. 맨 앞부터 중요한
+    문제로 보고 순서대로 고르되, 모양이 이상한 항목·중복 제목·"가설 대상 아님"으로 명시된
+    문제는 건너뜁니다. 절대 죽지 않게 방어합니다."""
     if not report:
-        return None
+        return []
     problems = report.get("problems")
     if not isinstance(problems, list):
-        return None
+        return []
+    out: list[dict] = []
+    seen_titles: set[str] = set()
     for item in problems:
-        if isinstance(item, dict) and item.get("title"):
-            return item
-    return None
+        if not isinstance(item, dict) or not item.get("title"):
+            continue
+        # report_sqp.py(검색어 클릭 분석)는 "검색 의도가 다른" 검색어를 "가설 없이 광고 제외
+        # 키워드로 처리"라고 스스로 명시합니다. 가설을 만들 대상이 아니라고 1번 쪽이 이미
+        # 판단한 문제이므로, 후보 목록에서도 건너뜁니다.
+        if "가설 없이" in str(item.get("detail") or ""):
+            continue
+        title = item["title"]
+        if title in seen_titles:   # 같은 제목이 중복으로 와도 같은 가설 후보를 두 번 보여주지 않음
+            continue
+        seen_titles.add(title)
+        out.append(item)
+        if len(out) >= limit:
+            break
+    return out
 
 
-def hypothesis_problem_key(problem: dict) -> str:
-    """리포트 문제가 바뀌었는지 비교하는 키 (제목 + 설명)"""
-    return f"{problem.get('title', '')}|{problem.get('detail', '')}"
-
-
-def _hypothesis_handle_reset(problem: dict) -> None:
-    """'자동 생성 문장으로 되돌리기' 버튼의 on_click 콜백. hypothesis_build_sentence()는 같은 problem에
-    항상 같은 문장을 돌려주므로(결정적), 이 버튼은 "다른 안을 보여주는" 게 아니라 textarea에서 손으로
-    고친 내용을 원래 자동 생성 문장으로 되돌리는 용도입니다. 위젯이 그려지기 전에 실행되므로
-    session_state를 안전하게 덮어쓸 수 있습니다."""
-    st.session_state["hypothesis-draft-text"] = hypothesis_build_sentence(problem)
+def hypothesis_pick_problem(report: dict | None) -> dict | None:
+    """하위 호환용: 가설 후보 중 1번(가장 중요한 문제)만 돌려줍니다."""
+    candidates = hypothesis_pick_candidates(report, limit=1)
+    return candidates[0] if candidates else None
 
 
 def _hypothesis_handle_save(problem: dict, text: str) -> None:
@@ -308,53 +388,30 @@ def _hypothesis_handle_save(problem: dict, text: str) -> None:
     )
 
 
-def hypothesis_render():
-    """'2. 가설 수립' 탭을 열 때마다 실행됩니다. 화면은 전부 이 함수 안에서 그립니다."""
-    ui.page_header("2. 가설 수립", "1번 분석 리포트의 문제를 바탕으로 가설 1개를 자동으로 만들어 드려요.")
+def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, saved: dict | None) -> None:
+    """가설 후보 1개(탭)를 그립니다. 가설 문장은 따로 수정 가능한 칸으로 보여주지 않고,
+    제목 → 근거(현지 특성·경쟁사 부정 리뷰·타깃/액션/이유/KPI/테스트 방법)를 쭉 읽은 뒤
+    맨 아래에서 "이 가설 선택하기"를 누르는 흐름입니다. 가설 문장 자체(hypothesis_resolve_sentence)는
+    화면에 그대로 노출하지 않고, 선택 시 저장할 값으로만 씁니다. index는 위젯 key를 후보마다
+    다르게 만드는 데만 씁니다."""
+    # report_sqp.py(검색어 클릭 분석)의 "소재 개선"/"노출 확대" 문제면, 가설 문장이 이미 sqp
+    # 원본 근거로 만들어진 것이므로 그 근거(타깃·액션·이유·KPI 등)를 이 탭 안에 이어서 보여줍니다.
+    is_sqp_main = bool(
+        sqp and problem.get("sqp_type") == "소재 개선" and sqp.get("query") == problem.get("query")
+    )
+    p2 = sqp.get("problem2") if sqp else None
+    is_sqp_problem2 = bool(
+        isinstance(p2, dict)
+        and problem.get("sqp_type") == "노출 확대"
+        and p2.get("query") == problem.get("query")
+    )
 
-    # report/problems 모양이 아직 안 정해졌거나 다른 탭이 예상과 다르게 저장해도
-    # 화면이 깨지지 않도록, dict/list가 아니면 전부 "없음"으로 취급합니다.
-    report = store_get("report")
-    report = report if isinstance(report, dict) else None
-    problem = hypothesis_pick_problem(report)
+    text = hypothesis_resolve_sentence(problem, sqp)
+    is_saved = bool(saved) and saved.get("text") == text and saved.get("problem_title") == problem.get("title")
 
-    summary = report.get("summary") if report else None
-    if not summary and report and isinstance(report.get("problems"), list) and report["problems"]:
-        summary = f"분석된 문제 {len(report['problems'])}건 중 첫 번째 문제를 기준으로 가설을 만들었어요."
-    if not summary:
-        summary = "분석 리포트 탭에서 먼저 문제를 분석해 주세요."
-
-    with st.container(border=True, key="hypothesis-summary-card"):
-        st.markdown("**📋 분석 리포트 문제 요약**")
-        st.caption(summary)
-
-    if not problem:
-        # key="hypothesis-empty"를 줘서 hypothesis_style.css의 .st-key-hypothesis-empty 규칙이
-        # 이 카드 버튼에도 똑같이 적용되게 합니다 (안 그러면 버튼 글씨가 또 안 보임).
-        with st.container(border=True, key="hypothesis-empty"):
-            st.markdown('<p class="hypothesis-empty-icon">🧭</p>', unsafe_allow_html=True)
-            st.markdown('<p class="hypothesis-empty-title">아직 분석된 문제가 없어요</p>', unsafe_allow_html=True)
-            st.caption("1. 분석 리포트 탭에서 문제를 분석하면, 그 결과로 가설이 자동으로 만들어져요.")
-            st.button(
-                "예시 데이터로 먼저 테스트하기",
-                key="hypothesis-btn-sample",
-                type="primary",
-                width="stretch",
-                on_click=lambda: store_set("report", SAMPLE_REPORT),
-            )
-        return
-
-    problem_key = hypothesis_problem_key(problem)
-
-    # 리포트 문제가 바뀌었으면(또는 처음 열었으면) 자동으로 가설을 새로 만듭니다.
-    # 같은 문제가 유지되는 동안에는 이미 만든 가설(수정한 내용 포함)을 그대로 둡니다.
-    if st.session_state.get("hypothesis-problem-key") != problem_key:
-        st.session_state["hypothesis-draft-text"] = hypothesis_build_sentence(problem)
-        st.session_state["hypothesis-problem-key"] = problem_key
-
-    # key="hypothesis-card"를 주면 Streamlit이 이 카드에 .st-key-hypothesis-card 클래스를 붙여줘서,
-    # hypothesis_style.css에서 다른 탭은 안 건드리고 이 카드 안만 정확히 골라 스타일을 고칠 수 있습니다.
-    with st.container(border=True, key="hypothesis-card"):
+    # key="hypothesis-card-{index}"를 주면 Streamlit이 .st-key-hypothesis-card-{index} 클래스를
+    # 붙여줘서, hypothesis_style.css가 (와일드카드 선택자로) 이 카드들만 정확히 골라 스타일을 고칩니다.
+    with st.container(border=True, key=f"hypothesis-card-{index}"):
         is_external = problem.get("type") == "외부"
         st.badge(
             "외부 요인 · 경쟁사" if is_external else "내부 요인",
@@ -369,53 +426,99 @@ def hypothesis_render():
         if problem.get("competitor_review"):
             st.markdown(f"💬 **경쟁사 부정 리뷰** · {problem['competitor_review']}")
 
+        # 가설 근거·실행 방법을 경쟁사 부정 리뷰 바로 아래, 펼치지 않아도 보이는 형태로 이어서
+        # 보여줍니다 (사용자가 위에서부터 쭉 읽고 맨 아래에서 바로 선택할 수 있도록).
         st.divider()
-        st.markdown("🤖 **분석 결과를 바탕으로 자동 생성된 가설**")
-        st.text_area(
-            "가설 문장",
-            key="hypothesis-draft-text",
-            height=120,   # 글자를 키운 만큼(hypothesis_style.css) 칸은 덜 비게 살짝 줄임
-            label_visibility="collapsed",
+        if is_sqp_main:
+            hypothesis_scenario_evidence_section(sqp, problem.get("competitor_review", ""))
+        elif is_sqp_problem2:
+            hypothesis_scenario_problem2_evidence_section(p2)
+        else:
+            hypothesis_generic_evidence_section(problem)
+
+        st.divider()
+        # media, home 탭이 읽을 수 있게 "hypothesis" 키에 가설 1개만 저장 (가설 1/2/3 중
+        # 사용자가 "선택"한 1개만 최종 저장됨 — 다른 후보를 선택하면 이 값이 바뀜).
+        st.button(
+            "✓ 선택됨" if is_saved else "이 가설 선택하기",
+            key=f"hypothesis-btn-save-{index}",
+            disabled=is_saved,
+            on_click=_hypothesis_handle_save,
+            args=(problem, text),
+            type="primary",
+            width="stretch",
         )
-        # AI가 아직 연결되지 않아서 항상 규칙 기반입니다. AI 연동 후에는 source를 받아 문구를 바꾸면 됩니다.
-        st.caption("✏️ 규칙 기반으로 자동 작성된 문장이에요. 자유롭게 고쳐서 저장하세요.")
+        if is_saved:
+            st.caption("✅ 이 가설을 선택해 저장했어요. 다음 탭(매체 제작 등)에서 이 가설을 사용해요.")
 
-        saved = store_get("hypothesis")
-        saved = saved if isinstance(saved, dict) else None
-        draft_text = str(st.session_state["hypothesis-draft-text"] or "").strip()
-        is_saved = bool(saved) and saved.get("text") == draft_text
 
-        c1, c2 = st.columns([1, 1])
-        with c1:
-            # "다른 안을 보여주는" 버튼이 아닙니다 — 1번 분석 결과에서 나온 가설은 하나뿐이어야
-            # 하므로, 이 버튼은 손으로 고친 내용을 원래 자동 생성 문장으로 되돌리기만 합니다
-            # (hypothesis_build_sentence는 같은 문제면 항상 같은 문장을 돌려줍니다).
-            # text_area가 이미 그려진 뒤에 같은 키(session_state["hypothesis-draft-text"])를
-            # 직접 덮어쓰면 StreamlitWidgetAlreadyInstantiatedError가 나므로, 위젯이 만들어지기
-            # 전에 실행되는 on_click 콜백에서 값을 바꿉니다.
+def hypothesis_render():
+    """'2. 가설 수립' 탭을 열 때마다 실행됩니다. 화면은 전부 이 함수 안에서 그립니다."""
+    ui.page_header("2. 가설 수립", "1번 분석 리포트의 상위 문제로 가설 후보를 자동으로 만들고, 그중 하나를 골라 저장해요.")
+
+    # report/problems 모양이 아직 안 정해졌거나 다른 탭이 예상과 다르게 저장해도
+    # 화면이 깨지지 않도록, dict/list가 아니면 전부 "없음"으로 취급합니다.
+    report = store_get("report")
+    report = report if isinstance(report, dict) else None
+    candidates = hypothesis_pick_candidates(report)
+    sqp = report.get("sqp") if report else None
+    sqp = sqp if isinstance(sqp, dict) else None
+
+    summary = report.get("summary") if report else None
+    if not summary and report and isinstance(report.get("problems"), list) and report["problems"]:
+        summary = f"분석된 문제 {len(report['problems'])}건 중 상위 {len(candidates)}개를 가설 후보로 보여드려요."
+    if not summary:
+        summary = "분석 리포트 탭에서 먼저 문제를 분석해 주세요."
+
+    if not candidates:
+        with st.container(border=True, key="hypothesis-summary-card"):
+            st.markdown("**📋 분석 리포트 문제 요약**")
+            st.caption(summary)
+        # key="hypothesis-empty"를 줘서 hypothesis_style.css의 .st-key-hypothesis-empty 규칙이
+        # 이 카드 버튼에도 똑같이 적용되게 합니다 (안 그러면 버튼 글씨가 또 안 보임).
+        with st.container(border=True, key="hypothesis-empty"):
+            st.markdown('<p class="hypothesis-empty-icon">🧭</p>', unsafe_allow_html=True)
+            st.markdown('<p class="hypothesis-empty-title">아직 분석된 문제가 없어요</p>', unsafe_allow_html=True)
+            st.caption("1. 분석 리포트 탭에서 문제를 분석하면, 그 결과로 가설 후보가 자동으로 만들어져요.")
             st.button(
-                "↺ 자동 생성 문장으로 되돌리기",
-                key="hypothesis-btn-reset",
-                on_click=_hypothesis_handle_reset,
-                args=(problem,),
-                type="secondary",
-                width="stretch",
-            )
-        with c2:
-            # media, solution 탭이 읽을 수 있게 "hypothesis" 키에 가설 1개만 저장
-            # (이미 저장됐거나, 텍스트를 전부 지워 빈 칸이면 저장 버튼을 눌러도 의미가 없으니 비활성화)
-            st.button(
-                "✓ 저장됨" if is_saved else "가설 저장",
-                key="hypothesis-btn-save",
-                disabled=is_saved or not draft_text,
-                on_click=_hypothesis_handle_save,
-                args=(problem, draft_text),
+                "예시 데이터로 먼저 테스트하기",
+                key="hypothesis-btn-sample",
                 type="primary",
                 width="stretch",
+                on_click=lambda: store_set("report", SAMPLE_REPORT),
             )
+        return
 
-        if is_saved:
-            st.caption("✅ 이 가설이 저장됐어요. 다음 탭(매체 제작 등)에서 이 가설을 사용해요.")
+    saved = store_get("hypothesis")
+    saved = saved if isinstance(saved, dict) else None
 
-    # 검색어 클릭 문제(문제 시나리오) 가설·KPI: report에 "sqp" 값이 있을 때만 표시 (hypothesis_scenario.py)
-    hypothesis_scenario_section(report)
+    # 맨 위: 왼쪽 "1번 리포트 요약" / 오른쪽 "지금 선택된 가설"을 나란히 보여줘서,
+    # 가설 후보를 고르기 전에 전체 맥락(무슨 분석에서 나왔는지, 지금 뭐가 선택돼 있는지)이
+    # 한눈에 보이게 합니다.
+    col_summary, col_selected = st.columns(2)
+    with col_summary:
+        with st.container(border=True, key="hypothesis-summary-card"):
+            st.markdown("**📋 분석 리포트 문제 요약**")
+            st.markdown(f'<p class="hypothesis-callout-box">{summary}</p>', unsafe_allow_html=True)
+    with col_selected:
+        with st.container(border=True, key="hypothesis-selected-card"):
+            # 헤더는 항상 "✅ 지금 선택된 가설"만 보여주고(문제 제목 등 옆에 아무것도 안 붙임),
+            # "분석 리포트 문제 요약" 칸과 똑같이 "제목 1줄 + 박스 1개" 구조를 유지합니다.
+            st.markdown("**✅ 지금 선택된 가설**")
+            if saved and str(saved.get("text") or "").strip():
+                st.markdown(f'<p class="hypothesis-callout-box">{saved["text"]}</p>', unsafe_allow_html=True)
+            else:
+                st.markdown(
+                    '<p class="hypothesis-callout-box hypothesis-callout-empty">'
+                    "아직 선택한 가설이 없어요. 아래 가설 1·2·3 중 하나를 고르고 "
+                    "'이 가설 선택하기'를 눌러 주세요.</p>",
+                    unsafe_allow_html=True,
+                )
+
+    st.markdown("### 🧪 가설 후보")
+    st.caption("1번 분석 리포트의 상위 문제로 만든 가설 후보예요. 하나씩 열어보고 가장 적합한 걸 선택하세요.")
+
+    tabs = st.tabs([f"가설 {i + 1}" for i in range(len(candidates))])
+    for i, (tab, problem) in enumerate(zip(tabs, candidates)):
+        with tab:
+            _hypothesis_render_candidate(i, problem, sqp, saved)

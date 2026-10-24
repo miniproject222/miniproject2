@@ -1,6 +1,7 @@
-# 2. 가설 수립 - 검색어 클릭 문제(문제 시나리오.md 2단계) 가설 · KPI · 최종 판단
-# 1번 리포트가 store_set("report", {..., "sqp": {...}})로 넘긴 검색어 클릭 분석 값이 있을 때만 보입니다.
-# hypothesis_render() 맨 아래에서 부릅니다.
+# 2. 가설 수립 - 검색어 클릭 문제(문제 시나리오.md 2단계) 가설 근거 · KPI · 최종 판단
+# 1번 리포트가 store_set("report", {..., "sqp": {...}})로 넘긴 검색어 클릭 분석 값이 있을 때만 쓰입니다.
+# hypothesis_page.py가 "소재 개선" 가설 후보 탭 안에서 hypothesis_scenario_evidence_section()을
+# 불러 근거·실행 방법·대안/운영 가설·KPI 판단 기준을 그 탭 안에 이어서 보여줍니다.
 import streamlit as st
 
 HYPOTHESIS_SCENARIO_KPIS = [
@@ -24,9 +25,30 @@ def hypothesis_scenario_sentence(sqp: dict) -> str:
     )
 
 
-def _hypothesis_scenario_fill(sqp: dict) -> None:
-    """'이 가설 문장을 위 칸에 넣기' 콜백. 위젯이 다시 그려지기 전에 실행되어 textarea 값을 바꿀 수 있습니다."""
-    st.session_state["hypothesis-draft-text"] = hypothesis_scenario_sentence(sqp)
+def hypothesis_scenario_problem2_sentence(p2: dict) -> str:
+    """'노출 확대' 가설 후보(sqp["problem2"])의 한 문장 (If → Then). 소재가 아니라 광고
+    타이밍 문제라 hypothesis_scenario_sentence()와는 액션·KPI가 다릅니다."""
+    return (
+        f"만약 독일 기상청(DWD) 최고기온 {p2.get('heat_temp', 28):.0f}°C 이상인 날에 "
+        f"'{p2.get('query', '')}' 입찰을 올린다면, 노출 점유율이 {p2.get('imp_share', 0)}%에서 "
+        f"{p2.get('goal_imp_share', 0)}%로 올라 {p2.get('month', '')} 기준 약 "
+        f"{p2.get('extra_clicks', 0):,}회 클릭이 늘 것이다."
+    )
+
+
+def hypothesis_scenario_problem2_evidence_section(p2: dict) -> None:
+    """'노출 확대' 가설 후보 탭 안에서, 경쟁사 부정 리뷰 줄 바로 아래 근거·실행 방법을
+    펼치지 않아도 바로 읽히는 형태로 보여줍니다 (사용자가 쭉 훑어보고 맨 아래에서 선택)."""
+    st.markdown("**📋 가설 근거 · 실행 방법** (타깃 · 액션 · 결과 · 테스트 방법)")
+    st.markdown(hypothesis_scenario_table([
+        ("타깃", f"amazon.de '{p2.get('query', '')}' 검색 결과"),
+        ("액션 (If)", f"독일 기상청(DWD) 최고기온 {p2.get('heat_temp', 28):.0f}°C 이상인 날에 입찰가를 올린다"),
+        ("결과 (Then) KPI", f"노출 점유율 {p2.get('imp_share', 0)}% → {p2.get('goal_imp_share', 0)}% "
+                           "(배수 1.2배 이상 유지)"),
+        ("고정 요소", "소재 변경 없이 입찰가만 조정 (광고 소재가 필요 없는 가설)"),
+        ("테스트 방법", f"{p2.get('month', '')} 폭염 주 기준 입찰 상향 전/후 비교"),
+    ]))
+    st.caption("소재 외 문제(③ 광고 소재가 아니라 ④ 광고 타이밍)라 메인 이미지 테스트와 별개로 운영할 수 있습니다.")
 
 
 def hypothesis_scenario_table(rows) -> str:
@@ -35,56 +57,39 @@ def hypothesis_scenario_table(rows) -> str:
     return f"| 칸 | 내용 |\n| --- | --- |\n{body}"
 
 
-def hypothesis_scenario_section(report: dict | None) -> None:
-    sqp = report.get("sqp") if isinstance(report, dict) else None
-    if not isinstance(sqp, dict) or not sqp.get("query"):
-        return
+def hypothesis_scenario_evidence_section(sqp: dict, competitor_review: str = "") -> None:
+    """'소재 개선' 가설 후보 탭 안에서, 경쟁사 부정 리뷰 줄 바로 아래 근거·실행 방법을
+    펼치지 않아도 바로 읽히는 형태로 보여줍니다 (사용자가 쭉 훑어보고 맨 아래에서 선택).
+    KPI 판단 기준은 보조 참고 자료라 따로 접어 둡니다. 가설 문장 자체와 저장 버튼은
+    호출하는 쪽(hypothesis_page.py의 가설 후보 카드)이 이미 공통 레이아웃으로 그리므로
+    여기서는 다시 그리지 않습니다 (같은 문제에 가설 문장이 두 번 보이면 "가설 1개" 원칙이
+    깨지기 때문)."""
     listing = sqp.get("listing") or {}
-    problems = report.get("problems") if isinstance(report.get("problems"), list) else []
-    first = problems[0] if problems and isinstance(problems[0], dict) else {}
-    review = str(first.get("competitor_review") or "").strip()
     goal = sqp.get("kpi_goal", 0.8)
+    review = str(competitor_review or "").strip()
 
-    with st.container(border=True, key="hypothesis-scenario-card"):
-        st.markdown(f"**📐 문제 1 가설** · '{sqp['query']}' 검색에서 보이는 만큼 눌리게 하기")
-        st.caption(f"데이터: {sqp.get('source', '')}")
+    because = (f"클릭 이후 전환은 시장과 비슷하다 (클릭 대비 장바구니 우리 {sqp.get('cart_rate_ours')}% vs "
+               f"시장 {sqp.get('cart_rate_market')}%) → 문제는 첫인상이다. 저가 제품과 비슷해 보이는 사진으로는 "
+               f"클릭된 상품 중앙 가격보다 €{sqp.get('price_gap', 0):.0f} 더 비싼 이유가 안 보인다.")
+    if review:
+        because += f" 경쟁 제품 약점({review})이 두께·원단과 관련 있다면 그것이 곧 차별점이다."
 
-        because = (f"클릭 이후 전환은 시장과 비슷하다 (클릭 대비 장바구니 우리 {sqp.get('cart_rate_ours')}% vs "
-                   f"시장 {sqp.get('cart_rate_market')}%) → 문제는 첫인상이다. 저가 제품과 비슷해 보이는 사진으로는 "
-                   f"클릭된 상품 중앙 가격보다 €{sqp.get('price_gap', 0):.0f} 더 비싼 이유가 안 보인다.")
-        if review:
-            because += f" 경쟁 제품 약점({review})이 두께·원단과 관련 있다면 그것이 곧 차별점이다."
-        st.markdown(hypothesis_scenario_table([
-            ("타깃", f"amazon.de '{sqp['query']}' 검색 결과"),
-            ("액션 (If)", f"메인 이미지를 {listing.get('main_image', '현재 사진')}(A)에서 펼친 패드의 모서리를 살짝 들어 "
-                          "두께와 냉감 원단 질감이 보이는 각도(B)로 바꾼다"),
-            ("이유 (Because)", because),
-            ("결과 (Then) KPI", f"클릭 점유율 ÷ 노출 점유율 {sqp.get('ratio', 0):.2f}배 → {goal:.1f}배 이상"),
-            ("고정 요소", f"흰 배경 실제 사진, 제목, 가격 €{listing.get('price', 0):.2f}, 쿠폰 없음"),
-            ("테스트 방법", "Manage Your Experiments, 메인 이미지 A/B"),
-        ]))
-        st.caption("근거의 경쟁 제품 약점은 경쟁사 DB 값이고 실제 리뷰 원문이 아닙니다. 경쟁 제품 리뷰 30~50개를 모아 "
-                   "가장 많이 나오는 불만으로 바꿔 넣어야 하고, 불만이 다르게 나오면 액션도 바뀝니다 "
-                   "(예: '미끄러진다'가 많으면 바닥 미끄럼 방지면이 보이는 각도).")
-        st.markdown(f"> {hypothesis_scenario_sentence(sqp)}")
-        st.button("이 가설 문장을 위 칸에 넣기", key="hypothesis-btn-scenario-fill",
-                  on_click=_hypothesis_scenario_fill, args=(sqp,), type="secondary")
+    st.markdown("**📋 가설 근거 · 실행 방법** (타깃 · 액션 · 이유 · KPI · 테스트 방법)")
+    st.markdown(hypothesis_scenario_table([
+        ("타깃", f"amazon.de '{sqp.get('query', '')}' 검색 결과"),
+        ("액션 (If)", f"메인 이미지를 {listing.get('main_image', '현재 사진')}(A)에서 펼친 패드의 모서리를 살짝 들어 "
+                      "두께와 냉감 원단 질감이 보이는 각도(B)로 바꾼다"),
+        ("이유 (Because)", because),
+        ("결과 (Then) KPI", f"클릭 점유율 ÷ 노출 점유율 {sqp.get('ratio', 0):.2f}배 → {goal:.1f}배 이상"),
+        ("고정 요소", f"흰 배경 실제 사진, 제목, 가격 €{listing.get('price', 0):.2f}, 쿠폰 없음"),
+        ("테스트 방법", "Manage Your Experiments, 메인 이미지 A/B"),
+    ]))
+    st.caption("근거의 경쟁 제품 약점은 경쟁사 DB 값이고 실제 리뷰 원문이 아닙니다. 경쟁 제품 리뷰 30~50개를 모아 "
+               "가장 많이 나오는 불만으로 바꿔 넣어야 하고, 불만이 다르게 나오면 액션도 바뀝니다 "
+               "(예: '미끄러진다'가 많으면 바닥 미끄럼 방지면이 보이는 각도).")
 
-        st.markdown("**대안 가설 (메인이 안 될 때)**")
-        st.markdown("- 제목 앞부분에 OEKO-TEX 인증과 두께를 넣는다. 모바일 검색 결과에서는 제목 앞부분만 보여서, "
-                    "인증을 내세우는 Novilla·RIBECO와 같은 조건에서 비교되게 하려는 것이다.\n"
-                    "- 메인 가설과 동시에 돌리면 변수가 두 개가 되니, 메인 테스트가 끝난 뒤에 시작한다.")
-
-        p2 = sqp.get("problem2")
-        if isinstance(p2, dict):
-            st.markdown("**문제 2 운영 가설 (참고, 소재 외 → ④ 광고 타이밍)**")
-            st.markdown(f"- 독일 기상청(DWD) 최고기온 {p2.get('heat_temp', 28):.0f}°C 이상인 날에 '{p2.get('query')}' 입찰을 올리면, "
-                        f"노출 점유율이 {p2.get('imp_share')}%에서 {p2.get('goal_imp_share')}%로 오르고 배수는 1.2배 이상을 "
-                        f"유지할 것이다. {p2.get('month')} 기준 약 {p2.get('extra_clicks'):,}회 클릭이 는다.\n"
-                        "- 광고 소재가 필요 없는 가설이라 ③ 광고 소재가 아니라 ④ 광고 타이밍으로 보낸다.")
-
-    with st.container(border=True, key="hypothesis-scenario-kpi"):
-        st.markdown("**📏 KPI와 최종 판단** · 클릭 단계 문제라 메인 KPI는 CTR, 나머지는 진단·안전장치")
+    with st.expander("📏 KPI 표 · 판단 기준 자세히 보기"):
+        st.caption("클릭 단계 문제라 메인 KPI는 CTR, 나머지는 진단·안전장치")
         st.markdown("| 역할 | KPI | 쓰는 법 |\n| --- | --- | --- |\n"
                     + "\n".join(f"| {a} | {b} | {c} |" for a, b, c in HYPOTHESIS_SCENARIO_KPIS))
         st.markdown(
