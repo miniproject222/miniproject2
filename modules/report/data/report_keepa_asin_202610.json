@@ -1,0 +1,10 @@
+{
+  "note": "Keepa 검색(2026-10-24)으로 찾은 Amazon.de 후보 상품. 경쟁사 DB 제품과 같은 상품인지 담당자 확인 필요. db_brand는 data/common_competitor_seori_202610.csv의 '기업/브랜드' 값과 같아야 합니다.",
+  "products": [
+    {"db_brand": "Novilla", "asin": "B0DQ8BDT9Z", "width_cm": 160, "length_cm": 200, "title": "Novilla Cooling Matratzenauflage 160x200cm"},
+    {"db_brand": "RIBECO Germany", "asin": "B07121YZM5", "width_cm": 90, "length_cm": 200, "title": "RIBECO GERMANY Ganzjahr-Matratzenauflage 90x200cm, 2-in-1"},
+    {"db_brand": "Traumnacht", "asin": "B0DK5548KL", "width_cm": 90, "length_cm": 200, "title": "Traumnacht Cool Komfort Topper Sommer und Winter 90x200 cm"},
+    {"db_brand": "Paradies", "asin": "B0D7HQFXCY", "width_cm": 90, "length_cm": 200, "title": "PARADIES kühlende Matratzenauflage 90x200 cm Cool Dream Pad"},
+    {"db_brand": "potow", "asin": "B0C6KTY7BX", "width_cm": null, "length_cm": null, "title": "potow Matratzenauflage mit Wasserkühlung (전동 수냉)"}
+  ]
+}
