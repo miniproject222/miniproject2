@@ -21,7 +21,7 @@
 
 1. 첫 작업 전에 `README.md`와 `RULES.md`를 확인한다.
 2. 담당 모듈 코드(`home`, `report`, `hypothesis`, `media`, `weather` 중 하나)를 확인한다.
-   - 솔루션 제안은 `media` 모듈에 포함된다. (이전 `solution` 모듈은 삭제됨)
+   - 이전 `solution` 모듈은 삭제됐다. (`media` 흐름은 외주 레퍼런스 준비까지이며 솔루션 제안은 빠짐)
    - `media` 모듈은 3단계로 나눠 개발한다. 2·3단계 담당은 `modules/media/media_stageN/` 폴더만 작업하고
      그 폴더의 `CLAUDE.md`, `media_stageN.md`, `media_stageN_prompt.md`를 따른다.
      `modules/media/` 바로 아래 파일(공용 파일 포함)은 1단계 담당만 고친다.
@@ -102,10 +102,14 @@
 ```
 
 **`media` 2·3단계 담당자는** 위 예시에서 `media` 줄(`"Edit(/modules/media/**)"`)을 넣지 말고,
-대신 아래 줄을 넣어요. (1단계 담당자는 다른 모듈 담당자와 똑같이 하면 돼요.)
+대신 아래 줄을 넣어요.
 
 - 2단계: `"Edit(/modules/media/*.*)"`, `"Edit(/modules/media/data/**)"`, `"Edit(/modules/media/images/**)"`, `"Edit(/modules/media/media_stage3/**)"`
 - 3단계: 위 2단계 줄과 같고, 마지막 줄만 `"Edit(/modules/media/media_stage2/**)"`로 바꿔요.
+
+**`media` 1단계 담당자는** `media` 줄을 넣지 않고, 2·3단계 폴더만 잠가요.
+
+- 1단계: `"Edit(/modules/media/media_stage2/**)"`, `"Edit(/modules/media/media_stage3/**)"`
 
 > 주의: 이 파일은 Claude의 **파일 수정 기능**을 막아요. 터미널 명령으로 파일을 바꾸는 것까지
 > 완벽히 막지는 못하니, 작업 후 GitHub Desktop의 변경 파일 목록은 계속 확인해요.

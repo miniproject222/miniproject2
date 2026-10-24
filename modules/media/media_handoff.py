@@ -1,14 +1,26 @@
 # 3. 매체 제작 > 단계 사이 데이터 주고받기 (1단계 담당 파일 · 2·3단계는 읽고 부르기만)
-# 1단계(가설에서 변수 도출 ~ A/B 소재 준비) → 2단계(결과·판정) → 3단계(솔루션 제안)로 넘기는 값의 모양을 여기서 정합니다.
+# 1단계(단일 변수 추출 ~ A/B 소재 선정) → 2단계(프롬프트 만들기) → 3단계(다듬기·매체 제작·외주 준비)로 넘기는 값의 모양을 여기서 정합니다.
 # 모양(키 이름)을 바꿀 때는 세 담당자가 같이 정하고 이 파일만 고칩니다.
-import streamlit as st
+#
+# 넘긴 값은 각 단계 폴더의 JSON 파일로 저장됩니다. 그 파일을 커밋·푸시하면, 다른 컴퓨터에서 풀 받은 사람에게 자동으로 이어집니다.
+#   1단계 → modules/media/data/media_handoff_plan.json              (min이 올림)
+#   2단계 → modules/media/media_stage2/data/media_stage2_prompt.json (JY가 올림)
+# 단계마다 자기 폴더의 파일 하나만 쓰므로 합칠 때 충돌이 나지 않습니다.
+# 앞 단계 파일이 아직 없으면 아래 예시 값이 와서 각자 먼저 개발할 수 있습니다.
+import json
+from pathlib import Path
 
 from modules.media.media_variable import MEDIA_VARIABLE_KPI
 
-# 2단계가 판정 결과를 넣어 두는 session_state 키 (3단계가 읽음)
-MEDIA_HANDOFF_RESULT_KEY = "media-handoff-result"
+MEDIA_HANDOFF_DIR = Path(__file__).resolve().parent
+MEDIA_HANDOFF_FILES = {
+    "plan": MEDIA_HANDOFF_DIR / "data" / "media_handoff_plan.json",
+    "prompt": MEDIA_HANDOFF_DIR / "media_stage2" / "data" / "media_stage2_prompt.json",
+    "result": MEDIA_HANDOFF_DIR / "media_stage2" / "data" / "media_stage2_result.json",   # (새 흐름에서는 안 씀)
+}
+MEDIA_HANDOFF_SLOT = "{slot}"   # 기본 프롬프트 안의 빈칸 표시
 
-# 1단계 → 2단계: A/B 테스트 설계. 1단계가 정한 값이라 언제 불러도 같은 값입니다.
+# 1단계 → 2단계: A/B 테스트 설계 예시. 1단계가 media_handoff_set_plan()으로 저장하면 그 값이 대신 쓰입니다.
 MEDIA_HANDOFF_PLAN = {
     "query": "kühlende matratzenauflage",          # 검색어
     "variable": "메인 이미지 촬영 구도",              # 독립 변수 (바꾸는 것 1개)
@@ -20,7 +32,20 @@ MEDIA_HANDOFF_PLAN = {
     "cvr_tolerance": 0.5,                          # 안전장치: B의 CVR이 A보다 이만큼(%p) 넘게 떨어지면 B 실패
 }
 
-# 2단계 → 3단계: 판정 결과 예시. 2단계가 아직 결과를 넣지 않았을 때 3단계가 이 값으로 먼저 개발합니다.
+# 2단계 → 3단계: 프롬프트 재료 예시. 2단계가 아직 넣지 않았을 때 3단계가 이 값으로 먼저 개발합니다.
+# 완성된 A/B 두 줄이 아니라 기본 프롬프트와 빈칸을 따로 넘겨야 3단계가 "빈칸 밖이 바뀌었나"를 확인할 수 있습니다.
+MEDIA_HANDOFF_PROMPT_SAMPLE = {
+    "variable": "메인 이미지 촬영 구도",           # 단일 변수
+    "base": "Product photo reference, white seamless background, a cooling mattress pad 90x200 cm "
+            "{slot}, soft even studio light, no text, no props",   # 기본 프롬프트 (빈칸 자리는 {slot})
+    "slot_a": "folded, seen from above",          # A 빈칸
+    "slot_b": "laid flat, camera 45 degrees above, one corner gently lifted to show the edge thickness "
+              "and the knitted cooling fabric texture",           # B 빈칸
+    # 고정 요소: 기본 프롬프트 안의 문구 그대로 (다듬은 뒤에도 남아 있어야 함)
+    "fixed": ["white seamless background", "90x200 cm", "soft even studio light", "no text", "no props"],
+}
+
+# (새 흐름에서는 쓰지 않음) 판정 결과 예시. 2단계가 아직 결과를 넣지 않았을 때 3단계가 이 값으로 먼저 개발합니다.
 # (지금 숫자는 2단계 가상 데이터 media_ab_result_dummy_202610.json으로 계산한 값)
 MEDIA_HANDOFF_RESULT_SAMPLE = {
     "source": "가상",                # 데이터 출처 ("가상" / "실제")
@@ -33,19 +58,59 @@ MEDIA_HANDOFF_RESULT_SAMPLE = {
 }
 
 
+def _media_handoff_get(name: str):
+    """name 단계 파일을 읽습니다. 풀 받은 최신 파일을 쓰도록 매번 새로 읽고, 없거나 깨져 있으면 None."""
+    path = MEDIA_HANDOFF_FILES[name]
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _media_handoff_put(name: str, value: dict) -> None:
+    """name 단계 파일에 저장합니다. 값이 그대로면 쓰지 않습니다 (화면이 다시 그려질 때마다 파일이 바뀌지 않게)."""
+    if _media_handoff_get(name) == value:
+        return
+    path = MEDIA_HANDOFF_FILES[name]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def media_handoff_set_plan(plan: dict) -> None:
+    """1단계가 A/B 설계를 정하면 부릅니다. 모양은 MEDIA_HANDOFF_PLAN과 같게 넣습니다."""
+    _media_handoff_put("plan", plan)
+
+
 def media_handoff_plan() -> dict:
-    """1단계 → 2단계: A/B 테스트 설계 (MEDIA_HANDOFF_PLAN 복사본)."""
-    return dict(MEDIA_HANDOFF_PLAN)
+    """1단계 → 2단계: A/B 테스트 설계. 1단계가 아직 저장하지 않았으면 예시 값(MEDIA_HANDOFF_PLAN)에 "sample": True."""
+    saved = _media_handoff_get("plan")
+    if saved:
+        return {**MEDIA_HANDOFF_PLAN, **saved, "sample": False}
+    return {**MEDIA_HANDOFF_PLAN, "sample": True}
+
+
+def media_handoff_set_prompt(prompt: dict) -> None:
+    """2단계가 프롬프트 재료를 다 만들면 부릅니다. 모양은 MEDIA_HANDOFF_PROMPT_SAMPLE과 같게 넣습니다."""
+    _media_handoff_put("prompt", prompt)
+
+
+def media_handoff_prompt() -> dict:
+    """2단계 → 3단계: 프롬프트 재료. 2단계가 아직 넣지 않았으면 예시 값에 "sample": True를 붙여 돌려줍니다."""
+    saved = _media_handoff_get("prompt")
+    if saved:
+        return {**saved, "sample": False}
+    return {**MEDIA_HANDOFF_PROMPT_SAMPLE, "fixed": list(MEDIA_HANDOFF_PROMPT_SAMPLE["fixed"]), "sample": True}
 
 
 def media_handoff_set_result(result: dict) -> None:
-    """2단계가 판정을 마치면 부릅니다. 모양은 MEDIA_HANDOFF_RESULT_SAMPLE과 같게 넣습니다."""
-    st.session_state[MEDIA_HANDOFF_RESULT_KEY] = dict(result)
+    """(새 흐름에서는 쓰지 않음) 판정을 마치면 부릅니다. 모양은 MEDIA_HANDOFF_RESULT_SAMPLE과 같게 넣습니다."""
+    _media_handoff_put("result", result)
 
 
 def media_handoff_result() -> dict:
-    """2단계 → 3단계: 판정 결과. 2단계가 아직 넣지 않았으면 예시 값에 "sample": True를 붙여 돌려줍니다."""
-    saved = st.session_state.get(MEDIA_HANDOFF_RESULT_KEY)
-    if isinstance(saved, dict):
+    """(새 흐름에서는 쓰지 않음) 판정 결과. 아직 없으면 예시 값에 "sample": True를 붙여 돌려줍니다."""
+    saved = _media_handoff_get("result")
+    if saved:
         return {**saved, "sample": False}
     return {**MEDIA_HANDOFF_RESULT_SAMPLE, "sample": True}

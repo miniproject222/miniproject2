@@ -1,9 +1,17 @@
-# 3. 매체 제작 > 3단계: 솔루션 제안 (`media_stage3`)
+# 3. 매체 제작 > 3단계: 매체 제작·외주 준비 (`media_stage3`)
 
 - 담당 브랜치: `DH`
-- 3번 탭(`media`)의 3단계 하위 탭(지금 이름 '솔루션 제안', 아래 "하위 탭 이름" 참고)을 만듭니다.
-- 2단계의 A/B 판정 결과를 받아 매체(광고 소재) 외에 실행할 수 있는 솔루션을 제안합니다.
+- 3번 탭(`media`)의 3단계 하위 탭(지금 이름 '매체 제작·외주 준비', 아래 "하위 탭 이름" 참고)을 만듭니다.
+- 2단계가 만든 프롬프트 재료를 받아 **AI로 다듬고 확인 → 매체(사진·영상 초안) 제작 → 외주용 파일 준비**까지 합니다.
 - 개발이 끝나면 1단계(`min` 브랜치) 기준으로 합칩니다.
+
+## 전체 흐름에서 3단계 위치
+
+| 단계 | 담당 | 하는 일 |
+|---|---|---|
+| 1단계 | min | 가설에서 단일 변수 추출 → A,B 테스트 소재 선정 |
+| 2단계 | JY | 기본 프롬프트 1개 쓰기 → 단일 변수 칸 비워 두기 → 빈칸 채워 A, B 만들기 |
+| **3단계** | **DH** | **AI로 다듬기 + 확인 → 매체 제작 → 외주 레퍼런스 취합·외주용 파일 준비** |
 
 ## 작업 범위
 
@@ -29,16 +37,46 @@
 
 - 함수: `media_s3_...` (진입 함수만 `media_stage3_render`)
 - 위젯 `key`, `st.session_state` 키, CSS class: `media-s3-...` (예: `key="media-s3-btn-export"`)
-- Supabase 표를 만들면 `media_` 로 시작 (예: `media_solution`)
+- Supabase 표를 만들면 `media_` 로 시작 (예: `media_reference`)
 
-## 받는 값 (`modules/media/media_handoff.py`)
+## 받는 값 (2단계 → 3단계)
 
-- `media_handoff_result()` → 2단계 판정 결과
-  - `source` 출처("가상"/"실제"), `winner` 승자, `b_wins` B 승리 여부, `kpi` 노출 대비 클릭률 [A, B],
-    `cvr` CVR [A, B], `cvr_ok` 안전장치 통과, `p_ctr` 유의확률
-  - 2단계가 아직 결과를 넣지 않았으면 예시 값이 오고 `sample`이 `True`입니다. 예시 값으로 먼저 개발할 수 있습니다.
-- 필요하면 `media_handoff_plan()`(1단계 A/B 설계)도 읽을 수 있습니다.
+`media_s3_input()`이 `media_handoff_prompt()`(`modules/media/media_handoff.py`)로 아래 모양을 받아 옵니다.
+**2단계가 아직 `media_handoff_set_prompt()`로 넘기지 않았으면 예시 값(`MEDIA_HANDOFF_PROMPT_SAMPLE`)에 `sample: True`가 붙어 옵니다.**
+2단계 값은 `media_stage2/data/media_stage2_prompt.json` 파일이라, 2단계 담당이 푸시한 뒤 풀 받으면 자동으로 들어옵니다.
 
-## 지금 상태 (나눌 때 옮겨 온 것)
+| 키 | 내용 | 예 |
+|---|---|---|
+| `variable` | 단일 변수 이름 | 메인 이미지 촬영 구도 |
+| `base` | 기본 프롬프트 (빈칸 자리는 `{slot}`) | `..., a cooling mattress pad 90x200 cm {slot}, ...` |
+| `slot_a` | A 빈칸 문구 | `folded, seen from above` |
+| `slot_b` | B 빈칸 문구 | `laid flat, ... one corner gently lifted ...` |
+| `fixed` | 고정 요소 (다듬은 뒤에도 프롬프트 안에 그대로 있어야 하는 문구) | `["white seamless background", "90x200 cm", ...]` |
 
-- 솔루션 우선순위 샘플 (`ui.progress_list`) 하나만 있음
+- 완성된 A, B 두 줄만 받으면 어디가 빈칸이었는지 알 수 없어 확인을 못 합니다. 그래서 **기본 프롬프트와 빈칸을 따로** 받습니다.
+
+## 화면 구성
+
+1. **① 프롬프트 다듬기 + 확인**
+   - `AI로 다듬기` 버튼 (AI 도구가 정해지기 전이라 꺼져 있음, 지금은 칸에서 직접 고침)
+   - 프롬프트 A, B를 나란히 두 칸에 보여 주고, 칸마다 `되돌리기`(빈칸만 채운 원래 문장으로) 버튼
+   - 확인 규칙 (`media_s3_check()`):
+     - 빈칸 문구(`slot_a`, `slot_b`)가 그대로 남아 있는가
+     - 빈칸 문구를 빼면 A와 B가 글자까지 똑같은가
+     - 고정 요소(`fixed`)가 A, B 모두에 남아 있는가
+   - 하나라도 어기면 경고를 띄우고, 외주 파일 다운로드를 막음
+2. **② 매체 제작 (사진·영상 초안)**
+   - `A/B 매체 생성` 버튼 (생성 도구가 정해지기 전이라 꺼져 있음)
+   - 지금은 만든 사진·영상 파일을 직접 올림 (png, jpg, webp, mp4, mov / 파일 이름에 A 또는 B)
+   - AI로 만든 사진·영상은 아마존 메인 이미지로 쓰지 않음 (외주 촬영 레퍼런스, 서브 이미지, 광고 초안 용도)
+3. **③ 외주 레퍼런스 정리**
+   - zip 하나로 묶어 내려받기 (`media_s3_package()`): `README.txt`(안내문), `prompt_A.txt`, `prompt_B.txt`, `prompts.json`, `reference/`(올린 매체)
+
+## 넘기는 값
+
+- 3번 탭의 마지막 단계라 다른 단계에 넘기는 값은 없습니다. 결과는 외주 전달용 zip 파일입니다.
+
+## 정해야 할 것
+
+- AI 다듬기 도구와 이미지·영상 생성 도구 (정해지면 `requirements.txt`·`secrets.toml.example`에 넣을 줄을 PM에게 알림)
+- 1단계의 '촬영 브리프 (외주용)'(`media_ab.py`)와 외주 자료를 한 곳으로 합칠지 (1단계 담당과 협의)
