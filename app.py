@@ -2,6 +2,8 @@
 # 로컬 실행: 프로젝트 맨 위 폴더에서 streamlit run app.py
 # 배포: GitHub main에 올리면 Streamlit Community Cloud가 이 파일로 자동 배포합니다
 # 디자인 규칙은 design.md, 공통 디자인 함수는 ui_theme.py에 있습니다
+import inspect
+
 import streamlit as st
 
 import ui_theme as ui
@@ -20,12 +22,12 @@ st.session_state["temps"] = None
 # key + bind="query-params"가 없으면, 다른 탭 안의 버튼을 눌러 화면이 다시 그려질 때마다
 # 선택된 탭이 유지되지 않고 첫 번째 탭(홈)으로 돌아가 버립니다. URL에 선택된 탭을 저장해 두면
 # 새로고침하거나 다른 위젯을 눌러도 보던 탭이 그대로 유지됩니다.
-NBSP = " "
-tabs = st.tabs(
-    [f"{t['icon']} {t['label'].replace(' ', NBSP)}" for t in LAYOUT_TABS],
-    key="main_tabs",
-    bind="query-params",
-)
+# bind는 Streamlit 1.66 이상에만 있으므로(requirements.txt), 그보다 낮은 버전에서는 빼고 실행해 오류를 막습니다.
+# (이 경우 탭 유지만 안 될 뿐 앱은 열립니다. pip install -r requirements.txt 로 맞추면 해결)
+NBSP = "\u00a0"
+tab_params = inspect.signature(st.tabs).parameters
+tab_options = {k: v for k, v in {"key": "main_tabs", "bind": "query-params"}.items() if k in tab_params}
+tabs = st.tabs([f"{t['icon']} {t['label'].replace(' ', NBSP)}" for t in LAYOUT_TABS], **tab_options)
 for tab, t in zip(tabs, LAYOUT_TABS):
     with tab:
         t["render"]()
