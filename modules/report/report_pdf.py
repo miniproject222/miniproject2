@@ -34,6 +34,9 @@ REPORT_PDF_COLORS = {name: report_rgb(ui.THEME[key]) for name, key in {
 REPORT_LEVEL_DOTS = {"높음": "●●●", "중간": "●●○", "낮음": "●○○"}
 
 
+REPORT_PDF_UMLAUT = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"})
+
+
 def report_short(text, limit):
     return text if len(text) <= limit else text[:limit - 1] + "…"
 
@@ -48,6 +51,10 @@ class ReportPdf(FPDF):
         self.add_font("SUIT", "B", str(REPORT_FONT_DIR / "SUIT-Bold.otf"))
         self.set_margins(margin, margin, margin)
         self.set_auto_page_break(auto=True, margin=margin)
+
+    def normalize_text(self, text):
+        # SUIT 글꼴에 독일어 움라우트가 없어 PDF에서는 ue·oe·ae·ss로 바꿔 씁니다 (예: kühlmatte → kuehlmatte)
+        return super().normalize_text(text.translate(REPORT_PDF_UMLAUT))
 
     def footer(self):
         self.set_y(-11)

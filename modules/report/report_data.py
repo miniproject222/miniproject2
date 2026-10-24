@@ -1,4 +1,5 @@
-# 1. 분석 리포트 - 데이터 불러오기 (실제 데이터만, 샘플 없음)
+# 1. 분석 리포트 - 데이터 불러오기
+# - 검색어 클릭 분석: 검색어 성과·광고·우리 상품은 가상(더미), 경쟁 제품은 Keepa 실제, 기온은 DWD 실제 (report_sqp.py)
 # - 경쟁사·내부/외부 요인: 공통 경쟁사 DB·독일 DB(루트 data/) + Keepa 마지막 조회값 + Open-Meteo 현재 기온
 # - 매출 KPI·구매 퍼널·유입 채널(UTM): GA4가 연결되면 표시, 연결 전에는 빈 상태
 # - A/B 테스트: data/report_ab_tests.json에 실제 결과를 넣으면 표시
@@ -14,6 +15,7 @@ from modules.report.report_competitor import (
 )
 from modules.report.report_ga4 import report_ga4_fetch, report_ga4_ready
 from modules.report.report_keepa import report_keepa_products, report_keepa_snapshot, report_keepa_usage
+from modules.report.report_sqp import report_sqp_analyze, report_sqp_handoff
 
 REPORT_AB_FILE = Path(__file__).resolve().parent / "data" / "report_ab_tests.json"
 REPORT_UTM_MIN_SHARE = 0.05   # 방문 비중이 이보다 작은 채널은 '전환율 최저' 판정에서 뺍니다 (표본이 작아서)
@@ -72,8 +74,17 @@ def report_load_data():
         "ga4": None,                                              # GA4 연결 시 {"funnel", "utm"}
         "source_error": "",
     }
-    data["key_problems"] = report_key_problems(data["internal"], data["external"])
+    data["position_key_problems"] = report_key_problems(data["internal"], data["external"])
+    data["key_problems"] = data["position_key_problems"]
     data["problems"] = report_hypothesis_problems(data["key_problems"], data["internal"], data["external"], rivals)
+
+    # 검색어 클릭 분석 (문제 시나리오.md): 있으면 문제 도출·다른 탭 문제의 맨 앞을 이 결과로 바꿉니다
+    data["sqp"] = report_sqp_analyze(rivals, snapshot["items"] if snapshot else None)
+    data["sqp_store"] = None
+    if data["sqp"]:
+        sqp_problems, sqp_key_problems, data["sqp_store"] = report_sqp_handoff(data["sqp"], rivals)
+        data["key_problems"] = sqp_key_problems
+        data["problems"] = sqp_problems + data["problems"]
     if report_ga4_ready():
         try:
             ga4 = report_ga4_fetch()

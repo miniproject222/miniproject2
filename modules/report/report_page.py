@@ -1,4 +1,4 @@
-# 1. 분석 리포트 (실제 데이터만 표시, 샘플 없음)
+# 1. 문제 분석 (검색어 클릭 분석은 가상 SQP + 실제 Keepa·DWD, 경쟁 포지션 분석은 실제 데이터만)
 from pathlib import Path
 
 import plotly.graph_objects as go
@@ -13,6 +13,8 @@ from modules.report.report_ga4 import REPORT_SHOP_URL, report_utm_link
 from modules.report.report_keepa import (
     report_keepa_can_fetch, report_keepa_estimate, report_keepa_fetch_and_save, report_keepa_usage,
 )
+from modules.report.report_sqp import report_sqp_kpis
+from modules.report.report_sqp_view import report_sqp_show
 
 REPORT_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경로 만들 때 사용)
 
@@ -23,20 +25,31 @@ REPORT_LEVEL_CLASS = {"높음": "high", "중간": "mid", "낮음": "low"}
 def report_render():
     """'1. 분석 리포트' 탭을 열 때마다 실행됩니다. 화면은 전부 이 함수 안에서 그립니다."""
     data = report_load_data()
-    ga4 = data["ga4"]
+    ga4, sqp = data["ga4"], data["sqp"]
     steps = report_funnel_steps(ga4["funnel"]) if ga4 else []
     worst = min(steps, key=lambda s: s["diff"]) if steps else None
     utm_rows, utm_worst = report_utm_rows(ga4["utm"]) if ga4 else ([], None)
     summary = report_build_summary(data, worst)
     report_save_store(data, summary, worst, utm_rows, utm_worst)
 
-    ui.page_header("1. 분석 리포트", "결과 데이터 요약, 문제 분석 (실제 데이터: 경쟁사 DB·독일 DB·Keepa·Open-Meteo"
-                                      + (" · GA4)" if ga4 else ") · 매출·퍼널·유입 채널은 GA4 연결 후 표시"))
+    ui.page_header("1. 문제 분석", "amazon.de 검색어별로 '보이는 만큼 눌리는지' 찾고 원인 분석 "
+                                    "(노출·클릭: 가상 / 경쟁 제품: Keepa 실제 / 기온: DWD 실제)")
     if data["source_error"]:
         st.caption(f"GA4 연결 실패: {data['source_error']}")
 
-    kpis = report_ga4_kpis(ga4) if ga4 else data["position_kpis"]
+    position_kpis = report_ga4_kpis(ga4) if ga4 else data["position_kpis"]
+    kpis = report_sqp_kpis(sqp) if sqp else position_kpis
     report_show_kpis(kpis)
+    if sqp:
+        report_sqp_show(sqp)
+    else:
+        st.info("검색어 성과 더미(data/report_sqp_weekly_dummy_202608.json)가 없습니다. "
+                "python -m modules.report.report_sqp_make 로 만들어 주세요.")
+
+    st.markdown("#### 경쟁 포지션 분석 · 경쟁사 DB·독일 DB·Keepa (실제)"
+                + (" · GA4" if ga4 else " · 매출·퍼널·유입 채널은 GA4 연결 후 표시"))
+    if sqp:
+        report_show_kpis(position_kpis)
 
     left, right = st.columns(2)
     with left:
@@ -68,8 +81,11 @@ def report_funnel_steps(funnel):
 
 
 def report_build_summary(data, worst):
-    """핵심 문제 요약: 내부 1순위 + 외부 위협 1순위 (+ GA4 퍼널이 있으면 가장 떨어진 단계)."""
+    """핵심 문제 요약: 검색어 클릭 문제 1순위 + 내부 1순위 + 외부 위협 1순위 (+ GA4 퍼널이 있으면 가장 떨어진 단계)."""
     parts = []
+    if data["sqp_store"]:
+        s = data["sqp_store"]
+        parts.append(f"검색 클릭: '{s['query']}' 클릭 ÷ 노출 {s['ratio']:.2f}배, 놓친 클릭 약 {s['missed_clicks']:,}회 (가상 SQP)")
     if data["internal"]:
         parts.append(f"내부: {data['internal'][0]['title']}")
     if worst:
@@ -104,7 +120,10 @@ def report_save_store(data, summary, worst, utm_rows, utm_worst):
         "ab_tests": [{"name": t["name"], "winner": t["result"]["winner"], "lift": round(t["result"]["lift"], 1),
                       "p_value": round(t["result"]["p"], 4), "significant": t["result"]["significant"]}
                      for t in data["ab_tests"]],
-        "data_source": "경쟁사 DB·독일 DB·Keepa·Open-Meteo" + (" · GA4" if data["ga4"] else ""),
+        # 가설·광고 소재: 검색어 클릭 분석 (문제 1 수치, 우리 상품, 경쟁 제품, 문제 2) / 없으면 None
+        "sqp": data["sqp_store"],
+        "data_source": ("검색어 성과 가상 SQP · DWD · " if data["sqp_store"] else "")
+                       + "경쟁사 DB·독일 DB·Keepa·Open-Meteo" + (" · GA4" if data["ga4"] else ""),
     }
     if st.session_state.get("report-stored-payload") != payload:
         store_set("report", payload)
@@ -126,6 +145,9 @@ def report_show_key_problems(data, summary, kpis, steps, utm_rows):
                 f'<div class="report-desc">→ 가설 탭 질문: <b>{p["question"]}</b></div></div>',
                 unsafe_allow_html=True,
             )
+        if data["sqp"]:
+            st.markdown('<div class="report-desc">경쟁 포지션 분석의 핵심 문제 (출시 준비): '
+                        + " / ".join(p["title"] for p in data["position_key_problems"]) + "</div>", unsafe_allow_html=True)
         st.caption("이 결과는 다른 탭(홈, 가설, 광고 소재, 광고 타이밍)에서 store_get(\"report\")로 읽을 수 있습니다.")
         report_download_pdf(data, kpis, summary, steps, utm_rows)
 

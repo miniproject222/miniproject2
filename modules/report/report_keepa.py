@@ -5,8 +5,9 @@
 #   KEEPA_API_KEY = "..."      (Keepa API 키)
 #   KEEPA_FETCH_PIN = "..."    (조회 확인용 PIN, 없으면 조회 버튼이 꺼짐)
 import json
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from statistics import median
 
 import requests
 import streamlit as st
@@ -20,6 +21,10 @@ REPORT_KEEPA_STATS_DAYS = 90       # 평균 가격 비교 기간
 REPORT_KEEPA_TOKENS_PER_PRODUCT = 2   # 예상치: 상품 1토큰 + 평점·리뷰 최대 1토큰
 # Keepa 가격 배열 순서: 0 Amazon 직판, 1 신품(마켓플레이스), 3 판매 순위, 16 평점(x10), 17 리뷰 수, 18 바이박스(배송비 포함)
 REPORT_KEEPA_PRICE_ORDER = (18, 1, 0)
+# 검색어 클릭 분석 기간 (report_sqp.py): 이 기간의 주별 할인·품절을 가격 이력에서 찾아 스냅샷에 같이 저장합니다
+REPORT_KEEPA_EVENT_START = date(2026, 6, 1)
+REPORT_KEEPA_EVENT_WEEKS = 13
+REPORT_KEEPA_EVENT_DROP = 0.10
 
 
 def report_keepa_secret(name):
@@ -88,14 +93,45 @@ def report_keepa_fetch_and_save(pin):
 
     used = int(body.get("tokensConsumed") or report_keepa_estimate())
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    snapshot = {"fetched_at": now, "tokens_left": body.get("tokensLeft"),
-                "items": {p["asin"]: report_keepa_parse(p) for p in body.get("products") or []}}
+    brands = {p["asin"]: p["db_brand"] for p in report_keepa_products()}
+    items = {}
+    for p in body.get("products") or []:
+        items[p["asin"]] = report_keepa_parse(p)
+        items[p["asin"]]["events"] = report_keepa_events(p, brands.get(p["asin"], p["asin"]))
+    snapshot = {"fetched_at": now, "tokens_left": body.get("tokensLeft"), "items": items}
     REPORT_KEEPA_SNAPSHOT_FILE.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     usage = report_keepa_usage()
     usage["used"] += used
     usage["log"].append({"date": now, "tokens": used, "what": f"경쟁사 상품 {len(asins)}개 조회 (화면 버튼)"})
     REPORT_KEEPA_USAGE_FILE.write_text(json.dumps(usage, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return used
+
+
+def report_keepa_events(product, brand):
+    """가격 이력(신품 가격)에서 검색어 분석 기간의 주별 할인(주 최저가가 기간 중앙값보다 10% 이상 낮음)·품절 주를 찾습니다.
+    Keepa 시간은 2011-01-01부터 지난 분 단위입니다. 쿠폰은 가격 이력에 없어서 할인으로만 잡힙니다."""
+    history = (product.get("csv") or [])[1:2]
+    if not history or not history[0]:
+        return []
+    points = [(datetime(2011, 1, 1) + timedelta(minutes=t), v) for t, v in zip(history[0][::2], history[0][1::2])]
+    weeks = [REPORT_KEEPA_EVENT_START + timedelta(weeks=i) for i in range(REPORT_KEEPA_EVENT_WEEKS)]
+    by_week = {}
+    for w in weeks:
+        before = [v for t, v in points if t.date() < w]
+        inside = [v for t, v in points if w <= t.date() < w + timedelta(days=7)]
+        by_week[w] = inside + before[-1:]          # 그 주에 바뀐 값 + 그 주 시작 때 값
+    prices = [v for vals in by_week.values() for v in vals if v > 0]
+    if not prices:
+        return []
+    base = median(prices)
+    out = []
+    for w, vals in by_week.items():
+        if any(v < 0 for v in vals):
+            out.append({"week": w.isoformat(), "brand": brand, "kind": "품절", "detail": "Amazon.de 오퍼 없음 (Keepa)"})
+        elif vals and min(vals) <= base * (1 - REPORT_KEEPA_EVENT_DROP):
+            out.append({"week": w.isoformat(), "brand": brand, "kind": "할인",
+                        "detail": f"€{min(vals) / 100:.2f} (기간 중앙값 €{base / 100:.2f}, Keepa)"})
+    return out
 
 
 def report_keepa_parse(product):

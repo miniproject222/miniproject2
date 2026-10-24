@@ -5,6 +5,7 @@
 | 파일 | 내용 |
 |---|---|
 | `hypothesis_page.py` | 화면 + 기능 (`hypothesis_render()` 함수 하나) |
+| `hypothesis_scenario.py` | 검색어 클릭 문제(루트 `문제 시나리오.md` 2단계) 가설 · KPI · 최종 판단. `report["sqp"]`가 있을 때만 `hypothesis_render()` 맨 아래에 표시 (`hypothesis_scenario_section()`), '이 가설 문장을 위 칸에 넣기' 버튼으로 가설 칸을 채움 |
 | `hypothesis_style.css` | 디자인 (class는 `hypothesis-`로 시작) |
 | `hypothesis_test.py` | 자체 테스트 (258개). `python modules/hypothesis/hypothesis_test.py`로 실행 |
 | `images/` | hypothesis에서만 쓰는 이미지 |
