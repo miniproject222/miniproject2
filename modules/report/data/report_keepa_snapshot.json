@@ -1,0 +1,12 @@
+{
+  "fetched_at": "2026-10-24 (개발 테스트 조회)",
+  "note": "개발 중 테스트 조회에서 화면에 나온 값을 기록한 것. Novilla·RIBECO의 90일 평균가는 실제 값, Traumnacht·Paradies·potow는 반올림된 변화율만 기록(90일 평균가 없음).",
+  "tokens_left": null,
+  "items": {
+    "B0DQ8BDT9Z": {"title": "Novilla Cooling Matratzenauflage 160x200cm", "price": 25.66, "avg90": 29.41, "change": -0.1275, "rating": 3.6, "reviews": 310, "rank": 412593, "in_stock": true},
+    "B07121YZM5": {"title": "RIBECO GERMANY Ganzjahr-Matratzenauflage 90x200cm, 2-in-1", "price": 39.94, "avg90": 53.82, "change": -0.2579, "rating": 4.1, "reviews": 173, "rank": 323890, "in_stock": true},
+    "B0DK5548KL": {"title": "Traumnacht Cool Komfort Topper Sommer und Winter 90x200 cm", "price": 56.90, "avg90": null, "change": 0.05, "rating": 4.1, "reviews": 28, "rank": 554696, "in_stock": true},
+    "B0D7HQFXCY": {"title": "PARADIES kühlende Matratzenauflage 90x200 cm Cool Dream Pad", "price": 149.00, "avg90": null, "change": 0.02, "rating": 4.1, "reviews": 5, "rank": 1082154, "in_stock": true},
+    "B0C6KTY7BX": {"title": "potow Matratzenauflage mit Wasserkühlung", "price": 102.20, "avg90": null, "change": 0.01, "rating": 1.0, "reviews": 1, "rank": 1207003, "in_stock": true}
+  }
+}

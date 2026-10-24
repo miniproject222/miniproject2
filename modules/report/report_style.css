@@ -7,4 +7,71 @@
 
 .report-desc {
   color: var(--color-sub);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* 한 줄 KPI 카드: 기본 KPI 카드의 약 1/3 높이 */
+.report-kpi {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.report-kpi-label {
+  font-size: 13px;
+  color: var(--color-sub);
+  margin-right: auto;
+}
+
+.report-kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+/* 내부 / 외부 요인 한 줄 */
+.report-factor {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.report-factor:last-child {
+  border-bottom: none;
+}
+
+/* 심각도 배지: 색만으로 구분하지 않도록 ●●● 점 개수도 함께 표시 */
+.report-level {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--color-primary);
+}
+
+.report-level-high {
+  background: var(--color-primary);
+  color: var(--color-card);
+}
+
+.report-level-mid {
+  color: var(--color-primary);
+}
+
+.report-level-low {
+  color: var(--color-sub);
+  border-color: var(--color-border);
+}
+
+.report-tag {
+  margin-right: 6px;
+  font-size: 12px;
+  color: var(--color-sub);
 }
