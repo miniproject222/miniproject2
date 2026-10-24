@@ -40,7 +40,7 @@
 | 🏠 | 홈 | 날씨, 달력, 전날 매출과 이슈 알림 | - | `home` |
 | ① | 문제 분석 | 결과 데이터 요약, 문제 분석, 리포트 다운로드 | 문제 요인의 내부/외부 분석 | `report` |
 | ② | 가설 세우기 | 문제 해결 가설 제안 (현지 특성 반영) | 경쟁사 부정 리뷰를 우리 홍보 포인트로 활용 | `hypothesis` |
-| ③ | 광고 소재·솔루션 | 하위 탭 4개: 가설에서 변수 도출 → A/B 소재 준비 → 결과·판정 → 솔루션 제안 | 광고 소재 레퍼런스 (따라 하기 / 피하기), 경쟁사 부정 리뷰 활용 | `media` |
+| ③ | 광고 소재·솔루션 | 하위 탭 4개: 가설에서 변수 도출 → A/B 소재 준비 → 프롬프트 만들기 → 매체 제작·외주 준비 (외주용 레퍼런스 파일까지) | 광고 소재 레퍼런스 (따라 하기 / 피하기), 경쟁사 부정 리뷰 활용 | `media` |
 | ④ | 광고 타이밍 | 날씨, 상황에 따른 광고(메타, 아마존) 노출 빈도와 예산 추천 | 폭염 + 경쟁사 품절 → 광고 빈도 증가 | `weather` |
 
 - 화면 구성: 화면 맨 왼쪽 **세로 아이콘 줄**에 홈, ①~④ 탭이 작업 순서대로 있고, 누르면 해당 화면으로 바뀝니다. (탭 이름과 순서는 `common/common_layout.py`의 `LAYOUT_TABS`, 모양은 `common/common_style.css`)
@@ -99,15 +99,15 @@ miniproject2/
     │   ├── images/
     │   └── data/
     │
-    ├── media/                      # 3. 매체 제작 + 솔루션 제안 (3단계로 나눠 개발)
+    ├── media/                      # 3. 매체 제작 (3단계로 나눠 개발)
     │   ├── media.md
     │   ├── media_page.py           # 하위 탭 4개를 만들고 단계별 화면 함수를 부름
     │   ├── media_handoff.py        # 단계 사이 데이터 주고받기
-    │   ├── media_variable.py       # 1단계: 가설에서 변수 도출
-    │   ├── media_ab.py             # 1단계: A/B 소재 준비
+    │   ├── media_variable.py       # 1단계: 단일 변수 추출
+    │   ├── media_ab.py             # 1단계: A/B 소재 선정
     │   ├── media_style.css
-    │   ├── media_stage2/           # 2단계: 결과·판정 (media_stage2.md, CLAUDE.md, media_stage2_prompt.md 포함)
-    │   ├── media_stage3/           # 3단계: 솔루션 제안 (media_stage3.md, CLAUDE.md, media_stage3_prompt.md 포함)
+    │   ├── media_stage2/           # 2단계: 프롬프트 만들기 (media_stage2.md, CLAUDE.md, media_stage2_prompt.md 포함)
+    │   ├── media_stage3/           # 3단계: 다듬기·매체 제작·외주 준비 (media_stage3.md, CLAUDE.md, media_stage3_prompt.md 포함)
     │   ├── images/
     │   └── data/
     │
@@ -279,7 +279,7 @@ API_KEY = st.secrets["AI_API_KEY"]          # O
 - [ ] 홈 (`home`)
 - [ ] 1. 분석 리포트 (`report`)
 - [ ] 2. 가설 수립 (`hypothesis`)
-- [ ] 3. 매체 제작 + 솔루션 제안 (`media`)
+- [ ] 3. 매체 제작 (`media`)
 - [ ] 4. 날씨 광고 타이밍 (`weather`)
 - [ ] 전체 통합 테스트 → `main` 반영
 - [ ] 최종 발표
@@ -298,3 +298,5 @@ API_KEY = st.secrets["AI_API_KEY"]          # O
 | 2026-10-23 | **Streamlit + Supabase + Streamlit Community Cloud 구조로 전환**: HTML/JS/FastAPI 삭제, 모듈별 `모듈코드_page.py`로 통합, `.env` → `.streamlit/secrets.toml`, 팀 규칙은 RULES.md로 정리 | 000 |
 | 2026-10-23 | `solution` 모듈 삭제 → `media` 모듈로 합침 (`media_solution.py`), 탭 5개(홈, ①~④)로 정리 | 000 |
 | 2026-10-24 | `media` 3단계 분리 반영: `media_solution.py` 삭제, `media_handoff.py`·`media_variable.py`·`media_ab.py`·`media_stage2/`·`media_stage3/` 추가, ③ 탭 설명 수정 | 000 |
+| 2026-10-24 | `media` 흐름 변경: 2단계 프롬프트 만들기, 3단계 다듬기·매체 제작·외주 준비 (판정·솔루션 제안은 흐름에서 뺌), `.gitignore`에 `.claude/settings.local.json` 추가 | 000 |
+| 2026-10-24 | `media` 단계 사이 값을 단계 폴더의 JSON 파일로 저장 (푸시·풀로 다른 컴퓨터에서도 이어짐) | 000 |

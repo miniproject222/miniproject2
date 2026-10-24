@@ -1,7 +1,7 @@
 # 3. 매체 제작 > 메인 이미지 A/B (문제 시나리오.md '가설과 소재 연결')
 # 1번 리포트의 검색어 클릭 분석(store "report"의 sqp)과 2번 가설(store "hypothesis")을 읽어
 # 메인 이미지 A/B 안, 촬영 브리프, Manage Your Experiments 안내를 보여 줍니다. 3번 탭의 하위 탭 'A/B 소재 준비'(1단계)에서 부릅니다.
-# 결과·판정은 2단계 폴더(media_stage2/)로 옮겼습니다.
+# 이전 결과·판정 코드는 media_stage2/media_stage2_judge.py에 보관합니다 (지금 흐름에서는 안 씀).
 import streamlit as st
 
 from common.common_store import store_get
