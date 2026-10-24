@@ -46,7 +46,9 @@ modules/report/
 
 모듈 코드는 파일명, 함수명, 위젯 key, class, Supabase 표 이름 앞에 붙이는 이름입니다. **이름이 겹치지 않게 해 주는 가장 중요한 규칙**입니다.
 
-> 솔루션 제안은 별도 모듈(`solution`)이 아니라 `media` 모듈 안에서 작업합니다. 파일은 `modules/media/media_solution.py`, 이름은 모두 `media`로 시작합니다. (예: `key="media-solution-..."`, 표 `media_solution`)
+> 솔루션 제안은 별도 모듈(`solution`)이 아니라 `media` 모듈 안에서 작업합니다.
+> `media`는 3단계로 나눠 개발합니다. 1단계(가설에서 변수 도출 ~ A/B 소재 준비)는 `modules/media/` 바로 아래 파일, 2단계(결과·판정)는 `modules/media/media_stage2/`, 3단계(솔루션 제안)는 `modules/media/media_stage3/`에서 작업합니다.
+> 이름은 모두 `media`로 시작하고 단계별 접두어를 붙입니다. 2단계는 함수 `media_s2_`, key·class `media-s2-`, 3단계는 함수 `media_s3_`, key·class `media-s3-`입니다. (진입 함수 `media_stage2_render()`, `media_stage3_render()`는 이름을 바꾸지 않음, Supabase 표는 `media_` 그대로)
 
 ---
 
@@ -345,7 +347,7 @@ main                        ← 최종 완성본 = 배포 (합쳐지면 Streamli
       ├── feature/report-download
       ├── feature/hypothesis-review
       ├── feature/media-prompt
-      ├── feature/media-solution-list
+      ├── feature/media-s3-solution-list
       └── feature/weather-ad-frequency
 ```
 
@@ -522,3 +524,4 @@ indent_size = 4
 | 2026-10-23 | 모듈 설명 파일 이름 변경 (`README.md` → `모듈코드.md`) | 000 |
 | 2026-10-23 | **Streamlit + Supabase 구조로 전환**: `모듈코드_page.py` / `모듈코드_render()` 규칙, 위젯 key 규칙, `store_get/store_set`, `common_db` 사용 규칙, `.env` → `.streamlit/secrets.toml` + Streamlit Cloud Secrets, main 자동 배포 반영 | 000 |
 | 2026-10-23 | `solution` 모듈을 `media`로 합침: 모듈 코드 표, store 키 표, secrets 칸, 브랜치 예시, 탭 개수(6 → 5) 수정 | 000 |
+| 2026-10-24 | `media` 3단계 분리 반영: 단계별 작업 폴더(`media_stage2/`, `media_stage3/`)와 이름 접두어(`media_s2_`, `media_s3_`) 안내, 브랜치 예시 수정 | 000 |
