@@ -1,8 +1,8 @@
-# 3. 매체 제작 + 솔루션 제안
+# 3. 매체 제작 (단일 변수 → A/B 소재 → 프롬프트 → 매체·외주 준비)
 # 3단계로 나눠 동시에 개발합니다. 이 파일은 1단계 담당자(공용 파일)만 고칩니다.
-#   1단계 가설에서 변수 도출 ~ A/B 소재 준비: media_variable.py, media_ab.py
-#   2단계 결과·판정: media_stage2/ (media_stage2_render())
-#   3단계 솔루션 제안: media_stage3/ (media_stage3_render())
+#   1단계 단일 변수 추출 ~ A/B 소재 선정: media_variable.py, media_ab.py
+#   2단계 프롬프트 만들기: media_stage2/ (media_stage2_render())
+#   3단계 다듬기·매체 제작·외주 준비: media_stage3/ (media_stage3_render())
 #   단계 사이 데이터: media_handoff.py
 from pathlib import Path
 
@@ -62,7 +62,7 @@ def media_render():
     media_load_stage_css()
     # key="media-root": media_style.css가 이 탭 안의 간격만 줄이도록 범위를 정하는 class (.st-key-media-root)
     with st.container(key="media-root"):
-        ui.page_header("3. 매체 제작", "가설에서 변수 도출 → A/B 소재 → 결과 → 솔루션, 단계별로 넘어가요")
+        ui.page_header("3. 매체 제작", "가설에서 변수 도출 → A/B 소재 → 프롬프트 → 매체·외주 준비, 단계별로 넘어가요")
         tabs = st.tabs([label for label, _ in MEDIA_STEPS], key="media-step", on_change="rerun")
         for i, (tab, (_, render)) in enumerate(zip(tabs, MEDIA_STEPS)):
             if tab.open:   # 선택된 단계만 그립니다
