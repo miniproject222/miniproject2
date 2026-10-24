@@ -1,6 +1,6 @@
 # 3. 매체 제작 > 메인 이미지 A/B (문제 시나리오.md '가설과 소재 연결')
 # 1번 리포트의 검색어 클릭 분석(store "report"의 sqp)과 2번 가설(store "hypothesis")을 읽어
-# 메인 이미지 A/B 안, 촬영 브리프, Manage Your Experiments 안내, 판정 규칙을 보여 줍니다. media_render()에서 부릅니다.
+# 메인 이미지 A/B 안, 촬영 브리프, Manage Your Experiments 안내, 판정 규칙을 보여 줍니다. 3번 탭의 하위 탭 ③(A/B 소재 준비)·④(결과·판정)에서 부릅니다.
 import json
 import math
 from pathlib import Path
@@ -61,63 +61,68 @@ def media_ab_brief(sqp, hypothesis_text):
     ])
 
 
-def media_ab_section():
-    """'메인 이미지 A/B' 영역. 반드시 media_render() 안에서 부릅니다."""
+def media_ab_sqp():
+    """1번 리포트의 검색어 클릭 분석(sqp). 없으면 None."""
     report = store_get("report")
     sqp = report.get("sqp") if isinstance(report, dict) else None
-    if not isinstance(sqp, dict) or not sqp.get("query"):
+    return sqp if isinstance(sqp, dict) and sqp.get("query") else None
+
+
+def media_ab_plan_step():
+    """하위 탭 ③ A/B 소재 준비: A/B 안, 메인 이미지 규칙, 촬영 브리프, 테스트 도구. 반드시 media_render() 안에서 부릅니다.
+    가설은 하위 탭 ①에서 이미 보여 주므로 여기서는 다시 보여 주지 않습니다."""
+    sqp = media_ab_sqp()
+    if not sqp:
+        st.caption("1. 분석 리포트 탭의 검색어 클릭 분석이 있어야 A/B 안을 만들 수 있어요.")
         return
     saved = store_get("hypothesis")
     saved_text = str(saved.get("text") or "").strip() if isinstance(saved, dict) else ""
     listing = sqp.get("listing") or {}
 
-    ui.page_header("메인 이미지 A/B", f"② 가설 → 메인 이미지 2안 → Manage Your Experiments ('{sqp['query']}' 검색)")
-    with st.container(border=True, key="media-ab-card"):
-        if saved_text:
-            st.markdown(f"**② 저장된 가설** · {saved_text}")
-        else:
-            st.caption("② 가설 탭에서 가설을 저장하면 여기에 표시됩니다. 지금은 1번 리포트의 문제 1 수치로 안을 만들었습니다.")
-        st.markdown(f'<div class="media-desc">문제: 노출 점유율 {sqp.get("imp_share")}% · 클릭 점유율 {sqp.get("click_share")}% · '
-                    f'배수 {sqp.get("ratio")}배 → 목표 {sqp.get("kpi_goal", 0.8)}배 이상 ({sqp.get("source", "")})</div>',
-                    unsafe_allow_html=True)
+    st.markdown(f'<div class="media-desc">\'{sqp["query"]}\' 검색 · 노출 점유율 {sqp.get("imp_share")}% · '
+                f'클릭 점유율 {sqp.get("click_share")}% · 배수 {sqp.get("ratio")}배 → 목표 {sqp.get("kpi_goal", 0.8)}배 이상 '
+                f'({sqp.get("source", "")})</div>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        with st.container(border=True):
+            st.markdown("**A · 현재 (대조군)**")
+            st.markdown(f"{listing.get('main_image', '')}  \n"
+                        f'<span class="media-desc">{listing.get("main_image_issue", "")}</span>', unsafe_allow_html=True)
+    with c2:
+        with st.container(border=True):
+            st.markdown("**B · 제안 (실험군)**")
+            st.markdown("펼친 패드, 모서리를 살짝 들어 두께와 냉감 원단 질감이 보이는 각도  \n"
+                        '<span class="media-desc">저가 제품과의 품질 차이(두께·원단)가 검색 결과에서 바로 보이게</span>',
+                        unsafe_allow_html=True)
+    st.markdown(f'<div class="media-desc">고정 요소: 흰 배경 실제 사진, 제목, 가격 €{listing.get("price", 0):.2f}, 쿠폰 없음 · '
+                '대안(제목 앞에 OEKO-TEX·두께)은 이 테스트가 끝난 뒤 따로 진행</div>', unsafe_allow_html=True)
 
-        c1, c2 = st.columns(2)
-        with c1:
-            with st.container(border=True):
-                st.markdown("**A · 현재 (대조군)**")
-                st.markdown(f"{listing.get('main_image', '')}  \n"
-                            f'<span class="media-desc">{listing.get("main_image_issue", "")}</span>', unsafe_allow_html=True)
-        with c2:
-            with st.container(border=True):
-                st.markdown("**B · 제안 (실험군)**")
-                st.markdown("펼친 패드, 모서리를 살짝 들어 두께와 냉감 원단 질감이 보이는 각도  \n"
-                            '<span class="media-desc">저가 제품과의 품질 차이(두께·원단)가 검색 결과에서 바로 보이게</span>',
-                            unsafe_allow_html=True)
-        st.markdown(f'<div class="media-desc">고정 요소: 흰 배경 실제 사진, 제목, 가격 €{listing.get("price", 0):.2f}, 쿠폰 없음 · '
-                    '대안(제목 앞에 OEKO-TEX·두께)은 이 테스트가 끝난 뒤 따로 진행</div>', unsafe_allow_html=True)
-
+    c1, c2 = st.columns(2, gap="medium")
+    with c1:
         st.markdown("**메인 이미지 규칙 (아마존)**")
         st.markdown("\n".join(f"- {r}" for r in MEDIA_AB_RULES))
-        brief = media_ab_brief(sqp, saved_text or "검색 결과 첫인상에서 두께·원단을 보여 주면 클릭 점유율 ÷ 노출 점유율이 오른다")
-        with st.expander("📷 촬영 브리프 (외주용)", expanded=False):
-            st.code(brief, language=None)
-            st.download_button("브리프 다운로드 (.txt)", brief, file_name="media_ab_brief.txt", key="media-btn-ab-brief")
-        with st.expander("🤖 AI 각도 레퍼런스 프롬프트 (레퍼런스·보정용, 메인 이미지로 쓰지 않음)", expanded=False):
-            st.code("Product photo reference, white seamless background, a cooling mattress pad 90x200 cm laid flat, "
-                    "camera 45 degrees above, one corner gently lifted to show the edge thickness and the knitted "
-                    "cooling fabric texture, soft even studio light, no text, no props", language=None)
-
+    with c2:
         st.markdown("**테스트 도구: Manage Your Experiments**")
         st.markdown("- 아마존 공식 A/B 도구. 메인 이미지, 제목, 불릿, 상세 설명, A+ 콘텐츠를 테스트할 수 있음\n"
                     "- 브랜드 등록과 충분한 트래픽이 필요하고, 상품당 한 번에 하나의 테스트만 가능\n"
                     "- 보통 4~10주 → 실제로는 성수기(5월) 전에 시작. 시연에서는 결과도 가상 데이터로 표시")
 
-    media_ab_show_result()
+    brief = media_ab_brief(sqp, saved_text or "검색 결과 첫인상에서 두께·원단을 보여 주면 클릭 점유율 ÷ 노출 점유율이 오른다")
+    c1, c2 = st.columns(2, gap="medium")
+    with c1:
+        with st.expander("📷 촬영 브리프 (외주용)", expanded=False):
+            st.code(brief, language=None)
+            st.download_button("브리프 다운로드 (.txt)", brief, file_name="media_ab_brief.txt", key="media-btn-ab-brief")
+    with c2:
+        with st.expander("🤖 AI 각도 레퍼런스 프롬프트 (메인 이미지로 쓰지 않음)", expanded=False):
+            st.code("Product photo reference, white seamless background, a cooling mattress pad 90x200 cm laid flat, "
+                    "camera 45 degrees above, one corner gently lifted to show the edge thickness and the knitted "
+                    "cooling fabric texture, soft even studio light, no text, no props", language=None)
 
-
-def media_ab_show_result():
-    """가상 결과 + 판정 (승자는 CTR, CVR은 안전장치) + 적용 전후 CAC."""
+def media_ab_result_step():
+    """하위 탭 ④ 결과·판정: 가상 결과 + 판정 (승자는 CTR, CVR은 안전장치) + 적용 전후 CAC."""
     if not MEDIA_AB_FILE.exists():
+        st.caption("A/B 결과 파일이 아직 없어요. 테스트가 끝나면 data/ 폴더에 결과를 넣어 주세요.")
         return
     result = json.loads(MEDIA_AB_FILE.read_text(encoding="utf-8"))
     j = media_ab_judge(result)

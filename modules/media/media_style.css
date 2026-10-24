@@ -8,3 +8,33 @@
 .media-desc {
   color: var(--color-sub);
 }
+
+/* 3번 탭(광고 소재·솔루션 = 최상위 탭 줄의 4번째)을 연 동안만 페이지 위·양옆 여백을 줄임
+   (다른 탭에는 적용되지 않음. 탭 순서가 바뀌면 nth-of-type 숫자를 맞춰야 함)
+   weather_style.css의 "5번째 탭 선택" 규칙이 이 탭의 하위 탭 ⑤에도 걸리므로, 같은 속성을 !important로 다시 정함 */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(4)[aria-selected="true"]) {
+    max-width: 1400px !important;
+    padding: 1rem 2.5rem 3rem !important;
+  }
+}
+.st-key-media-root .ui-caption {
+  margin-bottom: 6px;
+}
+
+.st-key-media-root [data-baseweb="tab-panel"] {
+  padding-top: 0.75rem;
+}
+
+/* 하위 탭 맨 아래 이전/다음 단계 버튼 줄 */
+[class*="st-key-media-step-nav-"] {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* 공통 p 글자색(진한 보라)이 버튼 배경과 같아 글자가 안 보이는 문제 → 이 탭 버튼만 흰 글자 */
+.st-key-media-root .stButton button p,
+.st-key-media-root .stDownloadButton button p {
+  color: var(--color-card) !important;
+}
