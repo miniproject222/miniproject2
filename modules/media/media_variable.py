@@ -1,11 +1,15 @@
 # 3. 매체 제작 > 가설에서 변수 도출
 # 2번 탭이 저장한 가설(store "hypothesis")을 받아 If/Because/Then으로 나누고,
 # 바꿀 수 있는 후보 중 A/B로 돌릴 변수 하나를 고릅니다. 3번 탭의 하위 탭 ①(가설에서 변수 도출)에서 부릅니다.
+# 고른 A/B 설계(plan)는 1번 리포트 값으로 채워 화면에 보여 주고, 같은 값을 2단계로 넘깁니다 (media_handoff.py).
+# 바깥 값을 읽는 곳은 두 함수뿐입니다: 가설 media_variable_hypothesis(), 리포트 media_variable_report_sqp()
+# (나중에 DB 등으로 출처가 바뀌면 이 두 함수만 고칩니다)
 import time
 
 import streamlit as st
 
 from common.common_store import store_get
+from modules.media.media_handoff import MEDIA_HANDOFF_PLAN, media_handoff_set_plan
 
 MEDIA_VARIABLE_LOAD_SECONDS = 1.2   # '가설 불러오기' 연출 시간 (실제 불러오기는 즉시 끝남)
 
@@ -20,7 +24,7 @@ MEDIA_VARIABLE_HYPOTHESIS = (
 MEDIA_VARIABLE_BADGES = [":blue-badge[If]", ":violet-badge[Because]", ":green-badge[Then]"]
 # KPI 이름: 가설 문장(2번 탭과 같은 원문)은 그대로 두고, 화면에 보일 때만 쉬운 이름으로 바꿉니다
 MEDIA_VARIABLE_KPI_RAW = "클릭 점유율 ÷ 노출 점유율"
-MEDIA_VARIABLE_KPI = "노출 대비 클릭률"
+MEDIA_VARIABLE_KPI = MEDIA_HANDOFF_PLAN["kpi"]   # "노출 대비 클릭률"
 
 # 후보 변수: (후보, 판정, 이유) · 기준은 가설의 If와 연결, 아마존 메인 이미지 규칙, Manage Your Experiments로 테스트 가능
 MEDIA_VARIABLE_CANDIDATES = [
@@ -76,36 +80,58 @@ def media_variable_callout(text: str) -> None:
 
 
 
-def media_variable_listing() -> tuple[str, str]:
-    """1번 리포트의 우리 상품 정보에서 (현재 메인 이미지 설명, 가격 문구). 없으면 기본 문구."""
+def media_variable_report_sqp() -> dict:
+    """1번 리포트의 검색어 클릭 분석(store "report"의 sqp). 없으면 빈 dict."""
     report = store_get("report")
     sqp = report.get("sqp") if isinstance(report, dict) else None
-    listing = (sqp.get("listing") or {}) if isinstance(sqp, dict) else {}
-    price = f"€{listing['price']:.2f}" if isinstance(listing.get("price"), (int, float)) else "현재 가격"
-    return listing.get("main_image") or "현재 메인 이미지", price
+    return sqp if isinstance(sqp, dict) else {}
 
 
-def media_variable_hypothesis_step():
-    """2번 가설 탭에서 가져온 가설 콜아웃 (media_variable_step()의 윗부분)."""
-    text, status = media_variable_hypothesis()
+def media_variable_plan() -> tuple[dict, str, list[str]]:
+    """(A/B 설계 plan, 가격 문구, 기본값을 쓴 항목 이름 목록).
+    plan은 media_handoff.py의 기본값(MEDIA_HANDOFF_PLAN)에서 시작해, 1번 리포트에 값이 있으면 덮어씁니다."""
+    sqp = media_variable_report_sqp()
+    listing = sqp.get("listing") if isinstance(sqp.get("listing"), dict) else {}
+    plan, defaults = dict(MEDIA_HANDOFF_PLAN), []
+    # (plan 키, 리포트 값, 맞는 자료형, 화면에 보일 이름)
+    for key, value, kind, label in [
+        ("query", sqp.get("query"), str, "검색어"),
+        ("a", listing.get("main_image"), str, "A · 대조군"),
+        ("kpi_now", sqp.get("ratio"), (int, float), "지금 KPI"),
+        ("kpi_goal", sqp.get("kpi_goal"), (int, float), "목표 KPI"),
+    ]:
+        if isinstance(value, kind) and value != "":
+            plan[key] = value
+        else:
+            defaults.append(label)
+    if isinstance(listing.get("price"), (int, float)):
+        price = f"€{listing['price']:.2f}"
+    else:
+        price = "현재 가격"
+        defaults.append("가격")
+    return plan, price, defaults
+
+
+def media_variable_hypothesis_step(plan: dict, text: str, status: str):
+    """2번 가설 탭에서 가져온 가설 콜아웃 + 핵심 요약 카드 (media_variable_step()의 윗부분)."""
     # 넓은 화면: 왼쪽(하위 탭 바 아래 빈자리)에 핵심 요약, 오른쪽(탭 바와 같은 줄)에 가설 콜아웃 (media_style.css)
     with st.container(horizontal=True, key="media-hypo-top"):
         with st.container(key="media-hypo-summary"):
-            st.markdown(":violet-badge[독립 변수] 메인 이미지 촬영 구도 (접힌 → 펼친 패드)  \n"
-                        f":green-badge[KPI] {MEDIA_VARIABLE_KPI} 0.63배 → **0.8배 이상**")
+            st.markdown(f":violet-badge[독립 변수] {plan['variable']} (접힌 → 펼친 패드)  \n"
+                        f":green-badge[KPI] {plan['kpi']} {plan['kpi_now']:g}배 → **{plan['kpi_goal']:g}배 이상**")
         with st.container(key="media-hypo-callout"):
             media_variable_callout(text)
     # status == "none"(2번 탭 저장 전)이면 기준 가설을 그대로 보여 줍니다. '가설 불러오기' 연출과 맞도록 따로 안내하지 않습니다.
     if status == "other":
         st.warning("2번 가설 탭에 저장된 가설이 기준 가설과 다릅니다. 아래 후보·선정 표는 기준 가설 기준이라, "
-                   "2번 탭에서 '이 가설 문장을 위 칸에 넣기'로 기준 가설을 저장하거나 표를 새 가설에 맞게 바꿔야 합니다.")
+                   "2번 탭에서 '이 가설 문장을 위 칸에 넣기'로 기준 가설을 저장하거나 표를 새 가설에 맞게 바꿔야 합니다. "
+                   "그 전까지는 2단계로 넘기는 A/B 설계를 새로 저장하지 않습니다.")
         with st.expander("기준 가설 보기", expanded=False):
             media_variable_callout(MEDIA_VARIABLE_HYPOTHESIS)
 
 
-def media_variable_derive_step():
-    """후보 변수 걸러내기 → 단일 변수 선정 (media_variable_step()의 아랫부분)."""
-    current, price = media_variable_listing()
+def media_variable_derive_step(plan: dict, price: str, defaults: list[str]):
+    """후보 변수 걸러내기 → 단일 변수 선정 (media_variable_step()의 아랫부분). 선정 표의 값은 plan에서 가져옵니다."""
     c1, c2 = st.columns([1, 1], gap="medium")
     with c1:
         st.markdown("**후보 변수 걸러내기**")
@@ -115,14 +141,16 @@ def media_variable_derive_step():
     with c2:
         st.markdown("**선정한 단일 변수**")
         st.markdown("| 구분 | 내용 |\n| --- | --- |\n"
-                    "| **독립 변수 (바꾸는 것 1개)** | 메인 이미지의 촬영 구도 |\n"
-                    f"| **A · 대조군** | {current} (지금 그대로) |\n"
-                    "| **B · 실험군** | 같은 패드를 펼쳐 45도 위에서, 한쪽 모서리를 살짝 들어 두께와 냉감 원단 결이 보이게 |\n"
+                    f"| **독립 변수 (바꾸는 것 1개)** | {plan['variable']} |\n"
+                    f"| **A · 대조군** | {plan['a']} (지금 그대로) |\n"
+                    f"| **B · 실험군** | {plan['b']} |\n"
                     f"| **통제 변수 (고정)** | 같은 제품·색상, 흰 배경, 같은 조명과 보정, 제품 85% 이상 · 제목, 가격 {price}, 쿠폰 없음, "
                     "불릿, A+ 콘텐츠, 서브 이미지, 광고 입찰 |\n"
-                    f"| **종속 변수 (메인 KPI)** | {MEDIA_VARIABLE_KPI} 0.63배 → 0.8배 이상 "
+                    f"| **종속 변수 (메인 KPI)** | {plan['kpi']} {plan['kpi_now']:g}배 → {plan['kpi_goal']:g}배 이상 "
                     f"(= {MEDIA_VARIABLE_KPI_RAW}, 시장 대비 CTR) |\n"
-                    "| **안전장치** | CVR(단위 세션 비율)이 A보다 0.5%p 넘게 떨어지면 B 실패 |")
+                    f"| **안전장치** | CVR(단위 세션 비율)이 A보다 {plan['cvr_tolerance']:g}%p 넘게 떨어지면 B 실패 |")
+        if defaults:   # 리포트 탭을 아직 안 열었거나 리포트 칸 이름이 바뀌었을 때 바로 알아차리도록
+            st.caption(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
     st.caption("두께와 원단 질감을 변수 두 개로 나누지 않는 이유: 가설이 말하는 원인은 '품질 차이가 안 보인다' 하나이고, "
                "모서리를 든 사진 한 장에 둘 다 담깁니다. Manage Your Experiments는 한 번에 두 안(A/B)만 비교하므로, "
                "둘을 따로 보려면 이 테스트가 끝난 뒤 B 안에서 다시 나눠 테스트합니다.")
@@ -156,9 +184,15 @@ def media_variable_step():
         return
 
     # key="media-hypo-box": media_style.css의 나타나는 애니메이션(.st-key-media-hypo-box)
+    text, status = media_variable_hypothesis()
+    plan, price, defaults = media_variable_plan()
+    # 2단계로 A/B 설계를 넘김 (modules/media/data/media_handoff_plan.json, 값이 그대로면 파일을 다시 쓰지 않음)
+    # 2번 탭 가설이 기준 가설과 다르면 선정 표가 그 가설에 맞지 않으므로 넘기지 않습니다
+    if status != "other":
+        media_handoff_set_plan(plan)
     with st.container(key="media-hypo-box"):
-        media_variable_hypothesis_step()
+        media_variable_hypothesis_step(plan, text, status)
         # key="media-hypo-divider": media_style.css가 구분선 위아래 기본 여백(2em)을 줄여 윗줄 바로 아래에 붙임
         with st.container(key="media-hypo-divider"):
             st.divider()
-        media_variable_derive_step()
+        media_variable_derive_step(plan, price, defaults)
