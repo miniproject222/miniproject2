@@ -1,0 +1,10 @@
+{
+  "note": "경쟁사 할인·품절 주 (2026년 6~8월). 지금은 Keepa 가격 이력을 아직 조회하지 않아 시나리오 가정 값입니다. Keepa 최신값 조회를 하면 스냅샷의 events(가격 10% 이상 하락 주, 품절 주)가 이 파일 대신 쓰입니다. 바뀌면 python -m modules.report.report_sqp_make 로 더미를 다시 만듭니다.",
+  "source": "가정",
+  "events": [
+    {"week": "2026-06-22", "brand": "저가 대표", "kind": "할인", "detail": "번개 할인 (폭염 주)"},
+    {"week": "2026-07-06", "brand": "Novilla", "kind": "할인", "detail": "10% 쿠폰 (7월 둘째 주)"},
+    {"week": "2026-07-13", "brand": "Novilla", "kind": "할인", "detail": "10% 쿠폰 이어짐"},
+    {"week": "2026-08-10", "brand": "RIBECO Germany", "kind": "품절", "detail": "Amazon.de 오퍼 없음"}
+  ]
+}

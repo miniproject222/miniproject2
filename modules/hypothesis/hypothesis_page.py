@@ -5,6 +5,7 @@ import streamlit as st
 
 import ui_theme as ui
 from common.common_store import store_get, store_set
+from modules.hypothesis.hypothesis_scenario import hypothesis_scenario_section
 
 HYPOTHESIS_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경로 만들 때 사용)
 
@@ -415,3 +416,6 @@ def hypothesis_render():
 
         if is_saved:
             st.caption("✅ 이 가설이 저장됐어요. 다음 탭(매체 제작 등)에서 이 가설을 사용해요.")
+
+    # 검색어 클릭 문제(문제 시나리오) 가설·KPI: report에 "sqp" 값이 있을 때만 표시 (hypothesis_scenario.py)
+    hypothesis_scenario_section(report)

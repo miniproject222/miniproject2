@@ -7,6 +7,8 @@
 |---|---|
 | `media_page.py` | 화면 + 기능 (`media_render()` 함수 하나) |
 | `media_solution.py` | 솔루션 제안 영역 (`media_solution_section()`, `media_render()` 안에서 부름) |
+| `media_ab.py` | 메인 이미지 A/B (루트 `문제 시나리오.md`): `report["sqp"]`·저장된 가설로 A(현재)/B(제안) 안, 메인 이미지 규칙, 촬영 브리프 다운로드, Manage Your Experiments 안내, 판정(CTR 승자 + CVR 안전장치), 적용 전후 CAC (`media_ab_section()`, `media_render()` 안에서 부름) |
+| `data/media_ab_result_dummy_202610.json` | A/B 결과 더미 (가상, 실제 테스트 결과가 나오면 교체) |
 | `media_style.css` | 디자인 (class는 `media-`로 시작) |
 | `images/` | media에서만 쓰는 이미지 |
 | `data/` | media에서만 쓰는 데이터 |

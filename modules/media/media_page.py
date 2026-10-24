@@ -4,6 +4,7 @@ from pathlib import Path
 import streamlit as st
 
 import ui_theme as ui
+from modules.media.media_ab import media_ab_section
 from modules.media.media_solution import media_solution_section
 
 MEDIA_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경로 만들 때 사용)
@@ -20,6 +21,9 @@ def media_render():
                 st.markdown(f"**프롬프트 {name}**")
                 st.text_area(f"프롬프트 {name}", key=f"media-prompt-{name}", label_visibility="collapsed")
                 st.markdown(f"**결과물 {name}** (생성 결과가 들어갈 자리)")
+
+    # 메인 이미지 A/B (media_ab.py): 1번 리포트의 검색어 클릭 분석이 있을 때만 표시
+    media_ab_section()
 
     # 매체 외 솔루션 제안 (media_solution.py)
     media_solution_section()
