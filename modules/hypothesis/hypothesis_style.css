@@ -10,28 +10,31 @@
 }
 
 /* ────────────────────────────────────────────────────────────
-   아래는 hypothesis_page.py가 key로 지정한 카드 안쪽에만 적용됩니다
-   (.st-key-hypothesis-card / -empty / -summary-card). 다른 탭에는 영향 없습니다.
+   아래는 hypothesis_page.py가 key로 지정한 카드 안쪽에만 적용됩니다.
+   가설 후보 카드는 "가설 1/2/3" 탭마다 key="hypothesis-card-0"/"-1"/"-2"처럼 번호가
+   붙으므로, 정확히 일치하는 클래스 선택자(.st-key-hypothesis-card-0 등) 대신
+   [class*="st-key-hypothesis-card-"]로 번호에 상관없이 전부 골라냅니다.
+   다른 탭에는 영향 없습니다.
    ──────────────────────────────────────────────────────────── */
 
 /* 버튼 글씨가 배경과 같은 보라색으로 깔려 안 보이던 문제 수정.
    (ui_theme.py의 공통 CSS가 p/label 전체를 보라색으로 칠하는데, 버튼 라벨도
    내부적으로 <p>로 렌더링돼서 같이 보라색이 되어 버림 → 흰색으로 강제 지정) */
-.st-key-hypothesis-card .stButton button,
-.st-key-hypothesis-card .stButton button *,
+[class*="st-key-hypothesis-card-"] .stButton button,
+[class*="st-key-hypothesis-card-"] .stButton button *,
 .st-key-hypothesis-empty .stButton button,
 .st-key-hypothesis-empty .stButton button * {
   color: var(--color-card) !important;
 }
 
 /* 가설 문장 칸: 글자를 더 크고 읽기 편하게, 줄간격도 넉넉하게 */
-.st-key-hypothesis-card textarea {
+[class*="st-key-hypothesis-card-"] textarea {
   font-size: 16px !important;
   line-height: 1.7 !important;
 }
 
 /* 현지 특성 / 경쟁사 부정 리뷰 줄도 같이 조금 키워서 가독성을 맞춤 */
-.st-key-hypothesis-card [data-testid="stMarkdownContainer"] p {
+[class*="st-key-hypothesis-card-"] [data-testid="stMarkdownContainer"] p {
   font-size: 15px;
   line-height: 1.6;
 }
@@ -67,4 +70,103 @@
 
 .st-key-hypothesis-empty .stButton button {
   max-width: 320px;
+}
+
+/* ────────────────────────────────────────────────────────────
+   맨 위 2단 레이아웃: "분석 리포트 문제 요약" / "지금 선택된 가설"
+   ──────────────────────────────────────────────────────────── */
+
+/* 두 칸 다 st.columns 안에 있는데, 기본으로는 내용 길이만큼만 높이가 잡혀서 "지금 선택된
+   가설" 칸(문장이 들어가면 더 길어짐)이 "분석 리포트 문제 요약" 칸보다 커 보였습니다.
+   weather_style.css와 같은 방식으로, 카드를 감싸는 stLayoutWrapper를 늘어나게(flex)
+   만들고 카드 자신도 그 늘어난 높이를 꽉 채우게(height:100%) 합니다. */
+[data-testid="stLayoutWrapper"]:has(> .st-key-hypothesis-summary-card),
+[data-testid="stLayoutWrapper"]:has(> .st-key-hypothesis-selected-card) {
+  flex: 1 1 auto;
+}
+
+.st-key-hypothesis-summary-card,
+.st-key-hypothesis-selected-card {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* 카드 높이는 맞췄지만, 안의 박스는 글자 길이만큼만 커서 카드 아래쪽이 비어 보였습니다.
+   카드 안 세로 블록을 flex 세로 방향으로 만들고, 박스를 담은 마지막 블록(제목 다음에 오는
+   하나뿐인 블록)을 flex-grow시켜서 남는 높이를 박스가 끝까지 채우게 합니다. */
+.st-key-hypothesis-summary-card [data-testid="stVerticalBlock"],
+.st-key-hypothesis-selected-card [data-testid="stVerticalBlock"] {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.st-key-hypothesis-summary-card [data-testid="stVerticalBlock"] > div:last-child,
+.st-key-hypothesis-selected-card [data-testid="stVerticalBlock"] > div:last-child {
+  flex: 1 1 auto;
+  display: flex;
+}
+
+/* "분석 리포트 문제 요약" / "지금 선택된 가설" 둘 다 같은 강조 박스 스타일을 씁니다.
+   (전에는 요약 칸이 캡션 글자만 떠 있어서, 높이를 맞춘 뒤 아래쪽이 휑하게 비어 보였습니다.
+   같은 박스 모양으로 감싸면 내용이 적어도 카드 안에 자리 잡은 것처럼 보입니다.) */
+.hypothesis-callout-box {
+  flex: 1 1 auto;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+  border-left: 4px solid var(--color-primary);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 6px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+/* "아직 선택한 가설이 없어요" 안내는 실제 선택된 내용과 구분되게 톤을 낮춤 */
+.hypothesis-callout-empty {
+  background: color-mix(in srgb, var(--color-sub) 10%, transparent);
+  border-left-color: var(--color-sub);
+  color: var(--color-sub);
+}
+
+/* ────────────────────────────────────────────────────────────
+   가설 후보 탭 ("가설 1/2/3") 안의 근거 표/펼치기 가독성.
+   표가 기본은 테두리 없이 다닥다닥 붙어 보여서, 칸마다 여백과 옅은 테두리를 줌.
+   ──────────────────────────────────────────────────────────── */
+
+[class*="st-key-hypothesis-card-"] table {
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.6;
+  border-collapse: collapse;
+  margin: 6px 0 4px;
+}
+
+[class*="st-key-hypothesis-card-"] table th,
+[class*="st-key-hypothesis-card-"] table td {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+[class*="st-key-hypothesis-card-"] table th {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* "자세히 보기" 펼치기 제목을 카드 안에서도 눈에 띄게 살짝 키움 */
+[class*="st-key-hypothesis-card-"] [data-testid="stExpander"] summary p {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+/* 가설 후보 탭 안에서 펼치기들 사이 여백을 살짝 줘서 서로 안 붙어 보이게 */
+[class*="st-key-hypothesis-card-"] [data-testid="stExpander"] {
+  margin-top: 6px;
 }
