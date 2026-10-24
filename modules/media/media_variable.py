@@ -158,5 +158,7 @@ def media_variable_step():
     # key="media-hypo-box": media_style.css의 나타나는 애니메이션(.st-key-media-hypo-box)
     with st.container(key="media-hypo-box"):
         media_variable_hypothesis_step()
-        st.divider()
+        # key="media-hypo-divider": media_style.css가 구분선 위아래 기본 여백(2em)을 줄여 윗줄 바로 아래에 붙임
+        with st.container(key="media-hypo-divider"):
+            st.divider()
         media_variable_derive_step()
