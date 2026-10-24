@@ -27,16 +27,10 @@
   color: var(--color-card) !important;
 }
 
-/* 가설 문장 칸: 글자를 더 크고 읽기 편하게, 줄간격도 넉넉하게 */
-[class*="st-key-hypothesis-card-"] textarea {
-  font-size: 16px !important;
-  line-height: 1.7 !important;
-}
-
 /* 현지 특성 / 경쟁사 부정 리뷰 줄도 같이 조금 키워서 가독성을 맞춤 */
 [class*="st-key-hypothesis-card-"] [data-testid="stMarkdownContainer"] p {
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 14.5px;
+  line-height: 1.55;
 }
 
 /* 문제가 아직 없을 때(빈 상태) 카드: 가운데 정렬 + 여백을 넉넉히 줘서
@@ -73,49 +67,13 @@
 }
 
 /* ────────────────────────────────────────────────────────────
-   맨 위 2단 레이아웃: "분석 리포트 문제 요약" / "지금 선택된 가설"
+   맨 위 "지금 선택된 가설" 칸 (전체 너비 1개 — "분석 리포트 문제 요약" 칸은
+   가설 후보 탭마다 내부/외부 요인을 이미 보여주고 있어서 중복이라 뺐습니다)
    ──────────────────────────────────────────────────────────── */
 
-/* 두 칸 다 st.columns 안에 있는데, 기본으로는 내용 길이만큼만 높이가 잡혀서 "지금 선택된
-   가설" 칸(문장이 들어가면 더 길어짐)이 "분석 리포트 문제 요약" 칸보다 커 보였습니다.
-   weather_style.css와 같은 방식으로, 카드를 감싸는 stLayoutWrapper를 늘어나게(flex)
-   만들고 카드 자신도 그 늘어난 높이를 꽉 채우게(height:100%) 합니다. */
-[data-testid="stLayoutWrapper"]:has(> .st-key-hypothesis-summary-card),
-[data-testid="stLayoutWrapper"]:has(> .st-key-hypothesis-selected-card) {
-  flex: 1 1 auto;
-}
-
-.st-key-hypothesis-summary-card,
-.st-key-hypothesis-selected-card {
-  height: 100%;
-  box-sizing: border-box;
-}
-
-/* 카드 높이는 맞췄지만, 안의 박스는 글자 길이만큼만 커서 카드 아래쪽이 비어 보였습니다.
-   카드 안 세로 블록을 flex 세로 방향으로 만들고, 박스를 담은 마지막 블록(제목 다음에 오는
-   하나뿐인 블록)을 flex-grow시켜서 남는 높이를 박스가 끝까지 채우게 합니다. */
-.st-key-hypothesis-summary-card [data-testid="stVerticalBlock"],
-.st-key-hypothesis-selected-card [data-testid="stVerticalBlock"] {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.st-key-hypothesis-summary-card [data-testid="stVerticalBlock"] > div:last-child,
-.st-key-hypothesis-selected-card [data-testid="stVerticalBlock"] > div:last-child {
-  flex: 1 1 auto;
-  display: flex;
-}
-
-/* "분석 리포트 문제 요약" / "지금 선택된 가설" 둘 다 같은 강조 박스 스타일을 씁니다.
-   (전에는 요약 칸이 캡션 글자만 떠 있어서, 높이를 맞춘 뒤 아래쪽이 휑하게 비어 보였습니다.
-   같은 박스 모양으로 감싸면 내용이 적어도 카드 안에 자리 잡은 것처럼 보입니다.) */
 .hypothesis-callout-box {
-  flex: 1 1 auto;
   width: 100%;
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
   background: color-mix(in srgb, var(--color-primary) 7%, transparent);
   border-left: 4px solid var(--color-primary);
   border-radius: 10px;
@@ -134,7 +92,124 @@
 }
 
 /* ────────────────────────────────────────────────────────────
-   가설 후보 탭 ("가설 1/2/3") 안의 근거 표/펼치기 가독성.
+   가설 후보 탭 ("가설 1/2/3") 제어 바 — 기본 알약형 탭보다 더 또렷하게.
+   Streamlit 버전에 따라 탭의 실제 DOM 속성이 data-baseweb 대신 role=tab 등으로
+   달라질 수 있어서, 두 가지 선택자를 모두 걸고 !important로 ui_theme.py의 공용
+   .stTabs 규칙과 겹쳐도 반드시 이 스타일이 이기도록 고정합니다.
+   ──────────────────────────────────────────────────────────── */
+
+.st-key-hypothesis-candidate-tabs [data-baseweb="tab-list"],
+.st-key-hypothesis-candidate-tabs [role="tablist"] {
+  gap: 10px !important;
+  margin-bottom: 6px !important;
+}
+
+.st-key-hypothesis-candidate-tabs [data-baseweb="tab"],
+.st-key-hypothesis-candidate-tabs [role="tab"] {
+  background: var(--color-card) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 999px !important;
+  padding: 10px 26px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 10%, transparent) !important;
+}
+
+.st-key-hypothesis-candidate-tabs [data-baseweb="tab"][aria-selected="true"],
+.st-key-hypothesis-candidate-tabs [role="tab"][aria-selected="true"] {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
+}
+
+.st-key-hypothesis-candidate-tabs [aria-selected="true"] p,
+.st-key-hypothesis-candidate-tabs [aria-selected="true"] * {
+  color: #fff !important;
+}
+
+.st-key-hypothesis-candidate-tabs [data-baseweb="tab-highlight"],
+.st-key-hypothesis-candidate-tabs [data-baseweb="tab-border"] {
+  display: none !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   가설 후보 카드 안의 "내부/외부 요인" 한 줄 배지 (배지+제목을 한 줄로 압축)
+   ──────────────────────────────────────────────────────────── */
+
+.hypothesis-factor-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.hypothesis-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.hypothesis-badge-internal { background: var(--color-primary); }
+.hypothesis-badge-external { background: #F1642E; }
+
+/* ────────────────────────────────────────────────────────────
+   If · Because · Then 카드 (사용자가 참고로 준 이미지와 같은 형태).
+   가설을 표 대신 색 배지 3줄로 보여줘서 스크롤 없이 한눈에 들어오게 합니다.
+   ──────────────────────────────────────────────────────────── */
+
+.hypothesis-ibt-box {
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hypothesis-ibt-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hypothesis-ibt-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 999px;
+  color: #fff;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.hypothesis-ibt-if { background: var(--color-primary); }
+.hypothesis-ibt-because { background: #F1642E; }
+.hypothesis-ibt-then { background: #A3B565; }
+
+.hypothesis-ibt-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+/* ────────────────────────────────────────────────────────────
+   가설 후보 탭 안의 근거 표/펼치기 가독성 (고정 요소·테스트 방법·KPI 표 등
+   "실행 세부사항"/"KPI 표" 펼치기 안에서만 씀).
    표가 기본은 테두리 없이 다닥다닥 붙어 보여서, 칸마다 여백과 옅은 테두리를 줌.
    ──────────────────────────────────────────────────────────── */
 
@@ -152,6 +227,12 @@
   border: 1px solid var(--color-border);
   text-align: left;
   vertical-align: top;
+  word-break: break-word;
+}
+
+[class*="st-key-hypothesis-card-"] table td:first-child,
+[class*="st-key-hypothesis-card-"] table th:first-child {
+  width: 110px;
 }
 
 [class*="st-key-hypothesis-card-"] table th {
@@ -162,11 +243,11 @@
 
 /* "자세히 보기" 펼치기 제목을 카드 안에서도 눈에 띄게 살짝 키움 */
 [class*="st-key-hypothesis-card-"] [data-testid="stExpander"] summary p {
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 /* 가설 후보 탭 안에서 펼치기들 사이 여백을 살짝 줘서 서로 안 붙어 보이게 */
 [class*="st-key-hypothesis-card-"] [data-testid="stExpander"] {
-  margin-top: 6px;
+  margin-top: 4px;
 }
