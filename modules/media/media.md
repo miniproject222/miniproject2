@@ -17,9 +17,10 @@
 - 단계 사이 데이터: `media_handoff.py` (1→2 `media_handoff_set_plan()` / `media_handoff_plan()`, 2→3 `media_handoff_set_prompt()` / `media_handoff_prompt()`).
   - 값은 각 단계 폴더의 JSON 파일로 저장됩니다. **그 파일을 커밋·푸시하면, 다른 컴퓨터에서 풀 받은 사람에게 자동으로 이어집니다.**
     - 1단계: `modules/media/data/media_handoff_plan.json` (min이 올림)
-      - 하위 탭 ①에서 '가설 불러오기'를 마친 화면이 그려질 때 자동 저장됩니다 (`media_variable.py`, 값이 그대로면 다시 쓰지 않음).
+      - 하위 탭 ① 선정 표 아래 '이 변수로 확정' 버튼을 눌러야 저장됩니다 (`media_variable_confirm_step()`). 확정 전에는 2단계가 예시 값을 받고,
+        확정한 뒤 리포트 값 등이 바뀌면 '다시 확정 필요'와 '다시 확정' 버튼이 보입니다.
         `MEDIA_HANDOFF_PLAN` 기본값에 1번 리포트 값(`sqp.query`, `sqp.listing.main_image` → `a`, `sqp.ratio` → `kpi_now`, `sqp.kpi_goal`)을 덮어쓴 값이고,
-        2번 탭 가설이 기준 가설과 다르면 저장하지 않습니다.
+        2번 탭 가설이 기준 가설과 다르면 확정 버튼이 꺼집니다.
     - 2단계: `modules/media/media_stage2/data/media_stage2_prompt.json` (JY가 올림)
   - 단계마다 자기 폴더의 파일만 쓰므로 합칠 때 충돌이 나지 않습니다. 읽을 때마다 파일을 새로 읽어서, 풀 받은 뒤 새로고침하면 바로 반영됩니다. 앞 단계 값이 없으면 예시 값이 와서 각자 먼저 개발할 수 있습니다.
   - 2→3 모양(`MEDIA_HANDOFF_PROMPT_SAMPLE`): `variable` 단일 변수, `base` 기본 프롬프트(빈칸 `{slot}`), `slot_a`, `slot_b` 빈칸 문구, `fixed` 고정 요소 목록
@@ -32,7 +33,7 @@
 |---|---|
 | `media_page.py` | 화면 + 기능 (`media_render()` 함수 하나). `MEDIA_STEPS`로 하위 탭(`st.tabs(key="media-step", on_change="rerun")`)을 만들고 선택된 단계만 그림, 이전/다음 버튼은 `st.session_state["media-step"]`을 바꿔 단계 이동 |
 | `media_handoff.py` | 단계 사이 데이터 모양과 주고받는 함수 (1단계 A/B 설계, 2단계 프롬프트 재료 예시) |
-| `media_variable.py` | 하위 탭 ① 가설에서 변수 도출(`media_variable_step()`): '가설 불러오기' 버튼은 페이지 제목 줄 오른쪽 끝, 가설 콜아웃·빈 카드는 하위 탭 바와 같은 줄 오른쪽 자리 폭으로 표시, 탭 바 아래 왼쪽에는 핵심 요약 카드(독립 변수·KPI). KPI '클릭 점유율 ÷ 노출 점유율'은 화면에서만 '노출 대비 클릭률'로 보여 주고 가설 원문은 그대로 둠(2번 탭이 어느 쪽으로 저장해도 같은 가설로 봄)(넓은 화면만, 좁은 화면은 전체 폭). 버튼을 누르기 전에는 점선 빈 카드만 보이고, 누르면 스피너(1.2초)·토스트 뒤 아래 내용이 떠오르며 나타남 (버튼은 '다시 불러오기'로 바뀜). 위에 2번 가설 탭이 저장한 가설(`store_get("hypothesis")`)을 콜아웃에 If/Because/Then 배지로 표시 (없으면 기준 가설, 다르면 경고, `media_variable_hypothesis_step()`), 아래에 후보 변수를 가설 연결·아마존 메인 이미지 규칙·테스트 도구 기준으로 걸러 독립 변수 1개(메인 이미지 촬영 구도)와 통제·종속 변수를 정함 (`media_variable_derive_step()`). 요약 카드와 '선정한 단일 변수' 표는 A/B 설계(plan, `media_variable_plan()`)로 그리고 같은 값을 2단계로 넘김. 리포트 값이 없으면 기본값을 쓰고 표 아래에 어떤 항목이 기본값인지 표시. 바깥 값을 읽는 곳은 `media_variable_hypothesis()`(가설), `media_variable_report_sqp()`(리포트) 두 함수뿐 (출처가 DB 등으로 바뀌면 여기만 고침) |
+| `media_variable.py` | 하위 탭 ① 가설에서 변수 도출(`media_variable_step()`): '가설 불러오기' 버튼은 페이지 제목 줄 오른쪽 끝, 가설 콜아웃·빈 카드는 하위 탭 바와 같은 줄 오른쪽 자리 폭으로 표시, 탭 바 아래 왼쪽에는 핵심 요약 카드(독립 변수·KPI). KPI '클릭 점유율 ÷ 노출 점유율'은 화면에서만 '노출 대비 클릭률'로 보여 주고 가설 원문은 그대로 둠(2번 탭이 어느 쪽으로 저장해도 같은 가설로 봄)(넓은 화면만, 좁은 화면은 전체 폭). 버튼을 누르기 전에는 점선 빈 카드만 보이고, 누르면 스피너(1.2초)·토스트 뒤 아래 내용이 떠오르며 나타남 (버튼은 '다시 불러오기'로 바뀜). 위에 2번 가설 탭이 저장한 가설(`store_get("hypothesis")`)을 콜아웃에 If/Because/Then 배지로 표시 (없으면 기준 가설, 다르면 경고, `media_variable_hypothesis_step()`), 아래에 후보 변수를 가설 연결·아마존 메인 이미지 규칙·테스트 도구 기준으로 걸러 독립 변수 1개(메인 이미지 촬영 구도)와 통제·종속 변수를 정함 (`media_variable_derive_step()`). 후보 표는 가설·후보 목록이 바뀌어도 선정 1개 + 목록 앞쪽 제외 후보로 3줄만 보여 줌 (`MEDIA_VARIABLE_SHOW`, 목록 순서 = 우선순위). 요약 카드와 '선정한 단일 변수' 표는 A/B 설계(plan, `media_variable_plan()`)로 그리고, 사용자가 '이 변수로 확정'을 누르면 같은 값을 2단계로 넘김. 리포트 값이 없으면 기본값을 쓰고 표 아래에 어떤 항목이 기본값인지 표시. 바깥 값을 읽는 곳은 `media_variable_hypothesis()`(가설), `media_variable_report_sqp()`(리포트) 두 함수뿐 (출처가 DB 등으로 바뀌면 여기만 고침) |
 | `media_ab.py` | 메인 이미지 A/B (루트 `문제 시나리오.md`): 하위 탭 ② A/B 소재 준비(`media_ab_plan_step()`: 하위 탭 ①과 같은 plan(`media_variable_plan()`)으로 A(현재)/B(제안) 안, 메인 이미지 규칙, 촬영 브리프 다운로드, Manage Your Experiments 안내. plan에 없는 노출·클릭 점유율, 지금 이미지 문제점만 `media_variable_report_sqp()`로 읽고, 리포트 값이 없어도 기본값으로 그림). 결과·판정은 `media_stage2/media_stage2_judge.py`에 보관 (지금 흐름에서는 안 씀) |
 | `media_style.css` | 디자인 (class는 `media-`로 시작). 3번 탭이 열린 동안만 페이지 위·양옆 여백 축소, 이 탭 버튼 글자색, 하위 탭 알약형 스타일 |
 | `images/` | media에서만 쓰는 이미지 |

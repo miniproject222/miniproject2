@@ -1,7 +1,7 @@
 # 3. 매체 제작 > 가설에서 변수 도출
 # 2번 탭이 저장한 가설(store "hypothesis")을 받아 If/Because/Then으로 나누고,
 # 바꿀 수 있는 후보 중 A/B로 돌릴 변수 하나를 고릅니다. 3번 탭의 하위 탭 ①(가설에서 변수 도출)에서 부릅니다.
-# 고른 A/B 설계(plan)는 1번 리포트 값으로 채워 화면에 보여 주고, 같은 값을 2단계로 넘깁니다 (media_handoff.py).
+# 고른 A/B 설계(plan)는 1번 리포트 값으로 채워 화면에 보여 주고, 사용자가 확정하면 2단계로 넘깁니다 (media_handoff.py).
 # 바깥 값을 읽는 곳은 두 함수뿐입니다: 가설 media_variable_hypothesis(), 리포트 media_variable_report_sqp()
 # (나중에 DB 등으로 출처가 바뀌면 이 두 함수만 고칩니다)
 import time
@@ -9,7 +9,7 @@ import time
 import streamlit as st
 
 from common.common_store import store_get
-from modules.media.media_handoff import MEDIA_HANDOFF_PLAN, media_handoff_set_plan
+from modules.media.media_handoff import MEDIA_HANDOFF_PLAN, media_handoff_plan, media_handoff_set_plan
 
 MEDIA_VARIABLE_LOAD_SECONDS = 1.2   # '가설 불러오기' 연출 시간 (실제 불러오기는 즉시 끝남)
 
@@ -26,15 +26,19 @@ MEDIA_VARIABLE_BADGES = [":blue-badge[If]", ":violet-badge[Because]", ":green-ba
 MEDIA_VARIABLE_KPI_RAW = "클릭 점유율 ÷ 노출 점유율"
 MEDIA_VARIABLE_KPI = MEDIA_HANDOFF_PLAN["kpi"]   # "노출 대비 클릭률"
 
+MEDIA_VARIABLE_PICKED = "✅ 선정"   # 선정된 후보의 판정 값
 # 후보 변수: (후보, 판정, 이유) · 기준은 가설의 If와 연결, 아마존 메인 이미지 규칙, Manage Your Experiments로 테스트 가능
+# 순서 = 화면에 보일 우선순위. 화면에는 선정 1개 + 앞쪽 제외 후보만 MEDIA_VARIABLE_SHOW개까지 보여 줍니다
+# (제외 이유가 서로 다른 후보를 앞에 두어 걸러내는 기준이 3줄로도 보이게 함)
 MEDIA_VARIABLE_CANDIDATES = [
-    ("메인 이미지 촬영 구도 (접힌 → 펼친 패드, 45도, 모서리 들기)", "✅ 선정", "If 그대로 · 흰 배경 실제 사진 · 메인 이미지 테스트 가능"),
+    ("메인 이미지 촬영 구도 (접힌 → 펼친 패드, 45도, 모서리 들기)", MEDIA_VARIABLE_PICKED, "If 그대로 · 흰 배경 실제 사진 · 메인 이미지 테스트 가능"),
+    ("제목 앞에 OEKO-TEX·두께", "제외 → 다음 테스트", "가설의 If가 아님 (대안 가설)"),
     ("원단만 크게 찍은 클로즈업", "제외 → 서브 이미지", "두께가 빠지고 제품 85% 이상 기준에 걸림"),
     ("두께 숫자·화살표 표기", "제외 → 서브 이미지", "메인 이미지에는 텍스트 금지"),
     ("AI로 만든 침실 연출 장면", "제외 → 스폰서드 브랜드 광고", "메인 이미지는 실제 사진만"),
-    ("제목 앞에 OEKO-TEX·두께", "제외 → 다음 테스트", "가설의 If가 아님 (대안 가설)"),
     ("가격·쿠폰", "제외 → 고정 요소", "가설과 무관"),
 ]
+MEDIA_VARIABLE_SHOW = 3   # 후보 표에 보여 줄 줄 수 (가설·후보 목록이 바뀌어도 이 수만큼만)
 
 
 def media_variable_hypothesis() -> tuple[str, str]:
@@ -78,6 +82,13 @@ def media_variable_callout(text: str) -> None:
         body = text
     st.info(body, icon="📥")
 
+
+
+def media_variable_shown_candidates(rows: list) -> list:
+    """후보 표에 보여 줄 줄: 선정된 후보를 맨 위에, 나머지는 목록 순서대로 채워 MEDIA_VARIABLE_SHOW개까지."""
+    picked = [r for r in rows if r[1] == MEDIA_VARIABLE_PICKED]
+    others = [r for r in rows if r[1] != MEDIA_VARIABLE_PICKED]
+    return (picked + others)[:MEDIA_VARIABLE_SHOW]
 
 
 def media_variable_report_sqp() -> dict:
@@ -137,7 +148,7 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str]):
         st.markdown("**후보 변수 걸러내기**")
         st.caption("가설의 If와 맞고, 아마존 메인 이미지 규칙 안이며, Manage Your Experiments로 돌릴 수 있어야 함")
         st.markdown("| 후보 | 판정 | 이유 |\n| --- | --- | --- |\n"
-                    + "\n".join(f"| {' | '.join(row)} |" for row in MEDIA_VARIABLE_CANDIDATES))
+                    + "\n".join(f"| {' | '.join(row)} |" for row in media_variable_shown_candidates(MEDIA_VARIABLE_CANDIDATES)))
     with c2:
         st.markdown("**선정한 단일 변수**")
         st.markdown("| 구분 | 내용 |\n| --- | --- |\n"
@@ -154,6 +165,35 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str]):
     st.caption("두께와 원단 질감을 변수 두 개로 나누지 않는 이유: 가설이 말하는 원인은 '품질 차이가 안 보인다' 하나이고, "
                "모서리를 든 사진 한 장에 둘 다 담깁니다. Manage Your Experiments는 한 번에 두 안(A/B)만 비교하므로, "
                "둘을 따로 보려면 이 테스트가 끝난 뒤 B 안에서 다시 나눠 테스트합니다.")
+
+
+def _media_variable_confirm(plan: dict) -> None:
+    """'이 변수로 확정' 버튼 콜백. A/B 설계를 2단계로 넘기고(modules/media/data/media_handoff_plan.json), 다음 화면에서 토스트를 띄웁니다."""
+    media_handoff_set_plan(plan)
+    st.session_state["media-variable-confirmed-toast"] = True
+
+
+def media_variable_confirm_step(plan: dict, status: str):
+    """선정 표 아래 확정 줄: 사용자가 추천된 단일 변수를 확인하고 확정해야 2단계로 넘어갑니다."""
+    saved = media_handoff_plan()
+    confirmed = not saved["sample"] and all(saved.get(k) == v for k, v in plan.items())
+    if st.session_state.pop("media-variable-confirmed-toast", False):
+        st.toast("단일 변수를 확정해 2단계로 넘겼어요", icon="✅")
+    if status == "other":   # 2번 탭 가설이 기준 가설과 달라 선정 표가 그 가설에 맞지 않음
+        note = "2번 탭 가설이 기준 가설과 달라 확정할 수 없어요"
+    elif confirmed:
+        note = ":green-badge[✅ 확정됨] 2단계(프롬프트 만들기)가 이 값을 받아요"
+    elif not saved["sample"]:   # 확정한 뒤 리포트 값 등이 바뀜
+        note = ":orange-badge[다시 확정 필요] 확정한 뒤 값이 바뀌었어요. 2단계는 아직 이전 값을 받아요"
+    else:
+        note = "추천된 변수를 확인하고 확정하면 2단계(프롬프트 만들기)로 넘어가요"
+    with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
+                      key="media-variable-confirm-row"):
+        st.markdown(note)
+        if not confirmed:   # 확정된 뒤에는 버튼을 숨기고, 값이 바뀌면 '다시 확정'으로 다시 보여 줌
+            st.button("다시 확정" if not saved["sample"] else "이 변수로 확정", key="media-btn-variable-confirm",
+                      type="primary", disabled=status == "other",
+                      on_click=_media_variable_confirm, args=(plan,))
 
 
 def _media_variable_start_load() -> None:
@@ -186,13 +226,10 @@ def media_variable_step():
     # key="media-hypo-box": media_style.css의 나타나는 애니메이션(.st-key-media-hypo-box)
     text, status = media_variable_hypothesis()
     plan, price, defaults = media_variable_plan()
-    # 2단계로 A/B 설계를 넘김 (modules/media/data/media_handoff_plan.json, 값이 그대로면 파일을 다시 쓰지 않음)
-    # 2번 탭 가설이 기준 가설과 다르면 선정 표가 그 가설에 맞지 않으므로 넘기지 않습니다
-    if status != "other":
-        media_handoff_set_plan(plan)
     with st.container(key="media-hypo-box"):
         media_variable_hypothesis_step(plan, text, status)
         # key="media-hypo-divider": media_style.css가 구분선 위아래 기본 여백(2em)을 줄여 윗줄 바로 아래에 붙임
         with st.container(key="media-hypo-divider"):
             st.divider()
         media_variable_derive_step(plan, price, defaults)
+        media_variable_confirm_step(plan, status)
