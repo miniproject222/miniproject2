@@ -5,6 +5,7 @@ import base64
 import io
 import json
 import math
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 
@@ -31,6 +32,7 @@ HOME_CITIES = [
     {"city": "München", "lat": 48.14, "lon": 11.58, "dy": 5},
 ]
 HOME_SAMPLE_TEMPS = [26, 31, 30, 32, 31, 30, 33]   # API 실패 시 샘플 (여름 폭염일 가정)
+HOME_WEEKDAYS = "월화수목금토일"
 
 # 구 설정: 중심(독일 중앙)에서 구 가장자리까지 실제 거리 HOME_GLOBE_CAP도
 HOME_CENTER = (10.45, 51.15)   # (경도, 위도)
@@ -163,18 +165,21 @@ def home_fetch_temps():
         "longitude": ",".join(str(c["lon"]) for c in HOME_CITIES),
         "current": "temperature_2m,apparent_temperature,relative_humidity_2m",
         "daily": "temperature_2m_max",
-        "forecast_days": 2,
+        "forecast_days": 7,
         "timezone": "Europe/Berlin",
     }
     res = requests.get("https://api.open-meteo.com/v1/forecast", params=params, timeout=5)
     res.raise_for_status()
     data = res.json()
     data = data if isinstance(data, list) else [data]
-    return [
-        {**c, "temp": float(d["current"]["temperature_2m"]), "feels": float(d["current"]["apparent_temperature"]),
-         "humidity": float(d["current"]["relative_humidity_2m"]), "tomorrow": float(d["daily"]["temperature_2m_max"][1])}
-        for c, d in zip(HOME_CITIES, data)
-    ]
+    out = []
+    for c, d in zip(HOME_CITIES, data):
+        maxes, days = d["daily"]["temperature_2m_max"], d["daily"]["time"]
+        week_i = max(range(1, len(maxes)), key=lambda i: maxes[i])   # 내일부터 이번 주 중 가장 더운 날
+        out.append({**c, "temp": float(d["current"]["temperature_2m"]), "feels": float(d["current"]["apparent_temperature"]),
+                    "humidity": float(d["current"]["relative_humidity_2m"]), "tomorrow": float(maxes[1]),
+                    "week_max": float(maxes[week_i]), "week_day": HOME_WEEKDAYS[date.fromisoformat(days[week_i]).weekday()]})
+    return out
 
 
 def home_get_temps():
@@ -182,7 +187,8 @@ def home_get_temps():
     try:
         return home_fetch_temps(), True
     except Exception:
-        return [{**c, "temp": float(t), "feels": float(t), "humidity": 55.0, "tomorrow": float(t + 1)}
+        return [{**c, "temp": float(t), "feels": float(t), "humidity": 55.0, "tomorrow": float(t + 1),
+                 "week_max": float(t + 2), "week_day": "토"}
                 for c, t in zip(HOME_CITIES, HOME_SAMPLE_TEMPS)], False
 
 
@@ -201,22 +207,24 @@ def _home_temp_color(temp, lo=0, hi=35):
     return _home_mix(HOME_TEMP_WARM, HOME_TEMP_HOT, (t - 0.5) * 2)
 
 
-def home_city_layer(temps):
-    """지구본 위 도시 기온 이름표 (HTML). 마우스를 올리면 체감·습도·내일 최고 표시"""
+def home_city_layer(temps, warning_of):
+    """지구본 위 도시 기온 이름표 (HTML). 경보 도시는 빨간 표시, 마우스를 올리면 체감·습도·예보 표시
+    warning_of(도시) → ("폭염경보" / "더위 주의" / "", 기준 기온)"""
     out = []
     for p in temps:
         x, y = _home_project(p["lon"], p["lat"])
-        color = _home_temp_color(p["temp"])
-        hot = max(p["temp"], p.get("tomorrow", p["temp"])) >= 30
-        advice = "광고 빈도 올리기 추천" if hot else "평소 빈도 유지"
+        level, _ = warning_of(p)
+        color = HOME_TEMP_HOT if level == "폭염경보" else _home_temp_color(p["temp"])
+        advice = "광고 빈도 올리기 추천" if level else "평소 빈도 유지"
+        badge = f'<i class="home-city-warn">{level}</i>' if level else ""
         out.append(
-            f'<div class="home-city" style="left:{x / HOME_SVG_SIZE * 100:.2f}%;top:{y / HOME_SVG_SIZE * 100:.2f}%;'
-            f'--c:{color};--dy:{p.get("dy", 0)}">'
+            f'<div class="home-city{" home-city-alert" if level else ""}" style="left:{x / HOME_SVG_SIZE * 100:.2f}%;'
+            f'top:{y / HOME_SVG_SIZE * 100:.2f}%;--c:{color};--dy:{p.get("dy", 0)}">'
             f'<i class="home-city-dot"></i>'
-            f'<span class="home-city-chip">{p["city"]} <b>{p["temp"]:.0f}°</b></span>'
+            f'<span class="home-city-chip">{p["city"]} <b>{p["temp"]:.0f}°</b>{badge}</span>'
             f'<div class="home-city-tip"><b>{p["city"]}</b>'
             f'<span>체감 {p.get("feels", p["temp"]):.0f}° · 습도 {p.get("humidity", 0):.0f}%</span>'
-            f'<span>내일 최고 {p.get("tomorrow", p["temp"]):.0f}°</span>'
+            f'<span>내일 최고 {p.get("tomorrow", p["temp"]):.0f}° · 이번 주 최고 {p.get("week_max", p["temp"]):.0f}° ({p.get("week_day", "")})</span>'
             f'<em>{advice}</em></div></div>'
         )
     return "".join(out)

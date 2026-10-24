@@ -8,3 +8,63 @@
 .hypothesis-desc {
   color: var(--color-sub);
 }
+
+/* ────────────────────────────────────────────────────────────
+   아래는 hypothesis_page.py가 key로 지정한 카드 안쪽에만 적용됩니다
+   (.st-key-hypothesis-card / -empty / -summary-card). 다른 탭에는 영향 없습니다.
+   ──────────────────────────────────────────────────────────── */
+
+/* 버튼 글씨가 배경과 같은 보라색으로 깔려 안 보이던 문제 수정.
+   (ui_theme.py의 공통 CSS가 p/label 전체를 보라색으로 칠하는데, 버튼 라벨도
+   내부적으로 <p>로 렌더링돼서 같이 보라색이 되어 버림 → 흰색으로 강제 지정) */
+.st-key-hypothesis-card .stButton button,
+.st-key-hypothesis-card .stButton button *,
+.st-key-hypothesis-empty .stButton button,
+.st-key-hypothesis-empty .stButton button * {
+  color: var(--color-card) !important;
+}
+
+/* 가설 문장 칸: 글자를 더 크고 읽기 편하게, 줄간격도 넉넉하게 */
+.st-key-hypothesis-card textarea {
+  font-size: 16px !important;
+  line-height: 1.7 !important;
+}
+
+/* 현지 특성 / 경쟁사 부정 리뷰 줄도 같이 조금 키워서 가독성을 맞춤 */
+.st-key-hypothesis-card [data-testid="stMarkdownContainer"] p {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* 문제가 아직 없을 때(빈 상태) 카드: 가운데 정렬 + 여백을 넉넉히 줘서
+   썰렁해 보이지 않고 다음에 뭘 해야 하는지 눈에 띄게 */
+.st-key-hypothesis-empty {
+  text-align: center;
+  padding: 12px 8px 20px;
+}
+
+.st-key-hypothesis-empty .hypothesis-empty-icon {
+  font-size: 36px;
+  line-height: 1;
+  margin: 4px 0 10px;
+}
+
+.st-key-hypothesis-empty .hypothesis-empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 6px;
+}
+
+.st-key-hypothesis-empty [data-testid="stCaptionContainer"] {
+  margin-bottom: 16px;
+}
+
+.st-key-hypothesis-empty .stButton {
+  display: flex;
+  justify-content: center;
+}
+
+.st-key-hypothesis-empty .stButton button {
+  max-width: 320px;
+}
