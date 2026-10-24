@@ -219,6 +219,11 @@
   white-space: nowrap;
 }
 
+/* 선정한 단일 변수 표 (media_variable.py key="media-variable-picked") - 구분 칸('A · 대조군')은 한 줄 */
+.st-key-media-variable-picked td:nth-child(1) {
+  white-space: nowrap;
+}
+
 /* 불러오기 전 빈 상태 카드 */
 .st-key-media-hypo-empty {
   border-style: dashed !important;

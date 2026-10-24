@@ -5,8 +5,12 @@
 # 이전 결과·판정 코드는 media_stage2/media_stage2_judge.py에 보관합니다 (지금 흐름에서는 안 씀).
 import streamlit as st
 
-from modules.media.media_variable import media_variable_hypothesis, media_variable_plan, media_variable_report_sqp
+from modules.media.media_variable import (media_variable_candidates, media_variable_hypothesis, media_variable_plan,
+                                          media_variable_report_sqp)
 
+MEDIA_AB_REF_PROMPT = ("Product photo reference, white seamless background, a cooling mattress pad 90x200 cm laid flat, "
+                       "camera 45 degrees above, one corner gently lifted to show the edge thickness and the knitted "
+                       "cooling fabric texture, soft even studio light, no text, no props")
 MEDIA_AB_RULES = [
     "흰 배경(RGB 255, 255, 255)에 텍스트·로고·워터마크 없는 실제 제품 사진",
     "AI로 만든 연출 장면은 메인 이미지에 쓰지 않음 → 서브 이미지나 스폰서드 브랜드 광고에서만 사용",
@@ -83,6 +87,5 @@ def media_ab_plan_step():
             st.download_button("브리프 다운로드 (.txt)", brief, file_name="media_ab_brief.txt", key="media-btn-ab-brief")
     with c2:
         with st.expander("🤖 AI 각도 레퍼런스 프롬프트 (메인 이미지로 쓰지 않음)", expanded=False):
-            st.code("Product photo reference, white seamless background, a cooling mattress pad 90x200 cm laid flat, "
-                    "camera 45 degrees above, one corner gently lifted to show the edge thickness and the knitted "
-                    "cooling fabric texture, soft even studio light, no text, no props", language=None)
+            # 하위 탭 ①에서 고른 후보의 레퍼런스 프롬프트 (후보 목록 파일에 없으면 기본 문장)
+            st.code(media_variable_candidates()["picked"].get("ref_prompt") or MEDIA_AB_REF_PROMPT, language=None)
