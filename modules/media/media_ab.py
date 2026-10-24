@@ -1,44 +1,17 @@
 # 3. 매체 제작 > 메인 이미지 A/B (문제 시나리오.md '가설과 소재 연결')
 # 1번 리포트의 검색어 클릭 분석(store "report"의 sqp)과 2번 가설(store "hypothesis")을 읽어
-# 메인 이미지 A/B 안, 촬영 브리프, Manage Your Experiments 안내, 판정 규칙을 보여 줍니다. 3번 탭의 하위 탭 ②(A/B 소재 준비)·③(결과·판정)에서 부릅니다.
-import json
-import math
-from pathlib import Path
-
+# 메인 이미지 A/B 안, 촬영 브리프, Manage Your Experiments 안내를 보여 줍니다. 3번 탭의 하위 탭 'A/B 소재 준비'(1단계)에서 부릅니다.
+# 결과·판정은 2단계 폴더(media_stage2/)로 옮겼습니다.
 import streamlit as st
 
-import ui_theme as ui
 from common.common_store import store_get
 
-MEDIA_AB_FILE = Path(__file__).resolve().parent / "data" / "media_ab_result_dummy_202610.json"
-MEDIA_AB_CVR_TOLERANCE = 0.5     # B의 CVR이 A보다 이만큼(%p) 넘게 낮으면 실패로 봅니다
 MEDIA_AB_RULES = [
     "흰 배경(RGB 255, 255, 255)에 텍스트·로고·워터마크 없는 실제 제품 사진",
     "AI로 만든 연출 장면은 메인 이미지에 쓰지 않음 → 서브 이미지나 스폰서드 브랜드 광고에서만 사용",
     "A/B 변수는 사진 안에서 바꿀 수 있는 것만: 각도, 구도, 접힌/펼친 상태, 두께감",
     "AI는 촬영 각도 레퍼런스와 보정에만 쓰고, 실제 촬영은 외주로 진행",
 ]
-
-
-def media_ab_rate_test(a_hit, a_n, b_hit, b_n):
-    """두 비율 z-검정. (A 비율, B 비율, 양측 유의확률)"""
-    ra, rb = a_hit / a_n, b_hit / b_n
-    pooled = (a_hit + b_hit) / (a_n + b_n)
-    se = math.sqrt(pooled * (1 - pooled) * (1 / a_n + 1 / b_n))
-    z = (rb - ra) / se if se else 0.0
-    return ra, rb, math.erfc(abs(z) / math.sqrt(2))
-
-
-def media_ab_judge(result):
-    """승자 판정: CTR이 유의하게 높고, CVR이 기준 이상 떨어지지 않은 쪽."""
-    a, b = result["variants"]
-    ctr_a, ctr_b, p_ctr = media_ab_rate_test(a["clicks"], a["impressions"], b["clicks"], b["impressions"])
-    cvr_a, cvr_b, p_cvr = media_ab_rate_test(a["units"], a["sessions"], b["units"], b["sessions"])
-    cvr_ok = (cvr_b - cvr_a) * 100 >= -MEDIA_AB_CVR_TOLERANCE
-    win = ctr_b > ctr_a and p_ctr < 0.05 and cvr_ok
-    mkt = result["market_ctr"]
-    return {"ctr": (ctr_a, ctr_b), "p_ctr": p_ctr, "cvr": (cvr_a, cvr_b), "p_cvr": p_cvr, "cvr_ok": cvr_ok,
-            "ratio": (ctr_a / mkt, ctr_b / mkt), "winner": b["name"] if win else a["name"], "b_wins": win}
 
 
 def media_ab_brief(sqp, hypothesis_text):
@@ -118,38 +91,3 @@ def media_ab_plan_step():
             st.code("Product photo reference, white seamless background, a cooling mattress pad 90x200 cm laid flat, "
                     "camera 45 degrees above, one corner gently lifted to show the edge thickness and the knitted "
                     "cooling fabric texture, soft even studio light, no text, no props", language=None)
-
-def media_ab_result_step():
-    """하위 탭 ③ 결과·판정: 가상 결과 + 판정 (승자는 CTR, CVR은 안전장치) + 적용 전후 CAC."""
-    if not MEDIA_AB_FILE.exists():
-        st.caption("A/B 결과 파일이 아직 없어요. 테스트가 끝나면 data/ 폴더에 결과를 넣어 주세요.")
-        return
-    result = json.loads(MEDIA_AB_FILE.read_text(encoding="utf-8"))
-    j = media_ab_judge(result)
-    a, b = result["variants"]
-    with st.container(border=True, key="media-ab-result"):
-        st.markdown(f"**🧪 A/B 결과 ({result['source']})** · {result['period']}")
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            ui.kpi_card("CTR 배수 (시장 대비)", f"{j['ratio'][0]:.2f} → {j['ratio'][1]:.2f}배",
-                        sub=f"CTR {j['ctr'][0] * 100:.2f}% → {j['ctr'][1] * 100:.2f}% · p={j['p_ctr']:.4f}")
-        with c2:
-            ui.kpi_card("CVR (안전장치)", f"{j['cvr'][0] * 100:.1f}% → {j['cvr'][1] * 100:.1f}%",
-                        sub=f"{MEDIA_AB_CVR_TOLERANCE}%p 넘게 떨어지면 실패 · " + ("통과" if j["cvr_ok"] else "실패"))
-        with c3:
-            ui.kpi_card("승자", j["winner"], sub=(b["desc"] if j["b_wins"] else a["desc"]))
-        st.dataframe([{"안": v["name"], "설명": v["desc"], "노출": f"{v['impressions']:,}", "클릭": f"{v['clicks']:,}",
-                       "세션": f"{v['sessions']:,}", "판매 수량": f"{v['units']:,}"} for v in result["variants"]],
-                     hide_index=True, width="stretch", key="media-ab-table-variants")
-
-        before, after = result["cac"]["before"], result["cac"]["after"]
-
-        def cac(x):
-            return x["spend"] / x["new_to_brand_orders"]
-
-        def acos(x):
-            return x["spend"] / x["sales"] * 100
-
-        st.markdown(f'<div class="media-desc">사업 효과 (가상): CAC(광고비 ÷ 신규 고객 주문) {before["label"]} €{cac(before):.1f} → '
-                    f'{after["label"]} €{cac(after):.1f} · ACoS {acos(before):.0f}% → {acos(after):.0f}%. '
-                    'A/B 승자는 CTR로 고르고, CAC는 적용 전후 4주 비교로만 확인합니다.</div>', unsafe_allow_html=True)

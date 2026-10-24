@@ -18,6 +18,12 @@
     padding: 1rem 2.5rem 3rem !important;
   }
 }
+/* 2·3단계 CSS를 넣는 칸 (media_page.py의 media_load_stage_css) - 칸은 숨기고 style만 적용 */
+.st-key-media-stage-css,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-stage-css) {
+  display: none;
+}
+
 .st-key-media-root .ui-caption {
   margin-bottom: 6px;
 }
