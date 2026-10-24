@@ -176,19 +176,22 @@ def report_position_kpis(rows, checklist):
     market = report_market10()
     if market:   # 냉감패드 경쟁 10개사 중앙값과 비교
         mid = median(c["sqm"] for c in market["companies"])
-        badge = f"냉감패드 {len(market['companies'])}개사 중앙값 €{mid:.1f}의 {own / mid:.1f}배"
+        badge = f"{len(market['companies'])}개사 중앙값의 {own / mid:.1f}배"
     else:
         mid = median(priced) if priced else None
-        badge = f"경쟁사 중앙값 €{mid:.1f}의 {own / mid:.1f}배" if mid else ""
-    kpis = [{"label": "㎡당 가격 (서리)", "value": f"€{own:.1f}", "badge": badge, "good": bool(mid) and own <= mid}]
+        badge = f"경쟁사 중앙값의 {own / mid:.1f}배" if mid else ""
+    kpis = [{"label": "㎡당 가격", "value": f"€{own:.1f}", "badge": badge, "good": bool(mid) and own <= mid,
+             "tip": f"서리 ㎡당 가격 €{own:.1f} · 중앙값 €{mid:.1f}" if mid else ""}]
     if reviews:
         top = max(reviews)
-        kpis.append({"label": "리뷰 수 (서리)", "value": f"{own_reviews:,}건", "badge": f"{top[1]} {top[0]:,}건",
+        kpis.append({"label": "리뷰 수", "value": f"{own_reviews:,}건", "badge": f"최다 {top[0]:,}건 ({top[1].split()[0]})",
+                     "tip": f"서리 리뷰 {own_reviews:,}건 · 경쟁사 최다 {top[1]} {top[0]:,}건",
                      "good": own_reviews >= top[0]})
-    kpis.append({"label": "판매 채널 (서리)", "value": f"{report_channel_count(seori)}개",
-                 "badge": f"경쟁사 최다 {wide['brand']} {report_channel_count(wide)}개",
+    kpis.append({"label": "판매 채널", "value": f"{report_channel_count(seori)}개",
+                 "badge": f"최다 {report_channel_count(wide)}개 ({wide['brand'].split()[0]})",
+                 "tip": f"서리 {seori['channels']} · 경쟁사 최다 {wide['brand']}: {wide['channels']}",
                  "good": report_channel_count(seori) >= report_channel_count(wide)})
-    kpis.append({"label": "출시 필수 인증·규제", "value": f"{len(done)}/{len(must)} 완료",
+    kpis.append({"label": "필수 인증·규제", "value": f"{len(done)}/{len(must)} 완료",
                  "badge": f"보완 {len(must) - len(done)}건" if len(done) < len(must) else "모두 완료",
                  "good": len(done) == len(must)})
     return kpis
@@ -272,6 +275,27 @@ def report_internal_factors(rows, criteria, checklist, tests, keepa_time):
     return sorted(out, key=lambda f: REPORT_LEVEL_ORDER[f["level"]])
 
 
+def report_price_factor(r, k, keepa_time):
+    """경쟁사 가격 변화 판정. 90일 평균은 계절(여름 성수기)이 섞여 비수기에 '인하'로 보이므로,
+    Keepa 상세의 작년 같은 날 가격과 비교해 계절 가격인지 실제 인하·인상인지 나눕니다."""
+    p = (report_keepa_detail().get("items", {}).get(r.get("asin") or "") or {}).get("price") or {}
+    down = k["change"] < 0
+    base = f"90일 평균 €{k['avg90']:.2f} → 현재 €{k['price']:.2f}" if k.get("avg90") else f"현재 €{k['price']:.2f}"
+    if p.get("year_ago"):
+        yoy = k["price"] / p["year_ago"] - 1
+        season = f"작년 같은 날 €{p['year_ago']:.2f}" + (f", 여름 중앙값 €{p['summer_median']:.2f}" if p.get("summer_median") else "")
+        if abs(yoy) < REPORT_PRICE_ALERT:   # 작년 이맘때와 같음 → 계절 가격
+            return {"kind": "위협" if down else "기회", "level": "낮음", "group": "경쟁사",
+                    "title": f"{r['brand']} 비수기 가격 (작년 같은 시기와 비슷, {yoy * 100:+.0f}%)",
+                    "detail": f"{base}, {season} → 매년 반복되는 계절 가격으로 판단 (Keepa {keepa_time})"}
+        return {"kind": "위협" if yoy < 0 else "기회", "level": "높음" if yoy < 0 else "낮음", "group": "경쟁사",
+                "title": f"{r['brand']} 가격 작년 대비 {abs(yoy) * 100:.0f}% {'인하' if yoy < 0 else '인상'}",
+                "detail": f"{base}, {season} (Keepa {keepa_time})"}
+    return {"kind": "위협" if down else "기회", "level": "중간" if down else "낮음", "group": "경쟁사",
+            "title": f"{r['brand']} 가격 {abs(k['change']) * 100:.0f}% {'인하' if down else '인상'} (작년 비교 없음)",
+            "detail": f"{base} · 작년 가격 기록이 없어 계절 가격인지 확인 못 함 (Keepa {keepa_time})"}
+
+
 def report_external_factors(rows, keepa_time, today=None):
     """외부 요인: 위협(문제)과 기회. (경쟁사 DB, Keepa, 독일 DB, Open-Meteo 현재 기온)"""
     today = today or date.today()
@@ -288,11 +312,7 @@ def report_external_factors(rows, keepa_time, today=None):
             out.append({"kind": "기회", "title": f"{r['brand']} Amazon.de 재고 없음", "level": "중간", "group": "경쟁사",
                         "detail": f"Keepa {keepa_time} 기준 판매 중인 오퍼 없음"})
         elif k.get("change") is not None and abs(k["change"]) >= REPORT_PRICE_ALERT:
-            down = k["change"] < 0
-            base = f"90일 평균 €{k['avg90']:.2f} → 현재 €{k['price']:.2f}" if k.get("avg90") else f"현재 €{k['price']:.2f}"
-            out.append({"kind": "위협" if down else "기회", "level": "높음" if down else "낮음", "group": "경쟁사",
-                        "title": f"{r['brand']} 가격 {abs(k['change']) * 100:.0f}% {'인하' if down else '인상'}",
-                        "detail": f"{base} (Keepa {keepa_time}, Amazon.de)"})
+            out.append(report_price_factor(r, k, keepa_time))
 
     # 날씨·시즌: Open-Meteo 현재 기온 + 독일 DB
     temps = ui.fetch_state_temperatures()

@@ -11,7 +11,7 @@ from modules.report.report_ab import REPORT_AB_TEMPLATE, report_ab_analyze, repo
 from modules.report.report_data import report_load_data, report_utm_rows
 from modules.report.report_download import report_download_pdf
 from modules.report.report_keepa import (
-    report_keepa_can_fetch, report_keepa_estimate, report_keepa_fetch_and_save, report_keepa_usage,
+    report_keepa_can_fetch, report_keepa_detail, report_keepa_estimate, report_keepa_fetch_and_save, report_keepa_usage,
 )
 from modules.report.report_sqp import report_sqp_kpis
 from modules.report.report_sqp_view import report_sqp_show
@@ -51,51 +51,56 @@ def report_render():
 
     # 오른쪽 끝 아이콘 (① 탭 안에서만 보이고 화면에 고정: report_style.css .st-key-report-side)
     # 아이콘: 테마 색 한 가지로 보이는 Material 아이콘 (마우스를 올리면 이름)
-    buttons = [(":material/picture_as_pdf:", "핵심 문제 전체 · 리포트 다운로드 (PDF)", report_dialog_problems,
-                (data, summary, kpis, steps, utm_rows)),
-               (":material/manage_search:", "검색어 클릭 분석 (노출·클릭: 가상 SQP)", report_dialog_sqp, (sqp, kpis)),
-               (":material/leaderboard:", "경쟁 포지션 · 경쟁사 비교", report_dialog_competitors, (data, position_kpis, sqp)),
-               (":material/science:", "해결안 A/B 테스트", report_dialog_ab, (data,))]
+    # 마우스를 올렸을 때 이름은 report_style.css의 말풍선 (.st-key-report-btn-side-이름)
+    buttons = [("pdf", ":material/picture_as_pdf:", report_dialog_problems, (data, summary, kpis, steps, utm_rows)),
+               ("sqp", ":material/manage_search:", report_dialog_sqp, (sqp, kpis)),
+               ("comp", ":material/leaderboard:", report_dialog_competitors, (data, position_kpis, sqp)),
+               ("ab", ":material/science:", report_dialog_ab, (data,))]
     if worst:
-        buttons.insert(2, (":material/filter_alt:", "구매 퍼널 (GA4)", report_dialog_funnel, (ga4["funnel"], worst)))
+        buttons.insert(2, ("funnel", ":material/filter_alt:", report_dialog_funnel, (ga4["funnel"], worst)))
     with st.container(key="report-side"):
-        for i, (icon, label, dialog, args) in enumerate(buttons):
-            if st.button("", icon=icon, key=f"report-btn-side-{i}", help=label, type="tertiary"):
+        for name, icon, dialog, args in buttons:
+            if st.button("", icon=icon, key=f"report-btn-side-{name}", type="tertiary"):
                 dialog(*args)
 
 
 @st.dialog("핵심 문제 전체 · 리포트 다운로드", width="large", icon=":material/picture_as_pdf:")
 def report_dialog_problems(data, summary, kpis, steps, utm_rows):
-    report_show_problem_rest(data, summary, kpis, steps, utm_rows)
+    with st.container(key="report-dialog-body-pdf"):
+        report_show_problem_rest(data, summary, kpis, steps, utm_rows)
 
 
 @st.dialog("검색어 클릭 분석 (노출·클릭: 가상 SQP)", width="large", icon=":material/manage_search:")
 def report_dialog_sqp(sqp, kpis):
-    with st.container(key="report-dialog-kpis-sqp"):   # 창 안에서 스크롤해도 KPI 줄은 위에 고정
-        report_show_kpis(kpis)
-    if sqp:
-        report_sqp_show(sqp)
-    else:
-        st.info("검색어 성과 더미(data/report_sqp_weekly_dummy_202608.json)가 없습니다. "
-                "python -m modules.report.report_sqp_make 로 만들어 주세요.")
+    with st.container(key="report-dialog-body-sqp"):
+        with st.container(key="report-dialog-kpis-sqp"):   # 창 안에서 스크롤해도 KPI 줄은 위에 고정
+            report_show_kpis(kpis)
+        if sqp:
+            report_sqp_show(sqp)
+        else:
+            st.info("검색어 성과 더미(data/report_sqp_weekly_dummy_202608.json)가 없습니다. "
+                    "python -m modules.report.report_sqp_make 로 만들어 주세요.")
 
 
 @st.dialog("구매 퍼널 (GA4)", width="large", icon=":material/filter_alt:")
 def report_dialog_funnel(funnel, worst):
-    report_show_funnel(funnel, worst)
+    with st.container(key="report-dialog-body-funnel"):
+        report_show_funnel(funnel, worst)
 
 
 @st.dialog("경쟁 포지션 · 경쟁사 비교", width="large", icon=":material/leaderboard:")
 def report_dialog_competitors(data, position_kpis, sqp):
-    if sqp:
-        with st.container(key="report-dialog-kpis-comp"):   # 창 안에서 스크롤해도 KPI 줄은 위에 고정
-            report_show_kpis(position_kpis)
-    report_show_competitors(data)
+    with st.container(key="report-dialog-body-comp"):
+        if sqp:
+            with st.container(key="report-dialog-kpis-comp"):   # 창 안에서 스크롤해도 KPI 줄은 위에 고정
+                report_show_kpis(position_kpis)
+        report_show_competitors(data)
 
 
 @st.dialog("해결안 A/B 테스트", width="large", icon=":material/science:")
 def report_dialog_ab(data):
-    report_show_ab(data["ab_tests"], data["ab_daily"], data["ab_upload"])
+    with st.container(key="report-dialog-body-ab"):
+        report_show_ab(data["ab_tests"], data["ab_daily"], data["ab_upload"])
 
 
 def report_pct(part, whole):
@@ -163,6 +168,7 @@ def report_save_store(data, summary, worst, utm_rows, utm_worst):
         "ab_upload": data["ab_upload"],             # 직접 올린 A/B 결과 파일 분석
         # ③ 광고 소재: 나중에 광고에 넣을 서리 문구 (독일어·한국어, 필수 표기, 금지 표현)
         "ad_claims": data["ad_claims"],
+        "data_rules": data["data_rules"],            # 지표별 비교 기준·출처·날짜·구분(실제/가정/가상)·신선도
         "data_source": ("검색어 성과 가상 SQP · DWD · " if data["sqp_store"] else "")
                        + "경쟁사 DB·독일 DB·Keepa·Open-Meteo" + (" · GA4" if data["ga4"] else ""),
     }
@@ -207,6 +213,8 @@ def report_show_problem_rest(data, summary, kpis, steps, utm_rows):
             st.markdown('<div class="report-desc">경쟁 포지션 분석의 핵심 문제 (출시 준비): '
                         + " / ".join(p["title"] for p in data["position_key_problems"]) + "</div>", unsafe_allow_html=True)
         st.caption("이 결과는 다른 탭(홈, 가설, 광고 소재, 광고 타이밍)에서 store_get(\"report\")로 읽을 수 있습니다.")
+        with st.expander(":material/rule: 데이터 기준·신뢰도 (같은 지표는 항상 같은 기준으로 계산)", expanded=False):
+            st.dataframe(data["data_rules"], hide_index=True, width="stretch", key="report-table-data-rules")
         report_download_pdf(data, kpis, summary, steps, utm_rows)
 
 
@@ -234,8 +242,10 @@ def report_show_kpis(kpis):
     """한 줄 높이의 작은 KPI 카드 (아래 분석 내용이 첫 화면에 보이도록)."""
     for col, k in zip(st.columns(len(kpis) or 1), kpis):
         with col:
-            badge = f'<span class="ui-delta {"up" if k["good"] else "down"}">{k["badge"]}</span>' if k["badge"] else ""
-            st.markdown(f'<div class="report-kpi"><span class="report-kpi-label">{k["label"]}</span>'
+            tip = str(k.get("tip") or k["badge"]).replace('"', "&quot;")
+            badge = (f'<span class="ui-delta {"up" if k["good"] else "down"}" title="{tip}">{k["badge"]}</span>'
+                     if k["badge"] else "")
+            st.markdown(f'<div class="report-kpi" title="{tip}"><span class="report-kpi-label">{k["label"]}</span>'
                         f'<span class="report-kpi-value">{k["value"]}</span>{badge}</div>', unsafe_allow_html=True)
 
 
@@ -268,7 +278,7 @@ def report_show_internal(data):
     if not items:
         st.caption("표시할 내부 요인이 없습니다. (경쟁사 DB에서 서리 행을 찾지 못하면 비어 보입니다. 앱을 다시 켜 주세요.)")
         return
-    report_factor_card(":material/domain: **내부 요인**", f'서리 가정: {data["seori_proxy"] or "-"} 실적 · {data["keepa_status"]}', items,
+    report_factor_card(":material/domain: **내부 요인**", f'서리 = {data["seori_proxy"] or "-"} 실적 가정 · {data["keepa_status"].split(" · ")[0]}', items,
                        lambda fs: "".join(report_factor_html(f, f["group"]) for f in fs), "internal")
 
 
@@ -315,22 +325,31 @@ def report_show_competitors(data):
         if not rows:
             st.info("공통 경쟁사 DB(data/common_competitor_seori_202610.csv)가 없습니다.")
             return
+        detail = report_keepa_detail().get("items", {})
+        summer = {a: d.get("rank_root_summer_median") for a, d in detail.items()}   # 순위 기준: 2026년 6~8월 중앙값
+        yago = {a: (d.get("price") or {}).get("year_ago") for a, d in detail.items()}   # 작년 같은 날 가격
         table = []
         for r in rows:
             k = r.get("keepa") or {}
             seori = r["kind"] == "자사"
             table.append({
-                "순위": r["label"], "브랜드": r["brand"], "냉감패드 제품": r["product"], "냉감 방식": r["principle"] or "-",
-                "Amazon 판매 순위": f"{k['rank']:,}" if k.get("rank") else ("가정 3위 (판매 전)" if seori else "-"),
+                "순위": "3위 (가정)" if seori else (f"{r['rank']}위" if r.get("rank") else r["label"]),
+                "브랜드": r["brand"], "냉감패드 제품": r["product"],
+                "여름 순위 (6~8월)": f"{summer[r.get('asin')]:,}" if summer.get(r.get("asin")) else "-",
+                "10월 순위": f"{k['rank']:,}" if k.get("rank") else ("가정 3위 (판매 전)" if seori else "-"),
                 "현재가": f"€{k['price']:.2f}" if k.get("price") else (f"€{r['db_price']:.2f} (권장가)" if seori and r["db_price"] else "-"),
-                "90일 평균 대비": f"{k['change'] * 100:+.0f}%" if k.get("change") is not None else "-",
+                # 가격 변화는 계절이 섞이지 않게 작년 같은 날과 비교 (데이터 기준: 가격 변화)
+                "작년 대비": (f"{(k['price'] / yago[r.get('asin')] - 1) * 100:+.0f}%"
+                              if k.get("price") and yago.get(r.get("asin")) else "-"),
                 "평점": f"{k['rating']:.1f}" if k.get("rating") else "-",
                 "리뷰 수": f"{k['reviews']:,}" if k.get("reviews") is not None else ("0건" if seori else "-"),
                 "㎡당 가격": (f"€{r['keepa_sqm']:.1f}" if r.get("keepa_sqm") else f"€{r['sqm_price']:.1f}" if r["sqm_price"] else "-"),
-                "Q-max": r["qmax"] or "-",
+                "Q-max": (r["qmax"] or "-").split(" · ")[0].split(" (")[0],
             })
-        st.dataframe(table, hide_index=True, width="stretch", key="report-table-competitors")
-        st.markdown('<div class="report-desc">순위: Keepa Amazon.de 판매 순위 (2026-10-24, 침구류 냉감패드만 비교 · 토퍼·전동·젤·일반 방수커버 제외) · '
+        st.dataframe(table, hide_index=True, width="stretch", key="report-table-competitors",
+                     column_config={"냉감패드 제품": st.column_config.TextColumn(width="medium")})
+        st.markdown('<div class="report-desc">순위 기준: 냉감 변형만 있는 상품의 2026년 6~8월 Amazon.de 판매 순위 중앙값 (Keepa 상세) · '
+                    '현재 순위는 비수기(10월) 값이라 순서가 다를 수 있음 · '
                     '서리 = 독일 3위 Herlag라고 가정해 판매 순위·가격·평점·리뷰·㎡당 가격은 Herlag의 Keepa 실적을 표시 '
                     '(제품명·냉감 방식·Q-max·강점·약점은 서리 기획) · ㎡당 가격: Keepa 현재가 기준</div>',
                     unsafe_allow_html=True)

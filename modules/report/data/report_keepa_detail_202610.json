@@ -1,6 +1,6 @@
 {
   "fetched_at": "2026-10-24",
-  "note": "Keepa 상품 상세(stats=90, rating=1, history=1) 4개 상품 조회 · 8토큰. 판매 순위는 Amazon.de 카테고리별 순위, '순위 하락 횟수'는 순위가 좋아진 횟수로 판매가 일어났다는 신호(Keepa salesRankDrops), '월 구매 배지'는 Amazon 'X+ im letzten Monat gekauft' 표시 기록. · 쿠폰 기록·수수료·상세페이지 특징 문구는 같은 조회 응답에서 추출 (추가 토큰 없음)",
+  "note": "Keepa 상품 상세(stats=90, rating=1, history=1) 4개 상품 조회 · 8토큰. 판매 순위는 Amazon.de 카테고리별 순위, '순위 하락 횟수'는 순위가 좋아진 횟수로 판매가 일어났다는 신호(Keepa salesRankDrops), '월 구매 배지'는 Amazon 'X+ im letzten Monat gekauft' 표시 기록. · 쿠폰 기록·수수료·상세페이지 특징 문구는 같은 조회 응답에서 추출 (추가 토큰 없음) · price: 신품 가격 기록에서 작년 같은 날·여름 중앙값·365일 중앙값 (계절 보정 비교용, 추가 토큰 없음)",
   "items": {
     "B0DJBVKMY9": {
       "brand": "Traumnacht",
@@ -63,7 +63,13 @@
         "Easy care – the Traumnacht Cool Comfort mattress topper is tested for harmful substances according to Oeko-Tex Standard 100 as well as easy to clean and washabl",
         "Sustainability: Traumnacht products are tested according to Oeko-Tex Standard 100. For sustainable recycling, we do not use a tightly stitched label - the displ"
       ],
-      "images": 9
+      "images": 9,
+      "price": {
+        "now": 28.9,
+        "year_ago": 26.9,
+        "summer_median": 28.9,
+        "median_365": 28.64
+      }
     },
     "B0B5RZH8C3": {
       "brand": "Mara Vital",
@@ -124,7 +130,13 @@
         "✅ FRISCHE AUF KNOPFDRUCK – Einfach bei 30 °C in die Waschmaschine und deine Matratzenschutzbezüge sind wie neu. Das Beste: Die Kühlwirkung bleibt nach jedem Was",
         "✅ FÜR ALLE DIE NACHTS INS SCHWITZEN KOMMEN – Ob heiße Sommernächte, Nachtschweiß oder einfach ein zu warmes Schlafzimmer: Der Elements Cool Matrazenschoner von "
       ],
-      "images": 7
+      "images": 7,
+      "price": {
+        "now": 89.9,
+        "year_ago": 89.9,
+        "summer_median": 89.9,
+        "median_365": 89.9
+      }
     },
     "B0F2FN34BS": {
       "brand": "Herlag",
@@ -174,7 +186,13 @@
         "💤 𝗢𝗘𝗞𝗢-𝗧𝗘𝗫 𝟭𝟬𝟬: Der Herlag Matratzenüberzug ist nach Öko Tex 100 zertifiziert (Sammelzertifikat SH025 193655) und beschert Ihnen erholsamen und sicheren Schlaf.",
         "💤 𝗔𝗧𝗠𝗨𝗡𝗚𝗦𝗔𝗞𝗧𝗜𝗩 & 𝗟𝗘𝗜𝗦𝗘: Auch wenn Sie sich nachts viel bewegen oder schwitzen unterstützt Sie der Topper dank atmungsaktiver Eigenschaft. Bewegungen veursachen "
       ],
-      "images": 7
+      "images": 7,
+      "price": {
+        "now": 34.9,
+        "year_ago": 32.9,
+        "summer_median": 32.28,
+        "median_365": 34.9
+      }
     },
     "B07121YZM5": {
       "brand": "RIBECO GERMANY",
@@ -222,7 +240,13 @@
         "PFLEGELEICHT: Die Matratzenauflage ist bis zu 40°C waschbar und trocknergeeignet, was die Reinigung und Pflege erleichtert. So bleibt die Auflage bei regelmäßig",
         "ZERTIFIZIERT: Die Matratzenauflage ist schadstoffgeprüft nach OEKOTEX 100"
       ],
-      "images": 8
+      "images": 8,
+      "price": {
+        "now": 39.94,
+        "year_ago": 39.94,
+        "summer_median": 53.44,
+        "median_365": 45.69
+      }
     }
   }
 }

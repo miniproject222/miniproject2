@@ -24,6 +24,7 @@ from modules.report.report_keepa import report_keepa_detail, report_keepa_produc
 from modules.report.report_sqp import report_sqp_analyze, report_sqp_handoff
 
 REPORT_AB_FILE = Path(__file__).resolve().parent / "data" / "report_ab_tests.json"
+REPORT_KEEPA_FRESH_DAYS = 7   # Keepa 마지막 조회가 이보다 오래되면 '새로 조회 권장'
 REPORT_UTM_MIN_SHARE = 0.05   # 방문 비중이 이보다 작은 채널은 '전환율 최저' 판정에서 뺍니다 (표본이 작아서)
 
 
@@ -77,6 +78,31 @@ def report_add_keepa_detail(data, rivals):
                                 "basis": "경쟁사 3곳 Keepa 수수료 중앙값 (Herlag는 FBA 정보 없음) · 원가·광고비 전 추정"}
 
 
+def report_data_rules(keepa_time):
+    """지표별 비교 기준·출처·날짜·구분. 같은 지표는 항상 같은 기준으로 계산해 결과가 흔들리지 않게 합니다."""
+    try:
+        age = (date.today() - date.fromisoformat(str(keepa_time)[:10])).days
+    except ValueError:
+        age = None
+    fresh = "-" if age is None else (f"{age}일 전" + (" → 새로 조회 권장" if age > REPORT_KEEPA_FRESH_DAYS else ""))
+    k = str(keepa_time)[:10] or "-"
+    return [
+        {"지표": "판매 순위", "비교 기준": "냉감 변형만 있는 상품의 2026년 6~8월 판매 순위 중앙값 (비수기 값 사용 안 함)",
+         "출처": "Keepa 상세", "기준일": k, "신선도": fresh, "구분": "실제 (상품 3개)"},
+        {"지표": "가격 변화", "비교 기준": "작년 같은 날 가격 대비 ±10% 이상만 인하·인상 (90일 평균은 계절이 섞여 보조로만)",
+         "출처": "Keepa", "기준일": k, "신선도": fresh, "구분": "실제"},
+        {"지표": "리뷰", "비교 기준": "현재 리뷰 수 + 최근 1년 증가", "출처": "Keepa", "기준일": k, "신선도": fresh, "구분": "실제"},
+        {"지표": "㎡당 가격", "비교 기준": "현재가 ÷ 면적, 냉감패드 10개사 중앙값과 비교", "출처": "Keepa·경쟁사 DB", "기준일": k,
+         "신선도": fresh, "구분": "실제 (서리는 가정 실적)"},
+        {"지표": "검색어 노출·클릭", "비교 기준": "2026년 6~8월 주별, 배수 0.7 미만 2주 연속이면 문제", "출처": "가상 SQP",
+         "기준일": "2026-08-24", "신선도": "-", "구분": "가상"},
+        {"지표": "기온", "비교 기준": "5개 도시 평균 최고기온 28℃ 이상 3일 = 폭염 주", "출처": "DWD", "기준일": "2026-08-31",
+         "신선도": "-", "구분": "실제"},
+        {"지표": "서리 Q-max·인증·시험", "비교 기준": "국내 기업 공개 자료 기반 가정", "출처": "가정 파일", "기준일": "2026-10-24",
+         "신선도": "-", "구분": "가정"},
+    ]
+
+
 def report_load_data():
     """화면에 필요한 실제 데이터를 한 번에 돌려줍니다."""
     snapshot = report_keepa_snapshot()
@@ -94,6 +120,7 @@ def report_load_data():
     data = {
         "period": date.today().strftime("%Y-%m"),
         "keepa_status": f"{last} · 토큰 사용 {usage['used']}/{usage['budget']}",
+        "data_rules": report_data_rules(keepa_time),              # 지표별 비교 기준·출처·날짜·구분·신선도
         "seori_proxy": REPORT_SEORI_PROXY,                       # 서리 판매 실적에 쓰는 가정 브랜드
         "competitors_full": rivals,                               # 화면 경쟁사 비교표
         "competitors": report_competitor_slim(rivals),            # 홈·가설 탭용 간단 표
