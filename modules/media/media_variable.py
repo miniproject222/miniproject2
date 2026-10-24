@@ -145,10 +145,14 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str]):
     """후보 변수 걸러내기 → 단일 변수 선정 (media_variable_step()의 아랫부분). 선정 표의 값은 plan에서 가져옵니다."""
     c1, c2 = st.columns([1, 1], gap="medium")
     with c1:
-        st.markdown("**후보 변수 걸러내기**")
-        st.caption("가설의 If와 맞고, 아마존 메인 이미지 규칙 안이며, Manage Your Experiments로 돌릴 수 있어야 함")
-        st.markdown("| 후보 | 판정 | 이유 |\n| --- | --- | --- |\n"
-                    + "\n".join(f"| {' | '.join(row)} |" for row in media_variable_shown_candidates(MEDIA_VARIABLE_CANDIDATES)))
+        # 걸러내는 기준은 제목 옆 ⓘ에 마우스를 올리면 보임 (설명 줄이 빠져 오른쪽 선정 표와 위쪽 끝이 맞음)
+        st.markdown("**후보 변수 걸러내기**",
+                    help="가설의 If와 맞고, 아마존 메인 이미지 규칙 안이며, Manage Your Experiments로 돌릴 수 있어야 함")
+        # key="media-variable-candidates": media_style.css가 판정 칸을 한 줄로 유지 (줄 높이가 들쭉날쭉하지 않게)
+        with st.container(key="media-variable-candidates"):
+            st.markdown("| 후보 | 판정 | 이유 |\n| --- | --- | --- |\n"
+                        + "\n".join(f"| {' | '.join(row)} |"
+                                    for row in media_variable_shown_candidates(MEDIA_VARIABLE_CANDIDATES)))
     with c2:
         st.markdown("**선정한 단일 변수**")
         st.markdown("| 구분 | 내용 |\n| --- | --- |\n"

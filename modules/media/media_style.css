@@ -214,6 +214,11 @@
   margin: 0 0 4px;
 }
 
+/* 후보 변수 표 (media_variable.py key="media-variable-candidates") - 판정 칸은 줄바꿈 없이 한 줄 */
+.st-key-media-variable-candidates td:nth-child(2) {
+  white-space: nowrap;
+}
+
 /* 불러오기 전 빈 상태 카드 */
 .st-key-media-hypo-empty {
   border-style: dashed !important;
