@@ -3,4 +3,4 @@ pandas>=2.0
 plotly>=5.20
 requests>=2.31
 st-supabase-connection
-streamlit>=1.40
+streamlit>=1.66
