@@ -214,11 +214,6 @@
   margin: 0 0 4px;
 }
 
-/* 후보 변수 표 (media_variable.py key="media-variable-candidates") - 판정 칸은 줄바꿈 없이 한 줄 */
-.st-key-media-variable-candidates td:nth-child(2) {
-  white-space: nowrap;
-}
-
 /* 선정한 단일 변수 표 (media_variable.py key="media-variable-picked") - 구분 칸('A · 대조군')은 한 줄 */
 .st-key-media-variable-picked td:nth-child(1) {
   white-space: nowrap;
