@@ -13,7 +13,7 @@ from modules.media.media_ab import media_ab_plan_step
 from modules.media.media_stage2.media_stage2 import MEDIA_S2_TAB_LABEL, media_stage2_render
 from modules.media.media_stage3.media_stage3_export import MEDIA_S3_EXPORT_TAB_LABEL, media_stage3_export_render
 from modules.media.media_stage3.media_stage3 import MEDIA_S3_TAB_LABEL, media_stage3_render
-from modules.media.media_variable import media_variable_kpi_chip, media_variable_step
+from modules.media.media_variable import MEDIA_VARIABLE_TAB_LABEL, media_variable_kpi_chip, media_variable_step
 
 MEDIA_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경로 만들 때 사용)
 # 공통 로더(layout_load_css)는 media_style.css만 읽으므로, 단계 폴더의 CSS는 여기서 읽어 넣습니다
@@ -23,7 +23,7 @@ MEDIA_STAGE_CSS = [MEDIA_DIR / "media_stage2" / "media_stage2_style.css",
 # 하위 탭(단계): (탭 이름, 화면 함수). 순서대로 '다음 단계' 버튼으로 넘어갑니다.
 # 2·3단계 탭 이름은 각 단계 파일의 MEDIA_S2_TAB_LABEL / MEDIA_S3_TAB_LABEL / MEDIA_S3_EXPORT_TAB_LABEL에서 정합니다 (단계 담당자가 바꿈)
 MEDIA_STEPS = [
-    ("가설에서 변수 도출", media_variable_step),
+    (MEDIA_VARIABLE_TAB_LABEL, media_variable_step),
     ("A/B 소재 준비", media_ab_plan_step),
     (MEDIA_S2_TAB_LABEL, media_stage2_render),
     (MEDIA_S3_TAB_LABEL, media_stage3_render),

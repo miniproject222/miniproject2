@@ -137,6 +137,17 @@
 
   /* 불러온 뒤: [핵심 요약 | 가설 콜아웃] 한 줄을 끌어올려 콜아웃 위쪽 끝을 탭 바와 맞춤.
      두 칸 높이를 같게 늘려(stretch) 왼쪽 요약 카드 아래 끝과 오른쪽 콜아웃 아래 끝을 맞춤 */
+  /* 끌어올린 줄이 하위 탭 바를 덮으므로 클릭은 요약 카드·콜아웃만 받고 나머지는 아래 탭 바로 통과시킴 */
+  .st-key-media-hypo-top,
+  .st-key-media-hypo-top > [data-testid="stLayoutWrapper"] {
+    pointer-events: none;
+  }
+
+  .st-key-media-hypo-summary,
+  .st-key-media-hypo-callout {
+    pointer-events: auto;
+  }
+
   .st-key-media-hypo-top {
     margin-top: -78px;
     gap: 24px;
@@ -219,7 +230,8 @@
   white-space: nowrap;
 }
 
-/* 불러오기 전 빈 상태 카드 */
+/* 불러오기 전 빈 상태 카드 (하위 탭 ①) / 확정 전 빈 상태 카드 (하위 탭 ②, media_ab.py key="media-ab-empty") */
+.st-key-media-ab-empty,
 .st-key-media-hypo-empty {
   border-style: dashed !important;
   background: var(--color-bg);

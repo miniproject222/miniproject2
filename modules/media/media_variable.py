@@ -15,6 +15,7 @@ import streamlit as st
 from common.common_store import store_get
 from modules.media.media_handoff import MEDIA_HANDOFF_PLAN, media_handoff_plan, media_handoff_set_plan
 
+MEDIA_VARIABLE_TAB_LABEL = "가설에서 변수 도출"   # 하위 탭 ① 이름 (media_page.py와 다른 하위 탭의 '① 으로 가서 확정하기' 버튼이 씀)
 MEDIA_VARIABLE_LOAD_SECONDS = 1.2   # '가설 불러오기' 연출 시간 (실제 불러오기는 즉시 끝남)
 
 # 담당자가 정한 기준 가설 (후보 목록 파일 data/media_variable_candidates.json의 첫 묶음과 같은 문장),
@@ -46,6 +47,8 @@ MEDIA_VARIABLE_PICK_MAX = MEDIA_VARIABLE_SHOW - 1   # 고를 수 있는 변수 �
 MEDIA_VARIABLE_VAR_KEY = "media-variable-var"       # 사용자가 표에서 고른 변수 이름 (session_state)
 MEDIA_VARIABLE_TABLE_KEY = "media-variable-table"   # 변수 표 (st.dataframe) key 앞부분 (뒤에 붙는 번호를 바꿔 선택을 되돌림)
 MEDIA_VARIABLE_PICK_KEY = "media-variable-pick"     # B안 고르기 버튼 (st.segmented_control) key 앞부분 (뒤에 변수 번호)
+# 사용자가 고른 B안 {변수 이름: 버튼 이름} (session_state). 버튼 값은 다른 하위 탭에 가면 Streamlit이 지우므로 따로 둠
+MEDIA_VARIABLE_B_KEY = "media-variable-b"
 MEDIA_VARIABLE_ROW_PX = 47   # 변수 표 줄 높이 (오른쪽 '고르기 버튼 + A·B 표'와 높이를 맞춤, media_style.css 참고)
 
 
@@ -154,7 +157,7 @@ def media_variable_candidates() -> dict:
                 or next((v for v in passed if v["name"] == saved.get("variable")), None)
                 or (passed[0] if passed else {}))
     options, broken = media_variable_b_options(variable) if variable else ([], [])
-    chosen_b = st.session_state.get(f"{MEDIA_VARIABLE_PICK_KEY}-{passed.index(variable)}") if variable else None
+    chosen_b = st.session_state.get(MEDIA_VARIABLE_B_KEY, {}).get(variable["name"]) if variable else None
     picked = (next((o for o in options if media_variable_label(o) == chosen_b), None)
               or next((o for o in options if o["b"] == saved.get("b")), None)
               or (options[0] if options else {}))
@@ -199,6 +202,38 @@ def media_variable_plan() -> tuple[dict, str, list[str]]:
         price = "현재 가격"
         defaults.append("가격")
     return plan, price, defaults
+
+
+def media_variable_confirm_state(plan: dict) -> str:
+    """2단계로 확정해 둔 값과 plan 비교: "none"(확정 전) / "same"(확정됨) / "changed"(확정 뒤 고른 값이 바뀜)."""
+    saved = media_handoff_plan()
+    if saved["sample"]:
+        return "none"
+    return "same" if all(saved.get(k) == v for k, v in plan.items()) else "changed"
+
+
+def media_variable_confirmed_plan() -> tuple[dict | None, str]:
+    """(확정해 둔 A/B 설계 plan, 상태). 하위 탭 ②부터는 ①에서 고르는 중인 값이 아니라 이 값을 기준으로 보여 줍니다.
+    확정 전이면 plan은 None. 상태는 지금 ①에서 고른 값과 비교한 media_variable_confirm_state()."""
+    saved = media_handoff_plan()
+    if saved["sample"]:
+        return None, "none"
+    current, _, _ = media_variable_plan()
+    return {k: v for k, v in saved.items() if k != "sample"}, media_variable_confirm_state(current)
+
+
+def media_variable_ref_prompt(b: str) -> str:
+    """지금 가설의 후보 목록에서 B 문장이 같은 B안의 AI 레퍼런스 프롬프트 (없으면 빈 문자열)."""
+    for v in media_variable_candidates()["set"].get("variables", []):
+        for o in (v.get("b_options") or []) if isinstance(v, dict) else []:
+            if isinstance(o, dict) and o.get("b") == b:
+                return o.get("ref_prompt") or ""
+    return ""
+
+
+def media_variable_go_step() -> None:
+    """'① 으로 가서 확정하기' 버튼 콜백. 하위 탭을 ①로 바꿉니다 (위젯이 그려지기 전에 실행됨)."""
+    st.session_state["media-step"] = MEDIA_VARIABLE_TAB_LABEL
 
 
 def media_variable_kpi_chip() -> None:
@@ -308,7 +343,10 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
         broken = "\n".join(f"- {o['label']}: {o['rule_break']} → {o.get('fallback') or '서브 이미지'}"
                            for o in cands["broken"])
         st.markdown("**선정한 단일 변수**", help=(
-            "왼쪽 표에서 고른 변수를 A(지금 그대로)와 B(바꾼 안)로 나눠요. B안이 여럿이면 버튼으로 하나를 골라요.\n\n"
+            "왼쪽 표에서 고른 변수를 A(지금 그대로)와 B(바꾼 안)로 나눠요.\n\n"
+            "**A는 고정**: 지금 아마존에 올라가 있는 메인 이미지(1번 리포트 값)라 바꾸지 않아요. "
+            "지금보다 나아지는지 비교해야 가설(KPI가 지금 값에서 목표로 오르는지)을 확인할 수 있어서, "
+            "A는 그대로 두고 B만 위 버튼으로 골라요.\n\n"
             f"**통제 변수 (고정)**: 같은 제품·색상, 흰 배경, 같은 조명과 보정, 제품 85% 이상 · 제목, 가격 {price}, 쿠폰 없음, "
             "불릿, A+ 콘텐츠, 서브 이미지, 광고 입찰\n\n"
             f"**종속 변수 (메인 KPI)**: {plan['kpi']} = {MEDIA_VARIABLE_KPI_RAW} (시장 대비 CTR)\n\n"
@@ -316,17 +354,23 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             + (f"\n\n**B로 못 쓰는 안 (메인 이미지 규칙 위반)**\n{broken}" if broken else "")
             + (f"\n\n{note}" if note else "")))
         if options:   # 고른 변수의 B안 중 하나 (required=True: 고른 것을 다시 눌러도 빈 선택이 되지 않음)
+            pick_key = f"{MEDIA_VARIABLE_PICK_KEY}-{passed.index(variable)}"
             st.segmented_control("B안 고르기", [media_variable_label(o) for o in options],
-                                 default=media_variable_label(picked), required=True,
-                                 key=f"{MEDIA_VARIABLE_PICK_KEY}-{passed.index(variable)}",
+                                 default=media_variable_label(picked), required=True, key=pick_key,
+                                 on_change=partial(_media_variable_pick_b, pick_key, variable["name"]),
                                  label_visibility="collapsed")
         # key="media-variable-picked": media_style.css가 구분 칸('A · 대조군')을 한 줄로 유지
         with st.container(key="media-variable-picked"):
             st.markdown("| 구분 | 내용 |\n| --- | --- |\n"
-                        f"| **A · 대조군** | {plan['a']} (지금 그대로) |\n"
+                        f"| **A · 대조군** | {plan['a']} (현재 사진 · 고정) |\n"
                         f"| **B · 실험군** | {plan['b']} |")
         if defaults:   # 리포트 탭을 아직 안 열었거나 리포트 칸 이름이 바뀌었을 때 바로 알아차리도록
             st.caption(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
+
+
+def _media_variable_pick_b(key: str, name: str) -> None:
+    """B안 버튼 콜백. 고른 B안을 버튼과 따로 저장해, 다른 하위 탭에 갔다 와도 확정 전 선택이 남게 합니다."""
+    st.session_state.setdefault(MEDIA_VARIABLE_B_KEY, {})[name] = st.session_state.get(key)
 
 
 def _media_variable_confirm(plan: dict) -> None:
@@ -337,23 +381,23 @@ def _media_variable_confirm(plan: dict) -> None:
 
 def media_variable_confirm_step(plan: dict, status: str):
     """선정 표 아래 확정 줄: 사용자가 고른 단일 변수를 확인하고 확정해야 2단계로 넘어갑니다."""
-    saved = media_handoff_plan()
-    confirmed = not saved["sample"] and all(saved.get(k) == v for k, v in plan.items())
+    state = media_variable_confirm_state(plan)
+    confirmed = state == "same"
     if st.session_state.pop("media-variable-confirmed-toast", False):
-        st.toast("단일 변수를 확정해 2단계로 넘겼어요", icon="✅")
+        st.toast("단일 변수를 확정했어요. 다음 단계들이 이 값을 받아요", icon="✅")
     if status == "other":   # 2번 탭 가설에 맞는 후보 목록이 없어 선정 표가 그 가설에 맞지 않음
         note = "이 가설의 후보 목록이 없어 확정할 수 없어요"
     elif confirmed:
-        note = ":green-badge[✅ 확정됨] 2단계(프롬프트 만들기)가 이 값을 받아요"
-    elif not saved["sample"]:   # 확정한 뒤 리포트 값 등이 바뀜
-        note = ":orange-badge[다시 확정 필요] 확정한 뒤 고른 후보나 값이 바뀌었어요. 2단계는 아직 이전 값을 받아요"
+        note = ":green-badge[✅ 확정됨] 다음 단계(A/B 소재 준비부터)가 이 값을 받아요"
+    elif state == "changed":   # 확정한 뒤 고른 후보나 리포트 값이 바뀜
+        note = ":orange-badge[다시 확정 필요] 확정한 뒤 고른 값이 바뀌었어요. 다음 단계는 아직 이전 값을 받아요"
     else:
-        note = "후보를 고르고 확정하면 2단계(프롬프트 만들기)로 넘어가요"
+        note = "후보를 고르고 확정하면 다음 단계(A/B 소재 준비부터)로 넘어가요"
     with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
                       key="media-variable-confirm-row"):
         st.markdown(note)
         if not confirmed:   # 확정된 뒤에는 버튼을 숨기고, 값이 바뀌면 '다시 확정'으로 다시 보여 줌
-            st.button("다시 확정" if not saved["sample"] else "이 변수로 확정", key="media-btn-variable-confirm",
+            st.button("다시 확정" if state == "changed" else "이 변수로 확정", key="media-btn-variable-confirm",
                       type="primary", disabled=status == "other",
                       on_click=_media_variable_confirm, args=(plan,))
 
