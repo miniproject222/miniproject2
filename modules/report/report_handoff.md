@@ -23,7 +23,7 @@ Keepa API(마지막 조회값) · Open-Meteo   ┘                              
 | 키 | 읽는 탭 | 내용 |
 |---|---|---|
 | `problems` | 홈, ② 가설 | 문제 목록. **맨 앞이 가장 중요한 문제**. 각 항목: `title`, `type`(내부/외부), `level`, `group`, `detail`, `target`, `metric`, `local_context`, `competitor_review` (검색어 문제는 `sqp_type`, `query` 추가) |
-| `summary` | ② 가설 | 핵심 문제 한 줄 요약 |
+| `summary` | ② 가설 | 핵심 문제 한 줄 요약 (Top 3와 같은 순서) |
 | `sqp` | ② 가설, ③ 광고 소재 | 검색어 클릭 분석: `query`, `imp_share`, `click_share`, `ratio`, `kpi_goal`, `listing`(우리 상품 메인 이미지·가격) 등 (노출·클릭은 **가상 SQP**) |
 | `ab_test` | 홈 | A/B 결과 `{name, a:{ctr,cvr}, b:{ctr,cvr}, summary}` · ① 탭에 결과 파일(CSV)을 올렸을 때만, 없으면 `None` |
 
@@ -31,6 +31,7 @@ Keepa API(마지막 조회값) · Open-Meteo   ┘                              
 
 | 키 | 쓸 탭 | 내용 |
 |---|---|---|
+| `analyzed_on`, `previous` | ① (내부용) | 분석한 날, 이전 분석의 날짜·데이터 기준·1·2순위 제목 (이전 분석 대비 문구용) |
 | `key_problems` | ② 가설 | 핵심 문제 Top 3 (검색어·내부·외부를 섞어 위험도 → 심각도 점수 순, `severity`: score·data·urgency·gap·basis) + 가설 질문 `question` · `problems` 앞 3개와 같은 순서 |
 | `opportunities` | ② 가설 | 외부 기회 |
 | `review_analysis` | ② 가설 | 리뷰 문제 근거·목표 (`seori`, `leader`, `five_star_needed`, `findings`, `metric`, `target`, `rule`) |

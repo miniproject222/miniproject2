@@ -461,6 +461,28 @@ def hypothesis_dialog_judgement(sqp: dict) -> None:
     hypothesis_scenario_judgement(sqp)
 
 
+@st.dialog("가설 보고서 다운로드", icon=":material/download:")
+def hypothesis_dialog_pdf(saved: dict) -> None:
+    """① 문제 분석 요약 + ② 선택한 가설을 한 PDF로 내려받습니다 (① 탭 PDF에는 가설이 없어서 따로 만듦)."""
+    try:
+        from modules.hypothesis.hypothesis_pdf import hypothesis_build_pdf
+    except ImportError:
+        st.warning("PDF를 만들려면 fpdf2 라이브러리가 필요합니다. `pip install -r requirements.txt`를 실행해 주세요.")
+        return
+    st.caption("① 핵심 요약·문제 도출 + ② 선택한 가설(If·Because·Then)·실행 방법이 들어가요. "
+               "경쟁사 비교 등 ① 전체 내용은 ① 탭 PDF에 있어요.")
+    today = datetime.now().strftime("%Y-%m-%d")
+    st.download_button(
+        "가설 보고서 다운로드 (PDF)",
+        data=hypothesis_build_pdf(saved, today),
+        file_name=f"hypothesis_report_{today}.pdf",
+        mime="application/pdf",
+        key="hypothesis-btn-download-pdf",
+        type="primary",
+        width="stretch",
+    )
+
+
 def hypothesis_resolve_ibt(problem: dict, sqp: dict | None) -> dict:
     """가설(If·Because·Then)은 각 후보마다 항상 1벌이어야 합니다. '검색 클릭' 문제(소재 개선 ·
     노출 확대 유형) 중에는, report의 sqp 원본 데이터(메인 이미지·장바구니 전환율, 또는 기온·
@@ -700,6 +722,10 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
         if hypothesis_evidence_rows(problem) and st.button("", icon=":material/menu_book:",
                                                            key=f"hypothesis-btn-side-evidence-{index}", type="tertiary"):
             hypothesis_dialog_evidence(problem)
+        # 가설을 선택(저장)한 뒤에만: ① 요약 + ② 가설 PDF 다운로드
+        if saved and isinstance(saved.get("selected"), dict) and st.button(
+                "", icon=":material/download:", key=f"hypothesis-btn-side-pdf-{index}", type="tertiary"):
+            hypothesis_dialog_pdf(saved)
 
 
 def hypothesis_render():

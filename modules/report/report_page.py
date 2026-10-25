@@ -1,4 +1,5 @@
 # 1. 문제 분석 (검색어 클릭 분석은 가상 SQP + 실제 Keepa·DWD, 경쟁 포지션 분석은 실제 데이터만)
+from datetime import date
 from pathlib import Path
 
 import plotly.graph_objects as go
@@ -6,7 +7,7 @@ import streamlit as st
 
 import ui_theme as ui
 
-from common.common_store import store_set
+from common.common_store import store_get, store_set
 from modules.report.report_ab import REPORT_AB_TEMPLATE, report_ab_analyze, report_ab_p, report_ab_parse_csv, report_ab_verdict
 from modules.report.report_competitor import REPORT_SEORI_PROXY
 from modules.report.report_data import report_load_data, report_utm_rows
@@ -35,7 +36,7 @@ def report_render():
     summary = report_build_summary(data, worst)
     report_save_store(data, summary, worst, utm_rows, utm_worst)
 
-    ui.page_header("1. 문제 분석", "노출·클릭: 가상 SQP · 경쟁 제품: Keepa 실제 · 기온: DWD 실제")
+    ui.page_header("1. 문제 분석", "Keepa·경쟁사 DB·검색어 분석으로 서리의 내부·외부 문제를 찾아 위험도 순으로 정리해요.")
     if data["source_error"]:
         st.caption(f"GA4 연결 실패: {data['source_error']}")
 
@@ -121,18 +122,11 @@ def report_funnel_steps(funnel):
 
 
 def report_build_summary(data, worst):
-    """핵심 문제 요약: 검색어 클릭 문제 1순위 + 내부 1순위 + 외부 위협 1순위 (+ GA4 퍼널이 있으면 가장 떨어진 단계)."""
-    parts = []
-    if data["sqp_store"]:
-        s = data["sqp_store"]
-        parts.append(f"검색 클릭: '{s['query']}' 클릭 ÷ 노출 {s['ratio']:.2f}배, 놓친 클릭 약 {s['missed_clicks']:,}회 (가상 SQP)")
-    if data["internal"]:
-        parts.append(f"내부: {data['internal'][0]['title']}")
+    """핵심 문제 요약: 핵심 문제 Top 3와 같은 순서 (위험도 → 심각도) + GA4 퍼널이 있으면 가장 떨어진 단계."""
+    parts = [f"{p['rank']}순위 {'검색 클릭' if p['group'] in ('소재 개선', '노출 확대', '제외 검토') else p['type']}: {p['title']}"
+             for p in data["key_problems"]]
     if worst:
         parts.append(f"퍼널: '{worst['name']}' 전환율 {worst['prev']:.1f}% → {worst['now']:.1f}%")
-    threat = next((f for f in data["external"] if f["kind"] == "위협"), None)
-    if threat:
-        parts.append(f"외부 위협: {threat['title']}")
     return " / ".join(parts) or "표시할 데이터가 없습니다."
 
 
@@ -169,6 +163,20 @@ def report_store_home_ab(upload):
             "b": {"ctr": r["ctr_b"], "cvr": r["cvr_b"]}, "summary": upload["verdict"]}
 
 
+def report_compare_text(previous, payload):
+    """이전 분석 대비 한 줄: 1·2순위가 바뀌었는지, 안 바뀌었다면 왜인지 (데이터가 같은지)."""
+    if not previous:
+        return "이전 분석 결과 없음 (오늘이 첫 분석) · 같은 데이터면 같은 결과가 나오도록 계산"
+    now = [p["title"] for p in payload["key_problems"][:2]]
+    when = f"이전 분석({previous['analyzed_on']})"
+    if now != previous["top"]:
+        changed = [f"{i}순위 '{t[:24]}'" for i, t in enumerate(now, 1) if i > len(previous["top"]) or previous["top"][i - 1] != t]
+        return f"{when}과 달라짐: " + ", ".join(changed) + " 새로 올라옴"
+    if previous["as_of"] == payload["as_of"]:
+        return f"{when}과 1·2순위 같음 · Keepa 데이터가 같아서 (새 데이터가 들어오면 다시 계산)"
+    return f"{when}과 1·2순위 같음 · 새 Keepa 데이터({payload['as_of'].split(': ')[-1]})로 다시 계산해도 같은 문제가 가장 큼"
+
+
 def report_save_store(data, summary, worst, utm_rows, utm_worst):
     """홈·가설·광고 소재·광고 타이밍 탭이 읽을 결과를 저장합니다 (store "report" = Supabase common_store). 내용이 바뀔 때만 다시 저장.
     지금 다른 탭이 읽는 키: 가설 problems·sqp·summary / 광고 소재 sqp / 홈 problems·ab_test.
@@ -202,6 +210,17 @@ def report_save_store(data, summary, worst, utm_rows, utm_worst):
     if utm_rows:   # GA4가 연결됐을 때만
         payload.update({"funnel_worst": worst["name"] if worst else "", "utm": utm_rows,
                         "utm_worst": utm_worst["channel"] if utm_worst else ""})
+    # 이전 분석과 비교: 오늘 첫 분석이면 저장돼 있던 결과가 '이전', 같은 날 다시 열면 그 이전 값을 유지
+    saved = store_get("report")
+    saved = saved if isinstance(saved, dict) else {}
+    today = date.today().isoformat()
+    if saved.get("analyzed_on") and saved["analyzed_on"] != today:
+        previous = {"analyzed_on": saved["analyzed_on"], "as_of": saved.get("as_of", ""),
+                    "top": [p["title"] for p in (saved.get("key_problems") or [])[:2]]}
+    else:
+        previous = saved.get("previous")
+    payload.update({"analyzed_on": today, "previous": previous})
+    data["compare"] = report_compare_text(previous, payload)
     if st.session_state.get("report-stored-payload") != payload:
         store_set("report", payload)
         st.session_state["report-stored-payload"] = payload
@@ -236,6 +255,8 @@ def report_show_key_problems(data):
                             p["group"], p["title"], f'근거: {p["detail"]}',
                             f'<div class="report-row-q">→ 가설 탭 질문: <b>{p["question"]}</b></div>')
             for p in data["key_problems"][:2]), unsafe_allow_html=True)
+        if data.get("compare"):   # 이전 분석 대비 (바뀌었는지, 안 바뀌었다면 왜인지)
+            st.markdown(f'<div class="report-desc">{data["compare"]}</div>', unsafe_allow_html=True)
 
 
 def report_show_problem_rest(data, summary, kpis, steps, utm_rows):
@@ -243,7 +264,7 @@ def report_show_problem_rest(data, summary, kpis, steps, utm_rows):
     with st.container(border=True):
         st.markdown("".join(report_problem_html(p) for p in data["key_problems"]), unsafe_allow_html=True)
         if data["sqp"]:
-            st.markdown('<div class="report-desc">경쟁 포지션 분석의 핵심 문제 (출시 준비): '
+            st.markdown('<div class="report-desc">경쟁 포지션 분석만 본 핵심 문제 (검색어 제외): '
                         + " / ".join(p["title"] for p in data["position_key_problems"]) + "</div>", unsafe_allow_html=True)
         st.caption("이 결과는 다른 탭(홈, 가설, 광고 소재, 광고 타이밍)에서 store_get(\"report\")로 읽을 수 있습니다.")
         with st.expander(":material/rule: 데이터 기준·신뢰도 (같은 지표는 항상 같은 기준으로 계산)", expanded=False):
@@ -311,7 +332,7 @@ def report_show_internal(data):
     if not items:
         st.caption("표시할 내부 요인이 없습니다. (경쟁사 DB에서 서리 행을 찾지 못하면 비어 보입니다. 앱을 다시 켜 주세요.)")
         return
-    report_factor_card(":material/domain: **내부 요인**", f'서리 = {data["seori_proxy"] or "-"} 실적 가정 · {data["keepa_status"].split(" · ")[0]}', items,
+    report_factor_card(":material/domain: **내부 요인**", f'서리 = {data["seori_proxy"] or "-"} 실적 가정 · {report_keepa_age_text(data)}', items,
                        lambda fs: "".join(report_factor_html(f, f["group"]) for f in fs), "internal")
 
 
@@ -347,9 +368,26 @@ def report_show_external(data):
                        "Keepa·Open-Meteo·독일 DB", items, block, "external", tag=lambda f: f"{f['kind']} · {f['group']}")
 
 
+def report_keepa_age_text(data):
+    """'Keepa 마지막 조회: 날짜 (N일 전 · 자동 갱신 꺼짐)' - 데이터가 오래됐는지, 아침 자동 갱신이 도는지 한눈에."""
+    last = data["keepa_status"].split(" · ")[0]
+    try:
+        age = (date.today() - date.fromisoformat(str(data.get("keepa_time", ""))[:10])).days
+    except ValueError:
+        return last
+    extra = ["오늘" if age == 0 else f"{age}일 전"]
+    if str(data.get("keepa_auto", "")).startswith("아침 자동 갱신 꺼짐"):
+        extra.append("자동 갱신 꺼짐")
+    return f"{last} ({' · '.join(extra)})"
+
+
 def report_show_competitors(data):
     """냉감패드 경쟁사 비교: 판매 순위 상위 2개사 + 서리(가정 3위). 냉감패드 제품 정보만 (경쟁사 DB + Keepa)."""
     rows = data["competitors_full"]
+    month = f"{int(data['keepa_time'][5:7])}월" if str(data.get("keepa_time", ""))[5:7].isdigit() else "현재"
+    now_col = f"현재 순위 ({month})"   # Keepa 마지막 조회 달 (아침 자동 갱신으로 달이 바뀌어도 맞게)
+    off_season = month == "현재" or int(month[:-1]) not in (6, 7, 8)
+    own_price = data["seori_profile"].get("amazon_price")
     with st.container(border=True):
         st.markdown(f":material/leaderboard: **냉감패드 경쟁사 비교** · 판매 순위 상위 2개사 + 서리(가정 3위)  \n"
                     f'<span class="report-desc">{data["keepa_status"]} · {data["keepa_auto"]}</span>',
@@ -371,11 +409,11 @@ def report_show_competitors(data):
                 "브랜드": r["brand"], "냉감패드 제품": r["product"],
                 "1년 판매 신호": f"{sig[r.get('asin')]}회" if sig.get(r.get("asin")) is not None else "-",
                 "여름 순위 (6~8월)": f"{summer[r.get('asin')]:,}" if summer.get(r.get("asin")) else "-",
-                "10월 순위": f"{k['rank']:,}" if k.get("rank") else ("가정 3위 (판매 전)" if seori else "-"),
+                now_col: f"{k['rank']:,}" if k.get("rank") else "-",
                 "현재가": f"€{k['price']:.2f}" if k.get("price") else (f"€{r['db_price']:.2f} (권장가)" if seori and r["db_price"] else "-"),
                 # 가격 변화는 계절이 섞이지 않게 작년 같은 날과 비교 (데이터 기준: 가격 변화)
                 "작년 대비": (f"{(k['price'] / yago[r.get('asin')] - 1) * 100:+.0f}%"
-                              if k.get("price") and yago.get(r.get("asin")) else "-"),
+                              if k.get("price") and yago.get(r.get("asin")) and not seori else "-"),   # 서리는 가정 가격이라 작년 비교 없음
                 "평점": f"{k['rating']:.1f}" if k.get("rating") else "-",
                 "리뷰 수": f"{k['reviews']:,}" if k.get("reviews") is not None else ("0건" if seori else "-"),
                 "㎡당 가격": (f"€{r['keepa_sqm']:.1f}" if r.get("keepa_sqm") else f"€{r['sqm_price']:.1f}" if r["sqm_price"] else "-"),
@@ -384,9 +422,10 @@ def report_show_competitors(data):
         st.dataframe(table, hide_index=True, width="stretch", key="report-table-competitors",
                      column_config={"냉감패드 제품": st.column_config.TextColumn(width="medium")})
         st.markdown('<div class="report-desc">순위 기준: 냉감 전용 상품의 1년 판매 신호(Keepa 순위가 좋아진 횟수 = 판매 횟수 추정), 양면(2-in-1)·비냉감 혼재 상품 제외 · '
-                    '현재 순위는 비수기(10월) 값이라 순서가 다를 수 있음 · '
-                    f'서리 = 독일 냉감패드 실적 3위 {REPORT_SEORI_PROXY}라고 가정해 판매 순위·평점·리뷰는 {REPORT_SEORI_PROXY}의 Keepa 실적을 표시, '
-                    '가격은 서리 판매가 €64.99 (가정, 검색어 분석과 같은 값) · 제품명·냉감 방식·Q-max·강점·약점은 서리 기획 · ㎡당 가격: 현재가 기준</div>',
+                    + (f'현재 순위는 비수기({month}) 값이라 순서가 다를 수 있음 · ' if off_season else '')
+                    + f'서리 = 독일 냉감패드 실적 3위 {REPORT_SEORI_PROXY}라고 가정해 판매 순위·평점·리뷰는 {REPORT_SEORI_PROXY}의 Keepa 실적을 표시, '
+                    + (f'가격은 서리 판매가 €{own_price:.2f} (가정, 검색어 분석과 같은 값) · ' if own_price else '')
+                    + '제품명·냉감 방식·Q-max·강점·약점은 서리 기획 · ㎡당 가격: 현재가 기준</div>',
                     unsafe_allow_html=True)
         with st.expander("냉감패드 항목별 비교 (서리 목표 vs 상위 2개사 최고)", expanded=False):
             st.dataframe([{"항목": c["item"], "가중치": f"{c['weight']:.0%}", "서리 (목표)": c["seori"],

@@ -412,10 +412,39 @@ def report_pdf_onepage(c):
     return pdf
 
 
+def report_pdf_hypothesis(pdf, h, new_page):
+    """② 가설 수립 탭에서 선택한 가설(store "hypothesis"의 selected)을 PDF 맨 아래에 붙입니다."""
+    def clean(text):
+        return str(text or "-").replace("—", "-").replace("–", "-")   # SUIT 글꼴에 긴 줄표가 없음
+
+    W, L = pdf.epw, pdf.l_margin
+    if new_page:
+        pdf.set_auto_page_break(True, margin=pdf.b_margin)   # 원페이지형은 자동 쪽 넘김이 꺼져 있음
+        pdf.add_page()
+        y = pdf.t_margin
+    else:
+        y = pdf.ensure_space(pdf.get_y() + 6, 40)
+    y = pdf.text_at(L, y, W, "□ 가설 (② 가설 수립에서 선택)", size=11.5, bold=True, line_h=7)
+    title = (h.get("problem") or {}).get("title")
+    if title:
+        y = pdf.text_at(L + 3, y + 1, W - 3, f"대상 문제: {clean(title)}", size=9, bold=True)
+    pdf.set_y(y + 1.5)
+    pdf.table_at(L, W, [("구분", "내용"), ("If (만약)", clean(h.get("if"))),
+                        ("Because (왜냐하면)", clean(h.get("because"))), ("Then (그러면)", clean(h.get("then")))],
+                 (1.3, 6), size=8.5)
+    execution = h.get("execution") or {}
+    if execution:
+        y = pdf.text_at(L, pdf.ensure_space(pdf.get_y() + 3, 20), W, "실행 방법", size=10, bold=True, line_h=6)
+        pdf.set_y(y)
+        pdf.table_at(L, W, [("항목", "내용")] + [(k, clean(v)) for k, v in execution.items()], (1.3, 6), size=8)
+    pdf.text_at(L, pdf.get_y() + 2, W, f"※ 가설 선택 {h.get('saved_at') or '-'} (② 가설 수립 탭 저장값)",
+                size=7.5, color="muted")
+
+
 REPORT_PDF_BUILDERS = {"formal": report_pdf_formal, "executive": report_pdf_executive, "onepage": report_pdf_onepage}
 
 
-def report_build_pdf(style, data, kpis, summary, steps=None, utm_rows=None):
+def report_build_pdf(style, data, kpis, summary, steps=None, utm_rows=None, hypothesis=None):
     """화면 데이터(report_load_data 결과)를 고른 양식(style)의 PDF로 만듭니다."""
     content = {
         "period": data["period"],
@@ -432,4 +461,7 @@ def report_build_pdf(style, data, kpis, summary, steps=None, utm_rows=None):
         "ga4": data["ga4"], "steps": steps or [], "utm_rows": utm_rows or [],
         "ab_tests": data["ab_tests"],
     }
-    return bytes(REPORT_PDF_BUILDERS[style](content).output())
+    pdf = REPORT_PDF_BUILDERS[style](content)
+    if hypothesis:   # ② 탭에서 가설을 선택했을 때만 맨 아래에 붙임
+        report_pdf_hypothesis(pdf, hypothesis, new_page=style != "formal")
+    return bytes(pdf.output())
