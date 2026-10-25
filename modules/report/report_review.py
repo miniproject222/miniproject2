@@ -6,7 +6,7 @@ import json
 import math
 from collections import Counter
 
-from modules.report.report_competitor import REPORT_MODULE_DATA, REPORT_SEORI_PROXY, report_market10
+from modules.report.report_competitor import REPORT_MODULE_DATA, REPORT_SEORI_PROXY, report_market10, report_shop_review_count
 from modules.report.report_keepa import report_keepa_detail
 
 REPORT_REVIEW_RATING_GOALS = (4.0, 4.1)   # 서리 평점 목표: 경쟁사 2곳 수준 (Mara Vital 4.0, Traumnacht 4.1)
@@ -86,9 +86,12 @@ def report_review_analysis(rivals, snapshot_items, keepa_time):
     needs = {f"{g:.1f}": report_review_need(seori["reviews"], seori["rating"], g) for g in REPORT_REVIEW_RATING_GOALS}
     many = max(others, key=lambda r: r["reviews"])
 
+    shop_n = report_shop_review_count()
+    total = seori["reviews"] + shop_n   # 서리 리뷰 수 = Amazon + 자사몰 (경쟁사는 Amazon만)
     findings = [
-        f"서리 리뷰 {seori['reviews']}건 · 평점 {seori['rating']} → 냉감패드 실적 1위 {leader['brand']} {leader['reviews']}건 · 평점 {leader['rating']}"
-        f" (리뷰 {max(leader['reviews'] - seori['reviews'], 0)}건 차이)",
+        f"서리 리뷰 {total:,}건 (Amazon {seori['reviews']} + 자사몰 {shop_n:,}) · Amazon 평점 {seori['rating']} → 냉감패드 실적 1위 "
+        f"{leader['brand']} {leader['reviews']}건 · 평점 {leader['rating']} (Amazon만, "
+        + (f"리뷰 {leader['reviews'] - total}건 차이)" if total < leader["reviews"] else f"서리가 {total - leader['reviews']:,}건 많음)"),
         f"비교 상품 {len(others)}개의 리뷰 수 중앙값 {median:g}건"
         + (f" · 서리는 그 {seori['reviews'] / median * 100:.0f}%" if median else ""),   # 리뷰가 모두 0건이면 비율 생략
         f"리뷰가 가장 많은 {many['brand']}({many['reviews']}건)의 판매 순위는 "
@@ -108,10 +111,10 @@ def report_review_analysis(rivals, snapshot_items, keepa_time):
         findings.append("자사몰 냉감 리뷰 주제: " + " / ".join(f"{t['theme']} {t['count']}건" for t in shop["themes"]))
     return {
         "rows": rows,
-        "seori": {"reviews": seori["reviews"], "rating": seori["rating"], "rank": seori["rank"]},
+        "seori": {"reviews": seori["reviews"], "reviews_shop": shop_n, "reviews_total": total, "rating": seori["rating"], "rank": seori["rank"]},
         "leader": {"brand": leader["brand"], "reviews": leader["reviews"], "rating": leader["rating"], "rank": leader["rank"]},
         "median_reviews": median,
-        "review_gap_to_leader": max(leader["reviews"] - seori["reviews"], 0),
+        "review_gap_to_leader": max(leader["reviews"] - total, 0),   # 합산 기준
         "five_star_needed": needs,                      # {"4.0": 건수, "4.1": 건수}
         "rank_corr": round(rho, 2) if rho is not None else None,
         "findings": findings,
