@@ -1,5 +1,6 @@
 # 1. 문제 분석 (검색어 클릭 분석은 가상 SQP + 실제 Keepa·DWD, 경쟁 포지션 분석은 실제 데이터만)
-from datetime import date
+import time
+from datetime import date, datetime
 from pathlib import Path
 
 import plotly.graph_objects as go
@@ -9,7 +10,7 @@ import ui_theme as ui
 
 from common.common_store import store_get, store_set
 from modules.report.report_ab import REPORT_AB_TEMPLATE, report_ab_analyze, report_ab_p, report_ab_parse_csv, report_ab_verdict
-from modules.report.report_competitor import REPORT_SEORI_PROXY
+from modules.report.report_competitor import REPORT_SEORI_PROXY, report_shop_review_count
 from modules.report.report_data import report_load_data, report_utm_rows
 from modules.report.report_review import report_shop_reviews
 from modules.report.report_download import report_download_pdf
@@ -27,17 +28,45 @@ REPORT_FACTOR_HEIGHT = 250   # 내부·외부 요인 카드 높이(px): 두 카�
 REPORT_FACTOR_ORDER = {"높음": 0, "중간": 1, "낮음": 2}
 
 
+REPORT_LOAD_MIN_SEC = 1.0   # 불러오기 로딩 표시 최소 시간 (초): 너무 빨리 끝나도 '불러오는 느낌'이 나게
+REPORT_LOADED_KEY = "report-loaded"   # 이번 접속에서 '불러오기'를 눌렀는지 (누르기 전에는 화면을 비워 둠)
+
+
 def report_render():
-    """'1. 분석 리포트' 탭을 열 때마다 실행됩니다. 화면은 전부 이 함수 안에서 그립니다."""
-    data = report_load_data()
+    """'1. 분석 리포트' 탭을 열 때마다 실행됩니다. 화면은 전부 이 함수 안에서 그립니다.
+    처음에는 비어 있고, 오른쪽 위 '불러오기'를 누르면 분석해서 화면을 채우고, '저장하기'를 누르면 ② 탭이 읽을 리포트로 저장."""
+    loaded = st.session_state.get(REPORT_LOADED_KEY, False)
+    with st.container(horizontal=True, vertical_alignment="center", key="report-head"):
+        with st.container(key="report-head-title"):
+            ui.page_header("1. 문제 분석", "Keepa·경쟁사 DB·검색어 분석으로 서리의 내부·외부 문제를 찾아 위험도 순으로 정리해요.")
+        st.button("불러오기", icon=":material/download:", key="report-btn-load", on_click=report_click_load,
+                  help="Keepa·경쟁사 DB·검색어 분석으로 문제 분석 결과를 만듭니다")
+        st.button("저장하기", icon=":material/save:", key="report-btn-save", type="primary", disabled=not loaded,
+                  on_click=report_click_save, help="지금 결과를 리포트로 저장 → ② 가설 탭에서 확인")
+    if st.session_state.pop("report-saved-toast", False):
+        st.toast("리포트를 저장했어요. ② 가설 탭에서 확인할 수 있어요", icon=":material/check_circle:")
+    if not loaded:
+        report_show_empty()
+        return
+
+    just = st.session_state.pop("report-just-loaded", False)
+    if just:   # 불러오기 직후: 데이터를 실제로 불러오는 동안 로딩 표시 (최소 1초)
+        started = time.time()
+        with st.spinner("Keepa·경쟁사 DB·검색어 분석 데이터를 불러오는 중…"):
+            data = report_load_data()
+            time.sleep(max(0.0, REPORT_LOAD_MIN_SEC - (time.time() - started)))
+    else:
+        data = report_load_data()
+    data["reveal"] = just   # 불러오기 직후 한 번만 글자가 차례로 나타남 (report_style.css .report-reveal)
     ga4, sqp = data["ga4"], data["sqp"]
     steps = report_funnel_steps(ga4["funnel"]) if ga4 else []
     worst = min(steps, key=lambda s: s["diff"]) if steps else None
     utm_rows, utm_worst = report_utm_rows(ga4["utm"]) if ga4 else ([], None)
     summary = report_build_summary(data, worst)
-    report_save_store(data, summary, worst, utm_rows, utm_worst)
+    payload = report_build_payload(data, summary, worst, utm_rows, utm_worst)
+    st.session_state["report-current-payload"] = payload   # '저장하기'가 이 값을 저장
+    data["saved"] = store_get("report") == payload        # 지금 화면 결과가 저장된 리포트와 같은지
 
-    ui.page_header("1. 문제 분석", "Keepa·경쟁사 DB·검색어 분석으로 서리의 내부·외부 문제를 찾아 위험도 순으로 정리해요.")
     if data["source_error"]:
         st.caption(f"GA4 연결 실패: {data['source_error']}")
 
@@ -65,6 +94,35 @@ def report_render():
         for name, icon, dialog, args in buttons:
             if st.button("", icon=icon, key=f"report-btn-side-{name}", type="tertiary"):
                 dialog(*args)
+
+
+def report_show_empty():
+    """'불러오기' 전 기본 틀: 결과 박스(1·2순위)와 내부·외부 요인 카드를 같은 모양으로 그리고 내용만 비워 둠.
+    분석·Keepa 조회는 하지 않고, 결과 박스 아래에 안내와 마지막 저장 리포트만 보여 줍니다."""
+    blank = "&nbsp;"
+    saved = store_get("report")
+    saved = saved if isinstance(saved, dict) and saved.get("problems") else None
+    last = (f'마지막 저장 리포트: {saved.get("analyzed_on", "-")} 분석 · '
+            + " / ".join(p["title"] for p in (saved.get("key_problems") or [])[:2]) if saved else "저장된 리포트 없음")
+    with st.container(border=True, key="report-card-result"):
+        st.markdown(':material/flag: **문제 분석 결과** <span class="report-desc">내부·외부 요인 중 위험도 → 심각도 순 1·2순위 '
+                    "→ ② 가설 탭에서 사용</span>", unsafe_allow_html=True)
+        # 결과를 모르니 내부·외부는 쓰지 않고, 색도 기본색(report-skeleton) - 불러오면 실제 값과 색으로 바뀜
+        st.markdown('<span class="report-skeleton"></span>' + "".join(
+            report_row_html(f'<span class="report-level">{rank}순위</span>', "", blank, blank,
+                            f'<div class="report-row-q">{blank}</div>')
+            for rank in (1, 2)), unsafe_allow_html=True)
+        st.markdown(f"<div class=\"report-desc\">아직 불러오지 않음 → 오른쪽 위 '불러오기'를 누르면 분석 결과가 채워져요 · {last}</div>",
+                    unsafe_allow_html=True)
+    left, right = st.columns(2)
+    for col, title, key in ((left, ":material/domain: **내부 요인**", "internal"), (right, ":material/public: **외부 요인**", "external")):
+        with col, st.container(border=True, height=REPORT_FACTOR_HEIGHT, key=f"report-card-{key}"):
+            # 높음·중간은 불러와야 알 수 있어 '위험도'로만, 색도 기본색
+            st.markdown(f'{title} <span class="report-desc">불러오기 전</span><span class="report-skeleton"></span>', unsafe_allow_html=True)
+            st.markdown("".join(report_row_html('<span class="report-level">위험도</span>', "", blank, blank) for _ in range(2)),
+                        unsafe_allow_html=True)
+            with st.container(key=f"report-more-{key}"):
+                st.popover("더보기 0", type="tertiary", disabled=True)
 
 
 @st.dialog("핵심 문제 전체 · 리포트 다운로드", width="large", icon=":material/picture_as_pdf:")
@@ -183,9 +241,9 @@ def report_compare_text(previous, payload):
     return f"{when}과 1·2순위 같음 · 새 Keepa 데이터({payload['as_of'].split(': ')[-1]})로 다시 계산해도 같은 문제가 가장 큼"
 
 
-def report_save_store(data, summary, worst, utm_rows, utm_worst):
-    """홈·가설·광고 소재·광고 타이밍 탭이 읽을 결과를 저장합니다 (store "report" = Supabase common_store). 내용이 바뀔 때만 다시 저장.
-    지금 다른 탭이 읽는 키: 가설 problems·sqp·summary / 광고 소재 sqp / 홈 problems·ab_test.
+def report_build_payload(data, summary, worst, utm_rows, utm_worst):
+    """홈·가설·광고 소재·광고 타이밍 탭이 읽을 리포트(store "report" = Supabase common_store)를 만듭니다. 저장은 하지 않음
+    ('저장하기' 버튼 → report_save_store). 지금 다른 탭이 읽는 키: 가설 problems·sqp·summary / 광고 소재 sqp / 홈 problems·ab_test.
     매출 값(yesterday_sales·sales_delta·sales_7d·kpi)은 실제 매출 데이터(GA4)가 없어 넣지 않습니다."""
     ra = data["review_analysis"] or {}
     payload = {
@@ -245,9 +303,27 @@ def report_save_store(data, summary, worst, utm_rows, utm_worst):
                                         if hyp["values_changed"] else "")
         payload["hypothesis"] = hyp
     data["compare"] = report_compare_text(previous, payload)
-    if st.session_state.get("report-stored-payload") != payload:
-        store_set("report", payload)
-        st.session_state["report-stored-payload"] = payload
+    return payload
+
+
+def report_save_store(payload):
+    """'저장하기' 버튼: 리포트를 store("report")에 저장 → ② 가설 탭(그리고 홈·③)에서 읽음."""
+    store_set("report", payload)
+    st.session_state["report-saved-at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    st.session_state["report-saved-toast"] = True
+
+
+def report_click_load():
+    """'불러오기' 버튼: 이번 접속에서 분석을 실행해 화면을 채움 (다시 누르면 최신 값으로 다시 계산)."""
+    st.session_state[REPORT_LOADED_KEY] = True
+    st.session_state["report-just-loaded"] = True   # 이번 한 번만: 로딩 표시 + 글자가 차례로 나타나는 효과
+    st.session_state["report-load-count"] = st.session_state.get("report-load-count", 0) + 1
+
+
+def report_click_save():
+    payload = st.session_state.get("report-current-payload")
+    if payload:
+        report_save_store(payload)
 
 
 def report_problem_html(p):
@@ -271,7 +347,9 @@ def report_row_html(badge, tag, title, detail, extra=""):
 def report_show_key_problems(data):
     """문제 분석 결과: 핵심 문제 1·2순위를 한 박스에 세로로. 전체(3순위)·PDF는 오른쪽 PDF 아이콘."""
     with st.container(border=True, key="report-card-result"):
-        st.markdown(':material/flag: **문제 분석 결과** <span class="report-desc">내부·외부 요인 중 위험도 → 심각도 순 1·2순위 (배지에 마우스를 올리면 점수) → ② 가설 탭에서 사용</span>',
+        # report-loaded-mark: 불러온 뒤 결과 박스를 빨간 테두리로 (report_style.css), report-reveal: 불러오기 직후 글자 효과
+        st.markdown(':material/flag: **문제 분석 결과** <span class="report-desc">내부·외부 요인 중 위험도 → 심각도 순 1·2순위 (배지에 마우스를 올리면 점수) → ② 가설 탭에서 사용</span>'
+                    '<span class="report-loaded-mark"></span>' + ('<span class="report-reveal"></span>' if data.get("reveal") else ""),
                     unsafe_allow_html=True)
         st.markdown("".join(
             report_row_html(f'<span class="report-level report-level-{REPORT_LEVEL_CLASS[p["level"]]}" '
@@ -279,8 +357,10 @@ def report_show_key_problems(data):
                             p["group"], p["title"], f'근거: {p["detail"]}',
                             f'<div class="report-row-q">→ 가설 탭 질문: <b>{p["question"]}</b></div>')
             for p in data["key_problems"][:2]), unsafe_allow_html=True)
-        if data.get("compare"):   # 이전 분석 대비 (바뀌었는지, 안 바뀌었다면 왜인지)
-            st.markdown(f'<div class="report-desc">{data["compare"]}</div>', unsafe_allow_html=True)
+        saved_text = (f"저장됨{' (' + st.session_state['report-saved-at'] + ')' if st.session_state.get('report-saved-at') else ''} · ② 가설 탭에서 확인 가능"
+                      if data.get("saved") else "아직 저장 안 됨 → 오른쪽 위 '저장하기'를 눌러야 ② 가설 탭에 반영")
+        st.markdown(f'<div class="report-desc">{saved_text}' + (f' · {data["compare"]}' if data.get("compare") else "") + "</div>",
+                    unsafe_allow_html=True)
 
 
 def report_show_problem_rest(data, summary, kpis, steps, utm_rows):
@@ -350,13 +430,18 @@ def report_factor_card(title, desc, items, render, key, tag=lambda f: f["group"]
                 st.markdown(render(rest), unsafe_allow_html=True)
 
 
+def report_reveal_mark(data):
+    """불러오기 직후 한 번만: 카드 안 글자가 차례로 나타나게 하는 표시 (report_style.css .report-reveal)."""
+    return '<span class="report-reveal"></span>' if data.get("reveal") else ""
+
+
 def report_show_internal(data):
     """내부 요인: 서리가 경쟁사 대비 부족한 점. 가장 큰 문제 2개(최대 3개) + 더보기."""
     items = data["internal"]
     if not items:
         st.caption("표시할 내부 요인이 없습니다. (경쟁사 DB에서 서리 행을 찾지 못하면 비어 보입니다. 앱을 다시 켜 주세요.)")
         return
-    report_factor_card(":material/domain: **내부 요인**", f'서리 = {data["seori_proxy"] or "-"} 실적 가정 · {report_keepa_age_text(data)}', items,
+    report_factor_card(":material/domain: **내부 요인**", f'서리 = {data["seori_proxy"] or "-"} 실적 가정 · {report_keepa_age_text(data)}' + report_reveal_mark(data), items,
                        lambda fs: "".join(report_factor_html(f, f["group"]) for f in fs), "internal")
 
 
@@ -389,7 +474,7 @@ def report_show_external(data):
         return html
 
     report_factor_card(":material/public: **외부 요인**", f'위협 {sum(f["kind"] == "위협" for f in items)}개 · 기회 {sum(f["kind"] == "기회" for f in items)}개 · '
-                       "Keepa·Open-Meteo·독일 DB", items, block, "external", tag=lambda f: f"{f['kind']} · {f['group']}")
+                       "Keepa·Open-Meteo·독일 DB" + report_reveal_mark(data), items, block, "external", tag=lambda f: f"{f['kind']} · {f['group']}")
 
 
 def report_keepa_age_text(data):
@@ -425,9 +510,11 @@ def report_show_competitors(data):
         sig = {a: (d.get("rank_drops") or {}).get("365") for a, d in detail.items()}   # 순위 기준: 1년 판매 신호
         yago = {a: (d.get("price") or {}).get("year_ago") for a, d in detail.items()}   # 작년 같은 날 가격
         table = []
+        shop_n = report_shop_review_count()   # 서리 리뷰 수 = Amazon + 자사몰 (경쟁사는 Amazon만)
         for r in rows:
             k = r.get("keepa") or {}
             seori = r["kind"] == "자사"
+            shop_total = (k.get("reviews") or 0) + shop_n
             table.append({
                 "순위": "3위 (가정)" if seori else (f"{r['rank']}위" if r.get("rank") else r["label"]),
                 "브랜드": r["brand"], "냉감패드 제품": r["product"],
@@ -439,7 +526,8 @@ def report_show_competitors(data):
                 "작년 대비": (f"{(k['price'] / yago[r.get('asin')] - 1) * 100:+.0f}%"
                               if k.get("price") and yago.get(r.get("asin")) and not seori else "-"),   # 서리는 가정 가격이라 작년 비교 없음
                 "평점": f"{k['rating']:.1f}" if k.get("rating") else "-",
-                "리뷰 수": f"{k['reviews']:,}" if k.get("reviews") is not None else ("0건" if seori else "-"),
+                "리뷰 수": (f"{shop_total:,} (Amazon {k.get('reviews') or 0} + 자사몰 {shop_n:,})" if seori and shop_n
+                           else f"{k['reviews']:,}" if k.get("reviews") is not None else ("0건" if seori else "-")),
                 "㎡당 가격": (f"€{r['keepa_sqm']:.1f}" if r.get("keepa_sqm") else f"€{r['sqm_price']:.1f}" if r["sqm_price"] else "-"),
                 "Q-max": (r["qmax"] or "-").split(" · ")[0].split(" (")[0],
             })
@@ -447,7 +535,8 @@ def report_show_competitors(data):
                      column_config={"냉감패드 제품": st.column_config.TextColumn(width="medium")})
         st.markdown('<div class="report-desc">순위 기준: 냉감 전용 상품의 1년 판매 신호(Keepa 순위가 좋아진 횟수 = 판매 횟수 추정), 양면(2-in-1)·비냉감 혼재 상품 제외 · '
                     + (f'현재 순위는 비수기({month}) 값이라 순서가 다를 수 있음 · ' if off_season else '')
-                    + f'서리 = 독일 냉감패드 실적 3위 {REPORT_SEORI_PROXY}라고 가정해 판매 순위·평점·리뷰는 {REPORT_SEORI_PROXY}의 Keepa 실적을 표시, '
+                    + f'서리 = 독일 냉감패드 실적 3위 {REPORT_SEORI_PROXY}라고 가정해 판매 순위·평점은 {REPORT_SEORI_PROXY}의 Keepa 실적, '
+                    + '리뷰 수는 Amazon + 자사몰 합산(경쟁사는 Amazon만), '
                     + (f'가격은 서리 판매가 €{own_price:.2f} (가정, 검색어 분석과 같은 값) · ' if own_price else '')
                     + '제품명·냉감 방식·Q-max·강점·약점은 서리 기획 · ㎡당 가격: 현재가 기준</div>',
                     unsafe_allow_html=True)
