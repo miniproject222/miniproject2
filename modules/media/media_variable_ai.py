@@ -20,12 +20,13 @@ MEDIA_VARIABLE_AI_EXAMPLE_FILE = Path(__file__).resolve().parent / "data" / "med
 MEDIA_VARIABLE_AI_RULE_SOURCE = "규칙"   # AI 없이 만든 묶음의 출처 이름
 
 # 변수 종류: kind → (표에 보일 이름, 가설 If에서 찾을 말). 위에서부터 먼저 맞는 종류로 봅니다.
+# 메인 이미지는 '이미지'만으로도 걸리므로, '상세 이미지'처럼 메인이 아닌 이미지 종류를 먼저 둡니다.
 MEDIA_VARIABLE_KINDS = {
-    "main_image": ("메인 이미지", ["메인 이미지", "대표 이미지", "썸네일", "사진", "이미지"]),
     "title": ("제목", ["제목", "타이틀", "상품명"]),
     "bullet": ("불릿·상세 설명", ["불릿", "상세 설명", "설명 문구"]),
-    "a_plus": ("A+ 콘텐츠", ["A+"]),
+    "a_plus": ("A+·상세 이미지", ["A+", "상세 이미지", "상세 페이지", "서브 이미지"]),
     "price": ("가격·쿠폰", ["가격", "할인", "쿠폰"]),
+    "main_image": ("메인 이미지", ["메인 이미지", "대표 이미지", "썸네일", "사진", "이미지"]),
     "other": ("가설의 If", []),
 }
 # 메인 이미지 B안에서 아마존 규칙에 걸리는 말: (찾을 말, 어긴 규칙, 대신 쓸 곳). AI 답과 규칙 묶음 모두 이걸로 다시 확인합니다.
@@ -180,8 +181,10 @@ def media_variable_kind(text: str) -> str:
 def media_variable_rule_set(hypo: dict) -> dict:
     """AI 없이 만드는 후보 묶음: 가설의 If를 그대로 독립 변수 하나 + B안 하나로 쓰고,
     걸러내는 예시로 다른 종류 변수 두 개를 '가설의 If가 아님'으로 붙입니다."""
-    # If가 따로 없으면(예전 저장값) 문장의 첫 쉼표 앞까지를 If로 봅니다
-    if_text = str(hypo.get("if") or hypo["text"].split(", ")[0]).strip().removeprefix("만약").strip().rstrip(",")
+    from modules.media.media_variable import media_variable_short_if   # 순환 방지로 여기서 불러옴
+    # If가 따로 없으면(예전 저장값) 문장의 첫 쉼표 앞까지를 If로 봅니다. B안은 콜아웃과 같은 짧은 모양 (대상·문장 틀 뺌)
+    _, if_text = media_variable_short_if(str(hypo.get("if") or hypo["text"].split(", ")[0]),
+                                         str((hypo.get("problem") or {}).get("target") or ""))
     kind = media_variable_kind(if_text)
     others = [k for k in ("title", "price", "main_image") if k != kind][:2]
     return media_variable_clean_set({

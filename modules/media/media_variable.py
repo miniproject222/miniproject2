@@ -5,6 +5,7 @@
 # 3번 탭의 하위 탭 ①(가설에서 변수 도출)에서 부릅니다.
 # 고른 A/B 설계(plan)는 1번 리포트 값으로 채워 화면에 보여 주고, 사용자가 확정하면 2단계로 넘깁니다 (media_handoff.py).
 # 바깥 값을 읽는 곳은 두 함수뿐입니다: 가설 media_variable_saved(), 리포트 media_variable_report_sqp()
+import re
 from functools import partial
 
 import streamlit as st
@@ -20,6 +21,12 @@ MEDIA_VARIABLE_GEN_KEY = "media-variable-gen"     # 그 가설의 후보 묶음 
 
 # 가설 콜아웃 각 줄 앞에 붙는 배지 (Streamlit 마크다운 배지 문법)
 MEDIA_VARIABLE_BADGES = [":blue-badge[If]", ":violet-badge[Because]", ":green-badge[Then]"]
+# 가설 콜아웃을 짧게 보여 줄 때 If 끝에서 걷어 낼 문장 틀 (정규식, 바꿀 말). 위에서부터 차례로 적용
+MEDIA_VARIABLE_IF_TRIMS = [(r"(을|를) 적용한다면$", " 적용"), (r"바꾸면$", "변경"), (r"(한다면|하면)$", "")]
+# Then '지표가 A에서 B(이상)로 (N%) 오를/낮아질 것이다' 모양 → '지표 A → B (N%↑)'
+MEDIA_VARIABLE_THEN_PATTERN = (r"(?P<metric>.+?)(?:이|가) (?P<a>\S+?)에서 (?P<b>\S+?)(?P<more> 이상)?(?:으로|로) "
+                               r"(?:(?P<pct>[\d.]+%p?) )?(?P<verb>오를|높아질|늘어날|올라갈|낮아질|줄어들|떨어질) 것이다")
+MEDIA_VARIABLE_THEN_UP = ("오를", "높아질", "늘어날", "올라갈")
 # KPI 이름: 가설 문장(2번 탭과 같은 원문)은 그대로 두고, 화면에 보일 때만 쉬운 이름으로 바꿉니다
 MEDIA_VARIABLE_KPI_RAW = "클릭 점유율 ÷ 노출 점유율"
 MEDIA_VARIABLE_KPI = MEDIA_HANDOFF_PLAN["kpi"]   # "노출 대비 클릭률"
@@ -120,21 +127,57 @@ def media_variable_split(text: str) -> list[str] | None:
     return None
 
 
+def media_variable_short_if(text: str, target: str) -> tuple[str, str]:
+    """If를 짧게: (대상, 바꿀 것). 문장 앞의 '{대상}에 '는 대상 칩으로 빼고, 끝의 '~을 적용한다면'·'~바꾸면' 같은
+    문장 틀만 걷어 냅니다. 대상이 문장 앞에 없으면 대상은 빈 문자열."""
+    text = text.removeprefix("만약").strip().rstrip(",").strip()
+    # 2번 탭은 문장 안의 ", "를 "·"로 바꿔 저장하므로(hypothesis_scenario.py) 두 모양 모두 찾음
+    for name in dict.fromkeys([target, target.replace(", ", "·")] if target else []):
+        josa = next((j for j in ("에게 ", "에 ") if text.startswith(name + j)), None)
+        if josa:
+            target, text = name, text[len(name + josa):]
+            break
+    else:
+        target = ""
+    for pattern, repl in MEDIA_VARIABLE_IF_TRIMS:
+        text = re.sub(pattern, repl, text)
+    return target, text
+
+
+def media_variable_short_then(text: str) -> str:
+    """Then을 짧게: '전환율이 2.4%에서 2.9%로 21% 오를 것이다' → '전환율 2.4% → 2.9% (21%↑)'.
+    이 모양이 아니면 끝의 마침표만 빼고 그대로 둡니다 (뜻을 바꾸지 않도록 정해진 모양만 줄임)."""
+    text = text.strip().rstrip(".")
+    m = re.fullmatch(MEDIA_VARIABLE_THEN_PATTERN, text)
+    if not m:
+        return text
+    arrow = "↑" if m["verb"] in MEDIA_VARIABLE_THEN_UP else "↓"
+    goal = m["b"] + (" 이상" if m["more"] else "")
+    return f"{m['metric']} {m['a']} → {goal} " + (f"({m['pct']}{arrow})" if m["pct"] else arrow)
+
+
 def media_variable_callout(hypo: dict) -> None:
-    """가설 콜아웃(st.info). If / Because / Then을 배지 붙은 줄로 나누고, Then(KPI)은 굵게 표시합니다.
+    """가설 콜아웃(st.info). If / Because / Then을 배지 붙은 줄로 나누고, 문장 틀만 걷어 낸 짧은 모양으로 보여 줍니다
+    (대상은 맨 위 칩, Then은 숫자를 화살표로). 줄인 것은 화면뿐이고, 원문 문장 그대로는 오른쪽 위 '원문' ⓘ에 둡니다.
     2번 탭이 나눠 저장한 If/Because/Then이 있으면 그대로 쓰고, 없으면 문장을 나눕니다. 나눌 수 없는 문장은 한 덩어리로 보여 줍니다."""
     text = media_variable_kpi_name(hypo["text"])
     if hypo.get("if") and hypo.get("because") and hypo.get("then"):
-        parts = [media_variable_kpi_name(p) for p in
-                 (f"만약 {hypo['if'].removeprefix('만약').strip()},", hypo["because"], hypo["then"].rstrip(".") + ".")]
+        parts = [media_variable_kpi_name(p) for p in (hypo["if"], hypo["because"], hypo["then"])]
     else:
         parts = media_variable_split(text)
     if parts:
-        parts[2] = f"**{parts[2]}**"
+        target, parts[0] = media_variable_short_if(parts[0], str((hypo.get("problem") or {}).get("target") or ""))
+        parts[1] = parts[1].strip().rstrip(",")
+        parts[2] = f"**{media_variable_short_then(parts[2])}**"
         body = "  \n".join(f"{badge} {part}" for badge, part in zip(MEDIA_VARIABLE_BADGES, parts))
+        if target:
+            body = f":gray-badge[대상: {target}]  \n{body}"
     else:
         body = text
     st.info(body, icon="📥")
+    # key="media-hypo-origin": media_style.css가 콜아웃 오른쪽 위 구석에 띄움
+    with st.container(key="media-hypo-origin"):
+        st.markdown(":gray[원문]", help=f"**2번 탭에서 넘어온 가설 원문**\n\n{hypo['text']}")
 
 def media_variable_b_options(v: dict) -> tuple[list[dict], list[dict]]:
     """변수 하나의 (B로 쓸 수 있는 안, 메인 이미지 규칙을 어겨 못 쓰는 안)."""
