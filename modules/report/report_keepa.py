@@ -16,6 +16,7 @@ REPORT_DATA_DIR = Path(__file__).resolve().parent / "data"
 REPORT_KEEPA_ASIN_FILE = REPORT_DATA_DIR / "report_keepa_asin_202610.json"
 REPORT_KEEPA_SNAPSHOT_FILE = REPORT_DATA_DIR / "report_keepa_snapshot.json"
 REPORT_KEEPA_USAGE_FILE = REPORT_DATA_DIR / "report_keepa_usage.json"
+REPORT_KEEPA_DETAIL_FILE = REPORT_DATA_DIR / "report_keepa_detail_202610.json"   # 하위 카테고리 순위·여름 순위·리뷰 추이 (2026-10-24 조회)
 REPORT_KEEPA_DOMAIN = 3            # Amazon.de
 REPORT_KEEPA_STATS_DAYS = 90       # 평균 가격 비교 기간
 REPORT_KEEPA_TOKENS_PER_PRODUCT = 2   # 예상치: 상품 1토큰 + 평점·리뷰 최대 1토큰
@@ -34,9 +35,16 @@ def report_keepa_secret(name):
         return ""
 
 
-def report_keepa_products():
-    """조회할 경쟁사 상품 목록 (브랜드, ASIN, 사이즈)."""
-    return json.loads(REPORT_KEEPA_ASIN_FILE.read_text(encoding="utf-8"))["products"]
+def report_keepa_products(brands=None):
+    """조회할 경쟁사 상품 목록 (브랜드, ASIN, 사이즈). brands가 있으면 그 브랜드만 (대시보드 상위 경쟁사만 조회해 토큰 절약)."""
+    products = json.loads(REPORT_KEEPA_ASIN_FILE.read_text(encoding="utf-8"))["products"]
+    return [p for p in products if not brands or p["db_brand"] in brands]
+
+
+def report_keepa_top_brands():
+    """대시보드에 보여 주는 경쟁사(경쟁사 DB 판매 순위 상위) 브랜드. 이 브랜드만 Keepa로 조회합니다."""
+    from modules.report.report_competitor import REPORT_SEORI_PROXY, report_competitor_load
+    return [r["brand"] for r in report_competitor_load() if r["kind"] != "자사"] + [REPORT_SEORI_PROXY]
 
 
 def report_keepa_snapshot():
@@ -46,13 +54,20 @@ def report_keepa_snapshot():
     return json.loads(REPORT_KEEPA_SNAPSHOT_FILE.read_text(encoding="utf-8"))
 
 
+def report_keepa_detail():
+    """냉감패드 실적 상세 (ASIN별 하위 카테고리 순위, 여름 순위, 판매 신호, 리뷰 1년 변화). 없으면 {}."""
+    if not REPORT_KEEPA_DETAIL_FILE.exists():
+        return {}
+    return json.loads(REPORT_KEEPA_DETAIL_FILE.read_text(encoding="utf-8"))
+
+
 def report_keepa_usage():
     return json.loads(REPORT_KEEPA_USAGE_FILE.read_text(encoding="utf-8"))
 
 
 def report_keepa_estimate():
     """다음 조회의 예상 토큰 수."""
-    return len(report_keepa_products()) * REPORT_KEEPA_TOKENS_PER_PRODUCT
+    return len(report_keepa_products(report_keepa_top_brands())) * REPORT_KEEPA_TOKENS_PER_PRODUCT
 
 
 def report_keepa_can_fetch():
@@ -76,7 +91,7 @@ def report_keepa_fetch_and_save(pin):
     if pin != report_keepa_secret("KEEPA_FETCH_PIN"):
         raise RuntimeError("PIN이 맞지 않습니다.")
 
-    asins = [p["asin"] for p in report_keepa_products()]
+    asins = [p["asin"] for p in report_keepa_products(report_keepa_top_brands())]
     # 오류 문구에 요청 주소(키 포함)가 들어가지 않도록, 원래 오류 대신 짧은 메시지로 바꿉니다
     try:
         resp = requests.get("https://api.keepa.com/product", timeout=30, params={

@@ -1,0 +1,252 @@
+{
+  "fetched_at": "2026-10-24",
+  "note": "Keepa 상품 상세(stats=90, rating=1, history=1) 4개 상품 조회 · 8토큰. 판매 순위는 Amazon.de 카테고리별 순위, '순위 하락 횟수'는 순위가 좋아진 횟수로 판매가 일어났다는 신호(Keepa salesRankDrops), '월 구매 배지'는 Amazon 'X+ im letzten Monat gekauft' 표시 기록. · 쿠폰 기록·수수료·상세페이지 특징 문구는 같은 조회 응답에서 추출 (추가 토큰 없음) · price: 신품 가격 기록에서 작년 같은 날·여름 중앙값·365일 중앙값 (계절 보정 비교용, 추가 토큰 없음)",
+  "items": {
+    "B0DJBVKMY9": {
+      "brand": "Traumnacht",
+      "title": "Traumnacht Cool Comfort Matratzenauflage 90x200 cm | Sommer & Winter | Weicher Doppeltuchbezug | Atmungsaktiv & komforta",
+      "category": "Bettwaren & Bettwäsche > Matratzenauflagen & Topper > Matratzenauflagen",
+      "sub_category": "Matratzenauflagen",
+      "listed_since": "2024-10-01",
+      "rank_root_now": 6992,
+      "rank_root_summer_median": 5488,
+      "rank_root_summer_best": 1444,
+      "rank_sub_now": 8,
+      "rank_sub_summer_median": 8,
+      "rank_sub_summer_best": 1,
+      "rank_drops": {
+        "30": 11,
+        "90": 42,
+        "180": 112,
+        "365": 270
+      },
+      "monthly_sold": [
+        {
+          "from": "2025-04-17",
+          "badge": 30
+        },
+        {
+          "from": "2026-02-05",
+          "badge": 10
+        },
+        {
+          "from": "2026-06-18",
+          "badge": 50
+        },
+        {
+          "from": "2026-06-27",
+          "badge": 100
+        }
+      ],
+      "reviews_now": 31,
+      "rating_now": 4.1,
+      "reviews_1y_ago": null,
+      "variations": 19,
+      "cooling_variations": 2,
+      "parent_asin": "B08NG4R86H",
+      "parent_title": "Traumnacht Komfort Microfaser Matratzenschoner",
+      "note": "2026-07-24 전까지 비냉감 'Komfort Microfaser Matratzenschoner' 상품군(리뷰 약 9,840건)에 묶여 있다가 새 상품군으로 분리, 리뷰 수가 19건부터 다시 시작. 변형 19개 중 냉감(Cool Komfort)은 2개 → 판매 순위·월 구매 배지는 비냉감 상품 실적이 섞였을 가능성이 큼",
+      "coupons": {
+        "count": 0,
+        "max_pct": 0,
+        "last": null,
+        "active_now": false
+      },
+      "fees": {
+        "referral_pct": 15.02,
+        "fba_eur": 6.28
+      },
+      "features": [
+        "Refreshing sleeping comfort – special mattress topper with a practical 2-in-1 cover made of cooling material and comfortable double cloth. Simply reversible and",
+        "Cover for summer and winter – supple, soft cover with a front made of cosy double cloth (55% polyester, 45% polyethylene, 350 g/m²), which has a pleasantly cool",
+        "Non-slip – Four elastic bands for attaching to the corners of the mattress prevent slipping. Suitable for mattresses, as well as water and box spring beds.",
+        "Easy care – the Traumnacht Cool Comfort mattress topper is tested for harmful substances according to Oeko-Tex Standard 100 as well as easy to clean and washabl",
+        "Sustainability: Traumnacht products are tested according to Oeko-Tex Standard 100. For sustainable recycling, we do not use a tightly stitched label - the displ"
+      ],
+      "images": 9,
+      "price": {
+        "now": 28.9,
+        "year_ago": 26.9,
+        "summer_median": 28.9,
+        "median_365": 28.64
+      }
+    },
+    "B0B5RZH8C3": {
+      "brand": "Mara Vital",
+      "title": "Mara Vital Kühlende Matratzenschoner 90x200 | Endlich kühl schlafen Dank PCM Kühlfasern | Matratzenauflage gegen Schwitz",
+      "category": "Bettwaren & Bettwäsche > Matratzenschutz & Ummantelungen",
+      "sub_category": "Matratzenschutz & Ummantelungen",
+      "listed_since": "2023-06-26",
+      "rank_root_now": 245133,
+      "rank_root_summer_median": 26847,
+      "rank_root_summer_best": 6178,
+      "rank_sub_now": 122,
+      "rank_sub_summer_median": 65,
+      "rank_sub_summer_best": 28,
+      "rank_drops": {
+        "30": 10,
+        "90": 33,
+        "180": 59,
+        "365": 73
+      },
+      "monthly_sold": [
+        {
+          "from": "2024-07-31",
+          "badge": 50
+        },
+        {
+          "from": "2025-07-04",
+          "badge": 50
+        },
+        {
+          "from": "2026-07-01",
+          "badge": 50
+        }
+      ],
+      "reviews_now": 131,
+      "rating_now": 4.0,
+      "reviews_1y_ago": 132,
+      "variations": 29,
+      "cooling_variations": 0,
+      "parent_asin": "B0D636YG6X",
+      "parent_title": "Mara Vital Kühlende Matratzenschoner (Größe) | Endlich kühl schlafen Dank PCM Kü",
+      "coupons": {
+        "count": 4,
+        "max_pct": 10,
+        "last": {
+          "from": "2026-10-13",
+          "pct": 10
+        },
+        "active_now": false
+      },
+      "fees": {
+        "referral_pct": 15.01,
+        "fba_eur": 4.99
+      },
+      "features": [
+        "✅ ENDLICH KÜHL SCHLAFEN – Schluss mit dem nächtlichen Wälzen und schweißnassen Kissen: Die kühlende Matratzenauflage 90x200cm von Mara Vital senkt die Temperatu",
+        "✅ KÜHLUNG DIE WIRKT – Die speziellen PCM Kühlfasern nehmen deine Körperwärme aktiv auf und geben erfrischende Kühlung zurück – ohne Klimaanlage, ohne kalten Luf",
+        "✅ KEIN KNISTERN, RUHIGER SCHLAF – Mit nur 5 mm Stärke verschwindet der mattress protector unsichtbar auf deiner Matratze. Kein Verrutschen dank vier elastischer",
+        "✅ FRISCHE AUF KNOPFDRUCK – Einfach bei 30 °C in die Waschmaschine und deine Matratzenschutzbezüge sind wie neu. Das Beste: Die Kühlwirkung bleibt nach jedem Was",
+        "✅ FÜR ALLE DIE NACHTS INS SCHWITZEN KOMMEN – Ob heiße Sommernächte, Nachtschweiß oder einfach ein zu warmes Schlafzimmer: Der Elements Cool Matrazenschoner von "
+      ],
+      "images": 7,
+      "price": {
+        "now": 89.9,
+        "year_ago": 89.9,
+        "summer_median": 89.9,
+        "median_365": 89.9
+      }
+    },
+    "B0F2FN34BS": {
+      "brand": "Herlag",
+      "title": "Herlag Matratzenauflage 90x200cm - 2-in-1 Wendeauflage mit Sommer- & Winterseite - Ganzjähriger Matratzenschoner - Cooli",
+      "category": "Bettwaren & Bettwäsche > Matratzenauflagen & Topper > Matratzentopper",
+      "sub_category": "Matratzentopper",
+      "listed_since": "2025-03-25",
+      "rank_root_now": 299729,
+      "rank_root_summer_median": 213802,
+      "rank_root_summer_best": 85368,
+      "rank_sub_now": 251,
+      "rank_sub_summer_median": 239,
+      "rank_sub_summer_best": 136,
+      "rank_drops": {
+        "30": 6,
+        "90": 14,
+        "180": 23,
+        "365": 41
+      },
+      "monthly_sold": [
+        {
+          "from": "2025-07-03",
+          "badge": 50
+        }
+      ],
+      "reviews_now": 20,
+      "rating_now": 3.8,
+      "reviews_1y_ago": 16,
+      "variations": 3,
+      "cooling_variations": 0,
+      "parent_asin": "B0F2FLH646",
+      "parent_title": "Herlag Matratzenauflage | 2-in-1 Wendbar mit Sommer- & Winterseite",
+      "coupons": {
+        "count": 0,
+        "max_pct": 0,
+        "last": null,
+        "active_now": false
+      },
+      "fees": {
+        "referral_pct": null,
+        "fba_eur": null
+      },
+      "features": [
+        "💤 𝗛𝗘𝗥𝗟𝗔𝗚 𝟮 𝗜𝗡 𝟭 𝗦𝗢𝗠𝗠𝗘𝗥- & 𝗪𝗜𝗡𝗧𝗘𝗥𝗠𝗔𝗧𝗥𝗔𝗧𝗭𝗘𝗡𝗔𝗨𝗙𝗟𝗔𝗚𝗘: Die temperaturregulierende Sommerseite mit Cooling-Gewebe reduziert Schwitzen und fördert Luftzirkulation – di",
+        "💤 𝗪𝗔𝗦𝗖𝗛𝗕𝗔𝗥𝗘𝗥 𝗦𝗖𝗛𝗢𝗡𝗘𝗥 𝗜𝗡 𝗦𝗧𝗔𝗡𝗗𝗔𝗥𝗗𝗚𝗥Öß𝗘𝗡: Der Bettschutz kann in der Maschine bis 40 Grad gewaschen werden und ist bei niedrigen Temperaturen trocknergeeignet. Er",
+        "💤 𝗘𝗖𝗞𝗕Ä𝗡𝗗𝗘𝗥 & 𝗗𝗜𝗔𝗠𝗔𝗡𝗧-𝗦𝗧𝗘𝗣𝗣𝗨𝗡𝗚: Auch die Details des Herlag Toppers sind durchdacht. Mit den Eckbändern ist die Auflage schnell angebracht und dank der Diamant-",
+        "💤 𝗢𝗘𝗞𝗢-𝗧𝗘𝗫 𝟭𝟬𝟬: Der Herlag Matratzenüberzug ist nach Öko Tex 100 zertifiziert (Sammelzertifikat SH025 193655) und beschert Ihnen erholsamen und sicheren Schlaf.",
+        "💤 𝗔𝗧𝗠𝗨𝗡𝗚𝗦𝗔𝗞𝗧𝗜𝗩 & 𝗟𝗘𝗜𝗦𝗘: Auch wenn Sie sich nachts viel bewegen oder schwitzen unterstützt Sie der Topper dank atmungsaktiver Eigenschaft. Bewegungen veursachen "
+      ],
+      "images": 7,
+      "price": {
+        "now": 34.9,
+        "year_ago": 32.9,
+        "summer_median": 32.28,
+        "median_365": 34.9
+      }
+    },
+    "B07121YZM5": {
+      "brand": "RIBECO GERMANY",
+      "title": "RIBECO GERMANY Ganzjahr-Matratzenauflage 90x200cm, 2-in-1 wärmend+kühlend",
+      "category": "Bettwaren & Bettwäsche > Matratzenauflagen & Topper > Matratzenauflagen",
+      "sub_category": "Matratzenauflagen",
+      "listed_since": "2017-05-26",
+      "rank_root_now": 323890,
+      "rank_root_summer_median": 63025,
+      "rank_root_summer_best": 12479,
+      "rank_sub_now": 100,
+      "rank_sub_summer_median": 33,
+      "rank_sub_summer_best": 10,
+      "rank_drops": {
+        "30": 6,
+        "90": 23,
+        "180": 49,
+        "365": 64
+      },
+      "monthly_sold": [],
+      "reviews_now": 173,
+      "rating_now": 4.1,
+      "reviews_1y_ago": 160,
+      "variations": 7,
+      "cooling_variations": 0,
+      "parent_asin": "B07S9SJZZ7",
+      "parent_title": "Parent Top Cool Matratzenauflage",
+      "coupons": {
+        "count": 1,
+        "max_pct": 20,
+        "last": {
+          "from": "2024-10-09",
+          "pct": 20
+        },
+        "active_now": false
+      },
+      "fees": {
+        "referral_pct": 15.0,
+        "fba_eur": 5.57
+      },
+      "features": [
+        "KÜHLENDE WIRKUNG: Die blau-weiß gestreifte Seite der Matratzenauflage besteht aus weicher Microfaser mit einer TopCool-Faser, die durch einen kühlenden Effekt b",
+        "WÄRMENDE WIRKUNG: Die weiße Rückseite aus hochwertigem Flanell bietet wohlige Wärme in den kälteren Wintermonaten. Diese Seite der 2 cm hohen Matratzenauflage u",
+        "PERFEKTE PASSFORM: Die vier Eckgummis sorgen dafür, dass die Matratzenauflage sicher und rutschfest auf Ihrer Matratze sitzt. Sie bleibt an Ort und Stelle, selb",
+        "PFLEGELEICHT: Die Matratzenauflage ist bis zu 40°C waschbar und trocknergeeignet, was die Reinigung und Pflege erleichtert. So bleibt die Auflage bei regelmäßig",
+        "ZERTIFIZIERT: Die Matratzenauflage ist schadstoffgeprüft nach OEKOTEX 100"
+      ],
+      "images": 8,
+      "price": {
+        "now": 39.94,
+        "year_ago": 39.94,
+        "summer_median": 53.44,
+        "median_365": 45.69
+      }
+    }
+  }
+}

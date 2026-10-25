@@ -13,6 +13,7 @@ from modules.report.report_sqp import (
     REPORT_SQP_TYPE_DIRECTION, report_sqp_main_reasons, report_sqp_month_range, report_sqp_statement,
 )
 
+REPORT_SQP_SHOW_COUNT = 2   # 검색어별 점유율 비교·주별 흐름에 보여 줄 검색어 수 (분석은 전체 검색어로 함)
 REPORT_SQP_TYPE_LABEL = {"소재 개선": "보이는 만큼 안 눌림 (문제)", "노출 확대": "보이는 것보다 더 눌림",
                          "제외 검토": "검색 의도 다름", "": "정상"}
 
@@ -20,6 +21,12 @@ REPORT_SQP_TYPE_LABEL = {"소재 개선": "보이는 만큼 안 눌림 (문제)"
 def report_sqp_source(text):
     """출처 표시 배지 (가상 / 실제 / 가정)."""
     return f'<span class="report-src">{text}</span>'
+
+
+def report_sqp_shown(sqp):
+    """화면에 보여 줄 검색어: 메인(문제) 검색어를 먼저, 나머지는 검색량 순위대로 REPORT_SQP_SHOW_COUNT개."""
+    rest = sorted((x for x in sqp["queries"] if x is not sqp["main"]), key=lambda x: x["volume_rank"])
+    return ([sqp["main"]] + rest)[:REPORT_SQP_SHOW_COUNT]
 
 
 def report_sqp_show(sqp):
@@ -34,7 +41,7 @@ def report_sqp_show(sqp):
 
 def report_sqp_show_statement(sqp):
     with st.container(border=True):
-        st.markdown(f"**📌 문제 문장** · amazon.de 검색어 성과 ({sqp['period']}) "
+        st.markdown(f":material/push_pin: **문제 문장** · amazon.de 검색어 성과 ({sqp['period']}) "
                     + report_sqp_source("노출·클릭: 가상"), unsafe_allow_html=True)
         st.markdown(f'<div class="report-statement">{report_sqp_statement(sqp)}</div>', unsafe_allow_html=True)
         st.markdown('<div class="report-desc">배수 = 클릭 점유율 ÷ 노출 점유율 = 우리 CTR ÷ 시장 CTR. '
@@ -44,10 +51,11 @@ def report_sqp_show_statement(sqp):
 
 def report_sqp_show_queries(sqp):
     with st.container(border=True):
-        st.markdown(f"**🔎 검색어별 점유율 비교** · {len(sqp['queries'])}개 검색어, {sqp['weeks_count']}주 합계 "
-                    + report_sqp_source("가상 SQP"), unsafe_allow_html=True)
+        shown = report_sqp_shown(sqp)
+        st.markdown(f":material/search: **검색어별 점유율 비교** · {len(shown)}개 검색어 (전체 {len(sqp['queries'])}개 중), "
+                    f"{sqp['weeks_count']}주 합계 " + report_sqp_source("가상 SQP"), unsafe_allow_html=True)
         rows = []
-        for x in sqp["queries"]:
+        for x in shown:
             t = x["total"]
             rows.append({
                 "검색어": x["query"], "검색량 순위": x["volume_rank"],
@@ -64,9 +72,9 @@ def report_sqp_show_queries(sqp):
 
 
 def report_sqp_show_trend(sqp):
-    queries = [x["query"] for x in sqp["queries"]]
+    queries = [x["query"] for x in report_sqp_shown(sqp)]
     with st.container(border=True):
-        st.markdown("**📈 주별 흐름** · 배수 + 검색량 + 기온 + 경쟁사 이벤트 "
+        st.markdown(":material/trending_up: **주별 흐름** · 배수 + 검색량 + 기온 + 경쟁사 이벤트 "
                     + report_sqp_source("기온: DWD 실제") + report_sqp_source(f"이벤트: {sqp['event_source']}"),
                     unsafe_allow_html=True)
         q = st.selectbox("검색어", queries, index=queries.index(sqp["main"]["query"]), key="report-sqp-query")
@@ -114,7 +122,7 @@ def report_sqp_chart(x, sqp):
 
 def report_sqp_show_problems(sqp):
     with st.container(border=True):
-        st.markdown("**🎯 1단계 문제 Top 3** · 자동 판정 " + report_sqp_source("가상 SQP"), unsafe_allow_html=True)
+        st.markdown(":material/flag: **1단계 문제 Top 3** · 자동 판정 " + report_sqp_source("가상 SQP"), unsafe_allow_html=True)
         rows = []
         for i, x in enumerate(sqp["problems"], 1):
             lo_i, hi_i = report_sqp_month_range(x, "imp_share")
@@ -149,7 +157,7 @@ def report_sqp_show_causes(sqp):
     left, right = st.columns(2)
     with left:
         with st.container(border=True):
-            st.markdown("**🔎 원인: 내부** · 검색 결과에서 보이는 것 " + report_sqp_source("가상"), unsafe_allow_html=True)
+            st.markdown(":material/domain: **원인: 내부** · 검색 결과에서 보이는 것 " + report_sqp_source("가상"), unsafe_allow_html=True)
             rivals = [c for c in sqp["competitors"] if c["source"] == "Keepa 실제" and c["reviews"]]
             most = max(rivals, key=lambda c: c["reviews"]) if rivals else None
             items = [
@@ -168,7 +176,7 @@ def report_sqp_show_causes(sqp):
                             f'ACoS {ads["acos"] * 100:.0f}%, 주문당 광고비 €{ads["spend_per_order"]:.2f}</div>', unsafe_allow_html=True)
     with right:
         with st.container(border=True):
-            st.markdown("**🌍 원인: 외부** · 경쟁 제품, 날씨 " + report_sqp_source("Keepa·DWD 실제"), unsafe_allow_html=True)
+            st.markdown(":material/public: **원인: 외부** · 경쟁 제품, 날씨 " + report_sqp_source("Keepa·DWD 실제"), unsafe_allow_html=True)
             st.dataframe([{"역할": c["role"], "브랜드": c["brand"],
                            "가격": f"€{c['price']:.2f}" if c["price"] else "-",
                            "우리와 차이": f"€{listing['price'] - c['price']:+.0f}" if c["price"] and c["role"] != "우리" else "-",
@@ -190,7 +198,7 @@ def report_sqp_show_causes(sqp):
 
 
 def report_sqp_show_sources(sqp):
-    with st.expander("📚 데이터 출처와 한계, 발표 대비", expanded=False):
+    with st.expander(":material/menu_book: 데이터 출처와 한계, 발표 대비", expanded=False):
         st.dataframe([
             {"데이터": "검색어별 노출·클릭·장바구니·구매", "출처": "가상 (SP-API 검색어 성과 리포트 형식)",
              "파일": "data/report_sqp_weekly_dummy_202608.json"},
