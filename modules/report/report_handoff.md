@@ -16,45 +16,39 @@ Keepa API(마지막 조회값) · Open-Meteo   ┘                              
 - 다른 탭은 `from common.common_store import store_get` 후 `report = store_get("report")`로 읽습니다. ① 탭을 한 번도 열지 않았으면 `None`일 수 있으니 꼭 확인하세요.
 - 값은 Supabase `common_store` 표에 저장되어, 새로고침하거나 다른 사람이 접속해도 같은 값을 봅니다.
 
-## 탭별로 쓰면 되는 키
+## 탭별로 쓰면 되는 키 (`version: report-v2`, 2026-10-25 정리)
 
-| 쓰는 탭 | 키 | 내용 |
+**지금 다른 탭이 읽는 키** (모양을 바꾸지 않음)
+
+| 키 | 읽는 탭 | 내용 |
 |---|---|---|
-| **② 가설** | `problems` | 문제 목록. **맨 앞이 가장 중요한 문제**. 각 항목: `title`, `type`(내부/외부), `level`, `group`, `detail`, `target`, `metric`, `local_context`, `competitor_review`. 검색어 문제는 `sqp_type`, `query`도 있음 |
-| ② 가설 | `key_problems` | 핵심 문제 Top 3 + 가설 질문 `question` ('어떻게 하면 ~할까?') |
-| ② 가설 | `summary` | 핵심 문제 한 줄 요약 |
-| ② 가설·③ | `sqp` | 검색어 클릭 분석: 메인 검색어, 노출·클릭 점유율, 배수, 놓친 클릭, 우리 상품, 경쟁 제품(Keepa) 등 (노출·클릭은 **가상 SQP**) |
-| ② 가설 | `review_analysis` | 리뷰 분석: 리뷰 수·평점 비교, 목표(`target`), 근거(`findings`) |
-| ② 가설 | `opportunities` | 외부 기회 |
-| **③ 광고 소재** | `ad_claims` | **광고에 넣을 서리 문구** (독일어·한국어·필수 표기), 금지 표현(`forbidden`), AI 광고 장면(`allowed_scenes`) |
-| ③ 광고 소재 | `marketing_rules` | 독일 광고 표현 규칙 8개 (체온 표현 금지, Q-max 조건 표기 등) |
-| ③ 광고 소재 | `seori_profile` | 서리 제품 정보: 가격, Q-max 0.207(10℃), 인증, 시험, 강점·약점, 체감 vs 실제 체온, 광고 가능 여부(`ad_check`) |
-| ③ 광고 소재 | `competitor_profiles` | 경쟁사 강점·약점, 상세페이지 특징 문구(`listing_features`) → 레퍼런스 |
-| **④ 광고 타이밍** | `competitor_signals` | 경쟁사 품절·현재가·90일 가격 변화·쿠폰 기록(`coupon`)·월 구매 배지 |
-| ④·③ | `utm`, `utm_worst`, `funnel_worst` | GA4 연결 후 채널·퍼널 성과 (지금은 빈 값) |
-| 공통 | `competitors` | 간단 비교표 (브랜드, 가격, 평점, 리뷰 수, 판매 채널, 재고) |
-| 공통 | `cooling_sales` | 냉감패드 실적만 (여름 순위, 판매 신호) |
-| 공통 | `ab_daily` | **[보류] 지금은 None** · ③ 탭 A/B 결과 아침 자동 분석 (③ 탭 저장 기능 완성 후 켬) |
-| 공통 | `ab_upload` | 직접 올린 A/B 결과 파일(CSV) 분석 |
-| 공통 | `data_source` | 데이터 출처 표시 문구 |
-| 공통 | `data_rules` | **지표별 비교 기준·출처·기준일·신선도·구분(실제/가정/가상)**. 다른 탭에서 숫자를 쓸 때 이 기준을 함께 표시해 주세요 |
+| `problems` | 홈, ② 가설 | 문제 목록. **맨 앞이 가장 중요한 문제**. 각 항목: `title`, `type`(내부/외부), `level`, `group`, `detail`, `target`, `metric`, `local_context`, `competitor_review` (검색어 문제는 `sqp_type`, `query` 추가) |
+| `summary` | ② 가설 | 핵심 문제 한 줄 요약 |
+| `sqp` | ② 가설, ③ 광고 소재 | 검색어 클릭 분석: `query`, `imp_share`, `click_share`, `ratio`, `kpi_goal`, `listing`(우리 상품 메인 이미지·가격) 등 (노출·클릭은 **가상 SQP**) |
+| `ab_test` | 홈 | A/B 결과 `{name, a:{ctr,cvr}, b:{ctr,cvr}, summary}` · ① 탭에 결과 파일(CSV)을 올렸을 때만, 없으면 `None` |
 
-> 홈 탭이 기다리는 `yesterday_sales`, `sales_7d`, `kpi`, `ab_test`는 실제 매출(GA4)이 없어 **아직 넣지 않습니다** (홈은 '연결 전'으로 표시).
+**다른 탭에서 쓰도록 준비한 키**
 
-## ③ → ① 으로 받는 값 (③ 담당자 요청, **현재 보류**)
+| 키 | 쓸 탭 | 내용 |
+|---|---|---|
+| `key_problems` | ② 가설 | 핵심 문제 Top 3 (검색어·내부·외부를 섞어 위험도 → 심각도 점수 순, `severity`: score·data·urgency·gap·basis) + 가설 질문 `question` · `problems` 앞 3개와 같은 순서 |
+| `opportunities` | ② 가설 | 외부 기회 |
+| `review_analysis` | ② 가설 | 리뷰 문제 근거·목표 (`seori`, `leader`, `five_star_needed`, `findings`, `metric`, `target`, `rule`) |
+| `seori_profile` | ③ 광고 소재 | 서리 제품·가격(SleepCOOL 실적)·판매 채널·Q-max·인증(`certs`)·시험(`tests`)·강점·약점·Amazon 수수료 추정(`amazon_fees`)·체온 광고 규칙(`body_temp_rule`) |
+| `ad_claims` | ③ 광고 소재 | **광고에 넣을 서리 문구**(독일어·한국어·필수 표기), 금지 표현(`forbidden`), AI 광고 장면(`allowed_scenes`) |
+| `marketing_rules` | ③ 광고 소재 | 독일 광고 표현 규칙 8개 |
+| `competitor_profiles` | ② 가설, ③ 광고 소재 | 경쟁사(Novilla·Mara Vital) 강점·약점·Keepa 값·상세페이지 특징 문구(`listing_features`) |
+| `competitor_signals` | ④ 광고 타이밍 | 경쟁사 품절·현재가·가격 변화·쿠폰(`coupon`)·월 구매 배지(`monthly_sold`) |
+| `competitor_ranking` | 공통 | 냉감패드 실적 순위: `rank`(냉감 전용끼리, 제외 상품은 None), `brand`, `type`, `sales_signal_365`, `summer_rank_median`, `reviews`, `monthly_sold` |
+| `data_rules` | 공통 | **지표별 비교 기준·출처·기준일·신선도·구분(실제/가정/가상)**. 숫자를 쓸 때 함께 표시해 주세요 |
+| `version`, `as_of` | 공통 | 데이터 모양 버전, 데이터 기준 시점 |
+| `ab_upload` | (① 탭 자체 보관용) | 올린 A/B 결과 파일 원본 분석 — 다른 탭은 `ab_test`를 쓰세요 |
 
-①은 매일 아침(한국 08:00 이후 첫 접속) ③ 탭 결과를 읽어 A/B를 분석하도록 만들어 두었지만, ③ 탭 저장 기능이 아직 없어 **주석으로 꺼 두었습니다** (`report_data.py`의 [보류]). ③ 탭에서 아래 모양으로 저장하면 켭니다.
+**뺀 키** (읽는 탭이 없고 겹치거나 비어 있음): `competitors`(→ `competitor_profiles`), `data_source`(→ `data_rules`), `cooling_sales`(→ `competitor_ranking`, 16KB → 순위 칸만), `ab_tests`·`ab_daily`(비어 있음), `seori_profile` 안의 `data_check`·`finished_qmax_ref`·`ad_check`·`body_temp` 세부(① 화면에만, 광고 문구는 `ad_claims`)
 
-```python
-store_set("media", {
-    "ab_result": {"source": "실제", "period": "...", "query": "kühlende matratzenauflage", "market_ctr": 0.03,
-                  "variants": [{"name": "A", "desc": "...", "impressions": 0, "clicks": 0, "sessions": 0, "units": 0, "orders": 0},
-                               {"name": "B", "desc": "...", "impressions": 0, "clicks": 0, "sessions": 0, "units": 0, "orders": 0}],
-                  "cac": {"before": {"spend": 0, "new_to_brand_orders": 0}, "after": {"spend": 0, "new_to_brand_orders": 0}}},
-    "utm": [{"source": "google", "medium": "cpc", "campaign": "...", "sessions": 0, "orders": 0, "revenue": 0}],
-    "updated_at": "2026-10-25 07:30",
-})
-```
+**나중에 추가할 키**: GA4 연결 후 `funnel_worst`, `utm`, `utm_worst`, `kpi`, `yesterday_sales`, `sales_delta`, `sales_7d` (홈이 기다리는 매출 값) · ③ 탭 저장 기능이 생기면 `ab_daily`
+
+> 홈 탭은 ① 탭보다 먼저 그려져서, 같은 접속에서 처음 열 때는 이전에 저장된 값을 보여 줍니다. Supabase에 연결되면 저장된 값을 바로 읽습니다.
 
 ## 매일 아침 자동 갱신 (Keepa, 설정으로 켜기)
 
@@ -71,7 +65,7 @@ store_set("media", {
 | `data/common_germany_knowledge_seori_202610.csv` | 독일 시장 지식 DB (문화, 결제, 광고 표현 규칙 LNG-·LAW- 등) | ③ 광고 문구, ④ 시즌·날씨 |
 
 - 경쟁사 순위는 **냉감 전용 상품 + 1년 판매 신호(Keepa) 기준** (2026-10-25): 1위 Novilla, 2위 Mara Vital, 3위 서리(가정: **SleepCOOL 실적**). RIBECO·Herlag는 양면(2-in-1) 제품, Traumnacht는 비냉감 실적 혼재라 순위에서 제외.
-- 서리 = **2018년 독일 시장 진입, 현재 여름 전용 제품**으로 설정. 판매 실적(가격 €89.90·리뷰 31건·평점 3.8·판매 순위)은 SleepCOOL 값, 제품명·소재·Q-max·인증은 서리 기획.
+- 서리 = **2018년 독일 시장 진입, 현재 여름 전용 제품**으로 설정. 판매 실적(리뷰 31건·평점 3.8·판매 순위)은 SleepCOOL 값, 판매가는 서리 자체 €64.99(90x200, 모든 탭 같은 값), 제품명·소재·Q-max·인증은 서리 기획.
 - 서리 Q-max는 완제품 0.207 W/㎠ (온도차 10℃, JIS L 1927)로 가정.
 
 ## report 폴더 파일 (참고, 수정은 report 담당만)

@@ -56,7 +56,7 @@ amazon.de 검색어별로 '보이는 만큼 눌리는지'(클릭 점유율 ÷ �
 | 외부 요인 | 내부 요인과 같은 **높음 / 더보기** 탭. ⚠️ 위협 (Keepa 경쟁사 가격 인하, 비시즌·현재 기온, Amazon PayPal 불가, 소비심리, 초저가 플랫폼, 친환경 표현 규제) / ✨ 기회 (경쟁사 Q-max 미공개, 에어컨 없는 가구, 경쟁사 품절·가격 인상) |
 | 경쟁사 비교 | 경쟁사 DB + Keepa 비교표, Keepa 최신값 조회(확인 PIN), 경쟁우위 항목별 점수, 브랜드별 강점·약점 |
 | 해결안 A/B 테스트 | 실제 결과가 있으면 전환율, 차이, 유의확률(두 비율 z-검정) |
-| 🎯 문제 도출 | 검색어 클릭 문제 Top 3 + 근거 + 가설 탭 질문 (경쟁 포지션 핵심 문제는 한 줄로), 한 줄 요약, PDF 양식 선택 + 다운로드 |
+| 🎯 문제 도출 | 핵심 문제 Top 3 (검색어 클릭 문제 + 경쟁 포지션 내부·외부를 섞어 심각도 순) + 근거 + 가설 탭 질문 (경쟁 포지션 핵심 문제는 한 줄로), 한 줄 요약, PDF 양식 선택 + 다운로드 |
 
 ## 다른 탭에 넘기는 데이터 (`store_get("report")`)
 
@@ -64,8 +64,8 @@ amazon.de 검색어별로 '보이는 만큼 눌리는지'(클릭 점유율 ÷ �
 |---|---|---|
 | `summary` | 핵심 문제 한 줄 요약 | 홈, 가설 |
 | `sqp` | 검색어 클릭 분석: `query`, `imp_share`·`click_share`(%), `ratio`, `ratio_range`, `missed_clicks`, `cart_rate_ours/market`, `our_price`, `median_click_price`, `price_gap`, `listing`(우리 상품), `competitors`(Keepa 실제), `kpi_goal`(0.8), `problem2`(노출 확대 검색어), `problems`, `source` | **② 가설**(문제 1 가설·KPI), **③ 광고 소재**(메인 이미지 A/B) |
-| `key_problems` | 검색어 클릭 분석이 있으면 그 문제 Top 3 (없으면 경쟁 포지션 핵심 문제 Top 3): `rank`, `type`(내부/외부), `level`, `group`, `title`, `detail`(근거), `question`(가설용 '어떻게 하면 ~할까?') | **② 가설** |
-| `problems` | **검색어 클릭 문제 3개가 맨 앞**(`sqp_type`, `query` 추가), 그다음 경쟁 포지션 핵심 문제 Top 3, 그다음 내부 요인·외부 위협 (낮음 제외). `title`, `type`(내부/외부), `level`, `group`, `detail` + 가설 탭 선택 필드 `target`, `metric`, `local_context`(독일 DB 근거), `competitor_review`(경쟁사 DB 약점·Keepa 평점, 실제 리뷰 원문 아님) | 홈(주요 문제), **② 가설 (`problems[0]`으로 가설 1개 생성)** |
+| `key_problems` | 검색어 클릭 문제 + 경쟁 포지션 문제(내부 요인·외부 위협)를 섞어 위험도(높음>중간>낮음) 순 Top 3, 같은 위험도면 심각도 점수(`severity`) 순 (검색어 분석이 없으면 경쟁 포지션만): `rank`, `type`(내부/외부), `level`, `group`, `title`, `detail`(근거), `question`(가설용 '어떻게 하면 ~할까?') | **② 가설** |
+| `problems` | **`key_problems` Top 3와 같은 순서가 맨 앞**(검색어 문제는 `sqp_type`, `query` 추가), 그다음 나머지 검색어 문제·경쟁 포지션 핵심 문제, 그다음 내부 요인·외부 위협 (낮음 제외). `title`, `type`(내부/외부), `level`, `group`, `detail` + 가설 탭 선택 필드 `target`, `metric`, `local_context`(독일 DB 근거), `competitor_review`(경쟁사 DB 약점·Keepa 평점, 실제 리뷰 원문 아님) | 홈(주요 문제), **② 가설 (`problems[0]`으로 가설 1개 생성)** |
 | `opportunities` | 외부 기회: `title`, `level`, `detail` | 가설, 광고 소재 |
 | `seori_profile` | 서리 제품: 제품명, 판매가, ㎡당 가격, 판매 채널, Q-max, 인증(`certs`), 시험(`tests`), 강점, 약점, Herlag 실적(평점·리뷰·가격), `data_check`(국내 기업 데이터로 채울 수 있는지), `body_temp`(체감 피부 온도 vs 실제 체온, 광고 표현 규칙) | 가설, **③ 광고 소재** |
 | `competitor_profiles` | 경쟁사 7곳: 강점, **약점**(→ 우리 홍보 포인트), Q-max, Amazon 현재가·90일 변화·평점·리뷰·재고 | **② 가설**, **③ 광고 소재**(레퍼런스) |
@@ -312,7 +312,7 @@ store_set("media", {
 
 - 순위 기준: **냉감 전용 상품만, 1년 판매 신호(Keepa 순위가 좋아진 횟수)** 순 (보조: 여름 순위 중앙값). 양면 2-in-1(RIBECO·Herlag)·비냉감 혼재(Traumnacht) 제외
 - 결과: 1위 Novilla(179회) · 2위 Mara Vital(73회) · **3위 서리 = SleepCOOL 실적(28회)** · 참고 4위 Paradies(25회, 표본 적음) · 5위 Ehrenkind(13회)
-- 서리 설정: 2018년 독일 진입, 여름 전용. 판매 실적은 SleepCOOL(B078HLXBS4, Colheim GmbH, 90x200 €89.90, 리뷰 31·3.8)
+- 서리 설정: 2018년 독일 진입, 여름 전용. 판매 실적(순위·평점·리뷰)은 SleepCOOL(B078HLXBS4, Colheim GmbH, 리뷰 31·3.8), 판매가는 서리 자체 90x200 €64.99 (2026-10-25 변경, SleepCOOL 현재가 €89.90은 안 씀)
 - 공통 경쟁사 DB: Novilla 1위·Mara Vital 2위, RIBECO·Herlag '참고: 양면 제품 · 냉감 전용 순위 제외', Paradies '참고: 냉감 전용 4위', SleepCOOL 행(No 11) 추가, 서리 행(가격·강점·약점·근거), 점수표(서리 가격 2점·리뷰 1점, 합계 3.25), 출처 50
 - 코드: `REPORT_SEORI_PROXY = "SleepCOOL"`, 판매 내부 요인·리뷰 분석 1위·냉감패드 실적 목록을 1년 판매 신호 기준으로, 경쟁사 표에 '1년 판매 신호' 열, 검색어 분석 경쟁자 Novilla·Mara Vital
 - Novilla 가격은 서리와 같은 **90x200 변형(€35.99)**으로 비교 (대표 상품 160x200 €25.66은 그 사이즈만 할인 → '49% 인하' 오판 방지), ㎡ 가격 비교 10개사에서 SleepCOOL 빼고 Herlag 포함(중앙값 €21.1)
@@ -331,3 +331,16 @@ store_set("media", {
 - 상태 문구: `keepa_auto` (경쟁사 비교 창 설명 줄에 표시)
 - 시험: 가짜 응답·임시 파일로 꺼짐/켜짐/같은 날/다음 날 확인 (실제 API·파일 사용 안 함)
 
+## 다른 탭 전달 데이터 정리 (report-v2, 2026-10-25)
+
+- 실제로 읽는 키 확인 (dev 최신): 홈 `problems`·`ab_test`(+GA4 매출 키), ② 가설 `problems`·`sqp`·`summary`, ③ 광고 소재 `sqp`, ④ 없음
+- store 정리: 45KB·21키 → 22KB·17키. `cooling_sales`(16KB) → `competitor_ranking`(순위 칸만, 냉감 전용 rank), `competitors`·`data_source`·`ab_tests`·`ab_daily` 삭제, `seori_profile` 세부 분석 표 제외(`body_temp_rule`만), 홈용 `ab_test` 추가(올린 A/B 결과), `version`·`as_of` 추가
+- Supabase 연동 요청서: `report_supabase.md` (common_store + report 전용 표 4개 + Secrets)
+
+## 핵심 문제 Top 3 기준·서리 가격 통일 (2026-10-25)
+
+- 핵심 문제 Top 3: 검색어 클릭 문제만 → **검색어 문제 + 내부 요인 + 외부 위협을 섞어 위험도 순, 같은 위험도면 심각도 점수 순**. `problems` 앞부분도 같은 순서라 ② 가설 후보와 ① 결과 순서가 같음
+- 심각도 점수 = 데이터 신뢰도(실제 1.0·가정 0.7·가상 0.5) × 시급성(지금 손실 1.0·잠재 위험 0.6) × (0.5 + 0.5 × 차이 크기). 차이 크기: 리뷰·판매·㎡ 가격·채널 = 경쟁사 대비 부족분, 검색어 = 목표(배수 0.8·노출 점유율) 대비 부족분, 잴 수 없으면 0.5. 분류별 구분은 `REPORT_SEVERITY_BASIS`
+- 현재 결과: 1 리뷰 31건(높음 0.95) · 2 UWG 경고장 위험(높음 0.45) · 3 검색어 클릭 0.63배(높음 0.30, 가상 데이터라 뒤로). 화면: 배지에 마우스를 올리면 점수, 전체 목록에 점수 한 줄
+- 서리 판매가: €64.99 (90x200, ㎡당 €36.1)로 통일. 근거 = `data/report_seori_assumption_202610.json`의 `price` 한 곳. ① 경쟁사 표·KPI·수수료, 검색어 분석 우리 상품, ②·③ 탭 모두 같은 값. 검색어 분석 우리 상품의 평점·리뷰도 서리 실적(SleepCOOL 3.8·31건)으로 맞춤
+- 경쟁사 DB 서리 행(판매가·㎡당 가격·약점·선정 근거)과 경쟁우위 가격 점수 2 → 3 (중앙값보다 비싸고 Mara Vital보다 저렴), 가중 합계 3.25 → 3.4
