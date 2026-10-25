@@ -552,3 +552,313 @@
   flex: 0 0 auto !important;
   height: max(270px, calc(100vh - 382px)) !important;
 }
+
+/* ④-3 만든 결과 보기 v2: 목록 → 열기(위 사진 A | 사진 B 반반, 아래 영상). 100% 화면에서 스크롤 없이 한 화면
+   --d-h = 이 영역 높이 (화면 높이 - 위 제목·탭 - 아래 ⑤로 넘기기 줄·이전/다음 줄). 칸마다 높이를 정하고 넘치면 칸 안에서만 스크롤 */
+.st-key-media-s3-hist-area {
+  --d-h: max(210px, calc(100vh - 438px));
+  --d-row: calc((var(--d-h) - 72px) / 2);   /* 위·아래 칸 높이 (반반) */
+}
+.st-key-media-s3-hist-list {
+  height: var(--d-h);
+  overflow-y: auto;
+  background: var(--color-card);
+}
+[class*="st-key-media-s3-hist-item-"] {
+  background: var(--color-bg);
+  flex-wrap: nowrap;
+}
+.media-s3-hist-item-text {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.media-s3-hist-item-text span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-sub);
+}
+.st-key-media-s3-hist-head { flex-wrap: nowrap; min-height: 40px; }
+.st-key-media-s3-hist-head [data-testid="stMarkdownContainer"] p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-key-media-s3-hist-ab { flex-wrap: nowrap; }
+.st-key-media-s3-hist-ab > [data-testid="stLayoutWrapper"] { flex: 1 1 0; min-width: 0; }
+[class*="st-key-media-s3-hist-card-"] {
+  height: var(--d-row);
+  overflow: auto;
+  background: var(--color-card);
+}
+[class*="st-key-media-s3-hist-card-"] > [data-testid="stElementContainer"]:first-child p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[class*="st-key-media-s3-hist-tiles-"] { flex-wrap: nowrap; }
+/* 버전 미리 보기: 칸 높이에 맞춰 (3:2), 영상도 같은 높이 */
+.media-s3-hist-thumb,
+[class*="st-key-media-s3-hist-vid-"] video {
+  height: max(60px, calc(var(--d-row) - 112px));
+  aspect-ratio: 3 / 2;
+  width: auto;
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+}
+.media-s3-hist-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.media-s3-hist-thumb img { width: 100%; height: 100%; object-fit: contain; }
+[class*="st-key-media-s3-hist-vid-"] video { object-fit: contain; }
+[class*="st-key-media-s3-hist-foot-"] { flex-wrap: nowrap; min-height: 32px; }
+[class*="st-key-media-s3-hist-foot-"] [data-testid="stCaptionContainer"] p { white-space: nowrap; }
+/* 높이는 감싸개(stLayoutWrapper)가 정하므로 감싸개에도 같은 높이를 줌 (내용이 많아도 늘어나지 않고 칸 안에서 스크롤) */
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-list) {
+  flex: 0 0 auto !important;
+  height: var(--d-h) !important;
+}
+[data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-card-"]) {
+  flex: 0 0 auto !important;
+  height: var(--d-row) !important;
+}
+.st-key-media-s3-hist-list,
+[class*="st-key-media-s3-hist-card-"] {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+.st-key-media-s3-hist-ab,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-ab) {
+  flex: 0 0 auto !important;
+  height: var(--d-row) !important;
+}
+.st-key-media-s3-hist-ab > [data-testid="stLayoutWrapper"] { height: 100% !important; }
+/* 목록 한 줄: 글은 남는 폭 전부, '열기'는 오른쪽 끝 */
+[class*="st-key-media-s3-hist-item-"] > [data-testid="stElementContainer"]:first-child { flex: 1 1 0; min-width: 0; }
+
+/* 만든 결과 보기 v3: 가설 기록 = 세로 카드 나란히 (날짜 → 가설 → 개수 → 버튼) */
+.st-key-media-s3-hist-listhead { flex-wrap: nowrap; }
+.st-key-media-s3-hist-listhead [data-testid="stMarkdownContainer"] p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-key-media-s3-hist-list,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-list) {
+  flex: 0 0 auto !important;
+  height: calc(var(--d-h) - 56px) !important;
+  overflow: visible;
+  background: transparent;
+  flex-wrap: nowrap;
+}
+.st-key-media-s3-hist-list > [data-testid="stLayoutWrapper"] { flex: 1 1 0; min-width: 0; height: 100%; max-width: 420px; }
+[class*="st-key-media-s3-hist-item-"] {
+  height: 100% !important;
+  background: var(--color-card);
+  overflow-y: auto;
+}
+[class*="st-key-media-s3-hist-item-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-date) { flex: 1 1 0; min-height: 0; overflow: hidden; }
+.media-s3-hist-date { font-weight: 700; font-size: 0.95rem; color: var(--color-text); margin-bottom: 6px; }
+.media-s3-hist-item-text {
+  -webkit-line-clamp: 7;
+  font-size: 0.86rem;
+}
+.media-s3-hist-meta { margin-top: 8px; font-size: 0.78rem; color: var(--color-sub); line-height: 1.5; }
+[class*="st-key-media-s3-hist-itembtn-"] { flex-wrap: nowrap; }
+/* 열었을 때 칸: 최신 한 장을 칸 높이에 맞춰 크게 */
+[class*="st-key-media-s3-hist-cardhead-"] { flex-wrap: nowrap; }
+[class*="st-key-media-s3-hist-cardhead-"] [data-testid="stMarkdownContainer"] p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[class*="st-key-media-s3-hist-card-"] .media-s3-hist-thumb,
+[class*="st-key-media-s3-hist-card-"] [class*="st-key-media-s3-hist-vid-"] video {
+  height: max(50px, calc(var(--d-row) - 125px));
+}
+/* '전부 보기' 팝업 안: 칸 높이 변수가 없어서 폭에 맞춘 3:2 */
+.st-key-media-s3-hist-dialog .media-s3-hist-thumb,
+.st-key-media-s3-hist-dialog [class*="st-key-media-s3-hist-vid-"] video {
+  height: auto;
+  width: 100%;
+}
+.st-key-media-s3-hist-dialog [class*="st-key-media-s3-hist-tile-"] { width: 100% !important; }
+
+/* v3b: A·B는 반반 나란히 크게, 영상은 아래 얇은 줄 */
+.st-key-media-s3-hist-area { --d-ab: calc(var(--d-h) - 56px - 122px); }   /* 위 제목 줄·아래 영상 줄을 뺀 A·B 높이 */
+.st-key-media-s3-hist-ab,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-ab) {
+  height: var(--d-ab) !important;
+}
+.st-key-media-s3-hist-ab > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-card-"]) {
+  flex: 1 1 0 !important;
+  min-width: 0;
+  height: 100% !important;
+}
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-card-V),
+.st-key-media-s3-hist-card-V {
+  height: auto !important;
+}
+.st-key-media-s3-hist-card-A .media-s3-hist-thumb,
+.st-key-media-s3-hist-card-B .media-s3-hist-thumb {
+  height: max(50px, calc(var(--d-ab) - 128px));
+}
+/* 팝업은 ③ 탭 밖에 그려져서 아이콘 색을 따로 맞춤 */
+.st-key-media-s3-hist-dialog [class*="st-key-media-s3-hist-tools-"] [data-testid="stIconMaterial"],
+.st-key-media-s3-hist-dialog [class*="st-key-media-s3-hist-tools-"] button p {
+  color: var(--color-text) !important;
+}
+
+/* v4: 열었을 때 사진 A | 사진 B | 영상 세 칸 세로로 나란히 (한 장씩 크게, 맨 위 한 줄에 넘기기·⑤·내려받기·지우기·전부 보기)
+   --d-col = 칸 높이 (영역 높이 - 위 '가설 목록' 줄) */
+.st-key-media-s3-hist-area { --d-col: calc(var(--d-h) - 56px); }
+.st-key-media-s3-hist-cols,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-cols) {
+  flex: 0 0 auto !important;
+  height: var(--d-col) !important;
+  flex-wrap: nowrap;
+}
+.st-key-media-s3-hist-cols > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-card-"]) {
+  flex: 1 1 0 !important;
+  min-width: 0;
+  height: 100% !important;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] {
+  height: 100% !important;
+  padding: 10px 12px;
+  gap: 8px;
+  overflow: hidden;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] { flex-wrap: nowrap; min-height: 32px; }
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] button {
+  min-height: 28px;
+  height: 28px;
+  width: 28px;
+  padding: 0;
+  border-radius: 50%;
+}
+.st-key-media-root [class*="st-key-media-s3-hist-cardhead-"] [data-testid="stIconMaterial"] { color: var(--color-text) !important; }
+[class*="st-key-media-s3-hist-cardhead-"] [data-testid="stCaptionContainer"] p,
+[class*="st-key-media-s3-hist-cardhead-"] [data-testid="stMarkdownContainer"] p { white-space: nowrap; }
+/* 큰 미리 보기: 칸의 남는 높이 전부 (사진은 잘리지 않게 contain) */
+.media-s3-hist-big,
+[class*="st-key-media-s3-hist-bigvid-"] video {
+  position: relative;
+  width: 100%;
+  height: max(70px, calc(var(--d-col) - 62px));
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+}
+.media-s3-hist-big { display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.media-s3-hist-big img { max-width: 100%; max-height: 100%; object-fit: contain; }
+[class*="st-key-media-s3-hist-bigvid-"] video { object-fit: contain; }
+
+/* v4b: 칸 머리 줄 버튼은 연한 동그라미 + 진한 아이콘, 제목은 잘리지 않게, 다른 점 띠는 한 줄 */
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] button {
+  background: var(--color-bg) !important;
+  border: 1px solid var(--color-border) !important;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] button:disabled { opacity: 0.4; }
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] > [data-testid="stElementContainer"]:first-child {
+  flex: 0 0 auto;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] [data-testid="stMarkdownContainer"] p { overflow: visible; }
+.st-key-media-s3-hist-cols .media-s3-hist-tag { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* v4c: 큰 미리 보기는 칸에 남은 높이에 딱 맞춤 (계산값 대신 flex로 채움 → 어느 화면에서도 잘리지 않음) */
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-big),
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-bigvid-"]) {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+}
+.st-key-media-s3-hist-cols [data-testid="stElementContainer"]:has(.media-s3-hist-big) [data-testid="stMarkdown"],
+.st-key-media-s3-hist-cols [data-testid="stElementContainer"]:has(.media-s3-hist-big) [data-testid="stMarkdown"] > div,
+.st-key-media-s3-hist-cols [data-testid="stElementContainer"]:has(.media-s3-hist-big) [data-testid="stMarkdownContainer"],
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-bigvid-"],
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-bigvid-"] > [data-testid="stElementContainer"],
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-bigvid-"] [data-testid="stVideo"] {
+  height: 100% !important;
+}
+.st-key-media-s3-hist-cols .media-s3-hist-big,
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-bigvid-"] video {
+  height: 100% !important;
+  min-height: 0;
+}
+/* 사진 아래 '다른 점' 한 줄 (넘치면 …, 마우스를 올리면 ⓘ에 전체) */
+[class*="st-key-media-s3-hist-diff-"] [data-testid="stCaptionContainer"] p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-diff-"]),
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-cardhead-"]) {
+  flex: 0 0 auto !important;   /* 머리 줄·다른 점 줄은 줄어들지 않고, 남는 높이만 사진이 씀 */
+}
+
+/* 만든 결과 보기: 사진 아래 '다른 점' 칩 (진한 글씨 한 줄, 줄어들지 않고 사진이 남는 높이를 씀) */
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-diff) {
+  flex: 0 0 auto !important;
+}
+.media-s3-hist-diff {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 사진 A·B 칸: 다른 점 칩 자리(약 38px)를 빼고 사진 높이를 정확히 정함 (칩이 잘리지 않게) */
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-A > [data-testid="stElementContainer"]:has(.media-s3-hist-big),
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-B > [data-testid="stElementContainer"]:has(.media-s3-hist-big) {
+  flex: 0 0 auto !important;
+  height: max(50px, calc(var(--d-col) - 96px)) !important;
+}
+
+/* ⑤ 보낼 파일: 사진·영상에 마우스를 올리면 🗑 (이번 외주 보내기에서 빼기) */
+.st-key-media-s3-ex-photos,
+.st-key-media-s3-ex-videos {
+  padding: 8px 10px;
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+  gap: 6px;
+}
+.st-key-media-s3-ex-thumbs { flex-wrap: wrap; }
+[class*="st-key-media-s3-ex-ph-"] { position: relative; }
+.media-s3-ex-thumb {
+  width: 84px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  display: block;
+}
+[class*="st-key-media-s3-ex-ph-"] > [data-testid="stElementContainer"]:has(button) {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: auto;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+[class*="st-key-media-s3-ex-ph-"]:hover > [data-testid="stElementContainer"]:has(button),
+[class*="st-key-media-s3-ex-vd-"]:hover button { opacity: 1; }
+[class*="st-key-media-s3-ex-vd-"] button { opacity: 0; transition: opacity 0.15s; }
+[class*="st-key-media-s3-ex-ph-"] button,
+[class*="st-key-media-s3-ex-vd-"] button {
+  min-height: 26px;
+  height: 26px;
+  width: 26px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--color-card) !important;
+  border: 1px solid var(--color-border);
+}
+.st-key-media-root [class*="st-key-media-s3-ex-ph-"] [data-testid="stIconMaterial"],
+.st-key-media-root [class*="st-key-media-s3-ex-vd-"] [data-testid="stIconMaterial"] { color: var(--color-text) !important; font-size: 1rem; }
+[class*="st-key-media-s3-ex-vd-"] { flex-wrap: nowrap; }
+[class*="st-key-media-s3-ex-vd-"] [data-testid="stCaptionContainer"] p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-key-media-s3-ex-head { flex-wrap: wrap; }
