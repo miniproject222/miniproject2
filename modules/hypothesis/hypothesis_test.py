@@ -66,7 +66,7 @@ def _new_apptest() -> AppTest:
 
 # ─────────────────────────────────────────────
 # 1. 핵심 흐름: 빈 상태 → 샘플 → 가설 1/2/3 탭(근거를 쭉 읽음) → 선택(저장) → 다른 후보로 재선택
-#    (가설 문장을 따로 수정하는 칸은 없앴습니다 — 근거를 읽고 "이 가설 선택하기"만 누릅니다)
+#    (가설 문장을 따로 수정하는 칸은 없앴습니다 — 근거를 읽고 제목 줄 오른쪽의 "선택하기"만 누릅니다)
 # ─────────────────────────────────────────────
 def test_core_flow() -> None:
     at = _new_apptest()
@@ -103,8 +103,8 @@ def test_core_flow() -> None:
         "[핵심] 가설 후보마다 If · Because · Then 카드가 펼치지 않아도 바로 보임 (3개)",
     )
     check(
-        [b.label for b in at.button if b.key and b.key.startswith("hypothesis-btn-save-")] == ["이 가설 선택하기"] * 3,
-        "[핵심] 가설 후보마다 '이 가설 선택하기' 버튼 1개만 있음",
+        [b.label for b in at.button if b.key and b.key.startswith("hypothesis-btn-save-")] == ["선택하기"] * 3,
+        "[핵심] 가설 후보마다 '선택하기' 버튼 1개만 있음",
     )
 
     expected_text = hypothesis_build_sentence(SAMPLE_REPORT["problems"][0])   # 가설 1 = 경쟁사 가격 인하
@@ -130,7 +130,7 @@ def test_core_flow() -> None:
     expected_text2 = hypothesis_build_sentence(SAMPLE_REPORT["problems"][2])   # 가설 2 = 장바구니 이탈 증가
     at.button(key="hypothesis-btn-save-1").click().run()
     check(at.button(key="hypothesis-btn-save-1").label == "✓ 선택됨", "[핵심] 가설 2를 선택하면 가설 2 버튼이 '선택됨'으로 바뀜")
-    check(at.button(key="hypothesis-btn-save-0").label == "이 가설 선택하기", "[핵심] 가설 2를 선택하면 가설 1 버튼은 '선택됨'에서 풀림")
+    check(at.button(key="hypothesis-btn-save-0").label == "선택하기", "[핵심] 가설 2를 선택하면 가설 1 버튼은 '선택됨'에서 풀림")
     saved2 = at.session_state["store-hypothesis"]
     check(saved2.get("text") == expected_text2, "[핵심] 최종 저장된 hypothesis가 가설 2 문장으로 바뀜 (가설은 항상 1개만 최종 저장)")
 
@@ -157,7 +157,7 @@ def test_defensive() -> None:
     at.session_state["store-hypothesis"] = "예전에 남은 이상한 값"
     at.run()
     check(not at.exception, "[방어] 저장된 hypothesis가 dict가 아니어도 예외 없음")
-    check(at.button(key="hypothesis-btn-save-0").label == "이 가설 선택하기", "[방어] 이상한 저장값은 '선택됨'으로 치지 않음")
+    check(at.button(key="hypothesis-btn-save-0").label == "선택하기", "[방어] 이상한 저장값은 '선택됨'으로 치지 않음")
 
 
 # ─────────────────────────────────────────────
@@ -467,8 +467,8 @@ def test_scenario_section() -> None:
     )
     expander_labels = [e.label for e in at.get("expander")]
     check(
-        not any("KPI 표" in lb for lb in expander_labels),
-        "[시나리오] 어떤 가설 후보도 이 sqp와 무관하면 sqp 전용 'KPI 표' expander는 안 뜸 (엉뚱한 근거 섞임 방지)",
+        not any("판단 기준 자세히" in lb for lb in expander_labels),
+        "[시나리오] 어떤 가설 후보도 이 sqp와 무관하면 sqp 전용 '목표 KPI · 판단 기준' expander는 안 뜸 (엉뚱한 근거 섞임 방지)",
     )
     check(
         not any("대안 가설" in v for v in md_values),
@@ -599,15 +599,16 @@ def test_sqp_single_hypothesis() -> None:
 
     expander_labels = [e.label for e in at.get("expander")]
     check(
-        sum("KPI 표" in lb for lb in expander_labels) == 1,
-        f"[시나리오 통합] sqp 전용 'KPI 표' expander는 소재 개선(가설 1) 탭에만 1개 뜸 (실제: {sum('KPI 표' in lb for lb in expander_labels)}개)",
+        sum("판단 기준 자세히" in lb for lb in expander_labels) == 1,
+        f"[시나리오 통합] sqp 전용 '목표 KPI · 판단 기준' expander는 소재 개선(가설 1) 탭에만 1개 뜸 (실제: {sum('판단 기준 자세히' in lb for lb in expander_labels)}개)",
     )
-    # 가설 1·2 탭에 각각 If·Because·Then 카드가 하나씩(2개) + 방금 선택한 가설 2가 맨 위
-    # "지금 선택된 가설" 칸에도 같은 카드로 보이므로(+1개) 총 3개가 뜸
+    # 가설 1 탭(1개) + 가설 2 탭(선택 여부와 관계없이 항상 카드를 그림, 1개) + 맨 위
+    # "지금 선택된 가설" 칸(가설 2 내용, 1개) = 총 3개
     md_values = [m.value for m in at.markdown]
     check(
         sum("hypothesis-ibt-box" in v for v in md_values) == 3,
-        f"[시나리오 통합] 가설 1·2 탭(2개) + 선택된 가설 칸(1개), 총 3개의 If·Because·Then 카드가 뜸 (실제: {sum('hypothesis-ibt-box' in v for v in md_values)}개)",
+        f"[시나리오 통합] 가설 1·2 탭(2개, 선택 여부와 무관하게 항상 카드를 그림) + 선택된 가설 칸(1개) = "
+        f"총 3개의 If·Because·Then 카드가 뜸 (실제: {sum('hypothesis-ibt-box' in v for v in md_values)}개)",
     )
 
 

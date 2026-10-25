@@ -93,29 +93,30 @@ def hypothesis_scenario_table(rows) -> str:
 
 
 def hypothesis_scenario_detail_section(sqp: dict) -> None:
-    """'소재 개선' 가설 후보 탭 안에서, If·Because·Then 카드 바로 아래 실행 세부사항·KPI
-    판단 기준을 보여줍니다 (If·Because·Then 카드는 hypothesis_page.py가 공통으로 그리므로
-    여기서는 세부사항만 다룹니다). 타깃·목표 KPI·고정 요소·테스트 방법을 표로 한 번에
-    보여줘서 "실행 방법이 너무 간단해 보인다"는 피드백을 반영해 다시 충분히 채웠습니다.
-    문제 설명·현지 특성·경쟁사 근거 원문·출처는 여기 말고 hypothesis_page.py의
-    hypothesis_evidence_section()이 바로 아래 별도 토글("📚 근거·출처 보기")로 모아 보여줍니다."""
+    """'소재 개선' 가설 후보 탭 안에서, If·Because·Then 카드보다 먼저 "실행 방법"을
+    보여줍니다(실행 방법을 보고 가설을 비교·선택할 수 있어야 한다는 요구 반영). 타깃·목표
+    KPI·준비할 소재·고정 요소·테스트 방법·기간·표본을 전부 토글 없이 메인 표 하나로
+    보여주고(목표 KPI도 실행 방법과 같이 보는 게 비교에 더 편함), CAC/CTR 판단 기준처럼
+    더 깊은 설명만 "📏 판단 기준 자세히 보기" 토글에 둡니다. 문제 설명·현지 특성·경쟁사 근거
+    원문·출처는 여기 말고 hypothesis_page.py의 hypothesis_evidence_section()이 별도
+    토글("📚 근거·출처 보기")로 모아 보여줍니다."""
     listing = sqp.get("listing") or {}
     goal = sqp.get("kpi_goal", 0.8)
 
-    with st.expander("🔧 실행 세부사항 보기 (타깃 · 목표 KPI · 고정 요소 · 테스트 방법)", expanded=False):
-        st.markdown(hypothesis_scenario_table([
-            ("타깃", f"amazon.de '{sqp.get('query', '')}' 검색 결과"),
-            ("목표 KPI", f"클릭 점유율 ÷ 노출 점유율 {sqp.get('ratio', 0):.2f}배 → {goal:.1f}배 이상"),
-            ("준비할 소재", "메인 이미지 A안(현재)·B안(두께·원단 질감이 보이는 각도) 사진 각 1장"),
-            ("고정 요소", f"흰 배경 실제 사진, 제목, 가격 €{listing.get('price', 0):.2f}, 쿠폰 없음"),
-            ("테스트 방법", "Amazon Manage Your Experiments로 메인 이미지 A(현재)/B(두께·질감 각도) 50:50 분할 노출"),
-            ("기간·표본", "최소 2주 또는 각 안 1,000노출 이상 — 먼저 도달하는 쪽까지"),
-        ]))
-        st.caption("근거의 경쟁 제품 약점은 경쟁사 DB 값이고 실제 리뷰 원문이 아닙니다. 경쟁 제품 리뷰 30~50개를 모아 "
-                   "가장 많이 나오는 불만으로 바꿔 넣어야 하고, 불만이 다르게 나오면 액션도 바뀝니다 "
-                   "(예: '미끄러진다'가 많으면 바닥 미끄럼 방지면이 보이는 각도).")
+    st.markdown("**🧪 실행 방법**")
+    st.markdown(hypothesis_scenario_table([
+        ("타깃", f"amazon.de '{sqp.get('query', '')}' 검색 결과"),
+        ("목표 KPI", f"클릭 점유율 ÷ 노출 점유율 {sqp.get('ratio', 0):.2f}배 → {goal:.1f}배 이상"),
+        ("준비할 소재", "메인 이미지 A안(현재)·B안(두께·원단 질감이 보이는 각도) 사진 각 1장"),
+        ("고정 요소", f"흰 배경 실제 사진, 제목, 가격 €{listing.get('price', 0):.2f}, 쿠폰 없음"),
+        ("테스트 방법", "Amazon Manage Your Experiments로 50:50 분할 노출"),
+        ("기간·표본", "최소 2주 또는 각 안 1,000노출 이상 — 먼저 도달하는 쪽까지"),
+    ]))
+    st.caption("근거의 경쟁 제품 약점은 경쟁사 DB 값이고 실제 리뷰 원문이 아닙니다. 경쟁 제품 리뷰 30~50개를 모아 "
+               "가장 많이 나오는 불만으로 바꿔 넣어야 하고, 불만이 다르게 나오면 액션도 바뀝니다 "
+               "(예: '미끄러진다'가 많으면 바닥 미끄럼 방지면이 보이는 각도).")
 
-    with st.expander("📏 KPI 표 · 판단 기준 자세히 보기", expanded=False):
+    with st.expander("📏 판단 기준 자세히 보기", expanded=False):
         st.caption("클릭 단계 문제라 메인 KPI는 CTR, 나머지는 진단·안전장치")
         st.markdown("| 역할 | KPI | 쓰는 법 |\n| --- | --- | --- |\n"
                     + "\n".join(f"| {a} | {b} | {c} |" for a, b, c in HYPOTHESIS_SCENARIO_KPIS))
@@ -131,15 +132,17 @@ def hypothesis_scenario_detail_section(sqp: dict) -> None:
 
 
 def hypothesis_scenario_problem2_detail_section(p2: dict) -> None:
-    """'노출 확대' 가설 후보 탭 안에서, If·Because·Then 카드 바로 아래 실행 세부사항을 보여줍니다."""
-    with st.expander("🔧 실행 세부사항 보기 (타깃 · 목표 KPI · 고정 요소 · 테스트 방법)", expanded=False):
-        st.markdown(hypothesis_scenario_table([
-            ("타깃", f"amazon.de '{p2.get('query', '')}' 검색 결과"),
-            ("목표 KPI", f"노출 점유율 {p2.get('imp_share', 0)}% → {p2.get('goal_imp_share', 0)}% "
-                        "(배수 1.2배 이상 유지)"),
-            ("고정 요소", "소재 변경 없이 입찰가만 조정 (광고 소재가 필요 없는 가설)"),
-            ("테스트 방법", f"{p2.get('month', '')} 폭염 주(최고기온 {p2.get('heat_temp', 28):.0f}°C 이상) 입찰 상향 후 "
-                          "노출 점유율 비교 (평소 입찰·같은 요일대 대비, 변경 후 최소 3일 반영 대기)"),
-        ]))
-        st.caption("소재 외 문제(③ 광고 소재가 아니라 ④ 광고 타이밍)라 메인 이미지 테스트와 별개로 운영할 수 있습니다. "
-                   "다만 A/B 테스트용 사진·영상 결과물이 따로 나오지는 않는 가설입니다.")
+    """'노출 확대' 가설 후보 탭 안에서, If·Because·Then 카드보다 먼저 "실행 방법"을
+    보여줍니다. 타깃·목표 KPI·고정 요소·테스트 방법을 전부 토글 없이 메인 표 하나로
+    둡니다(목표 KPI도 실행 방법과 같이 보는 게 비교에 더 편함)."""
+    st.markdown("**🧪 실행 방법**")
+    st.markdown(hypothesis_scenario_table([
+        ("타깃", f"amazon.de '{p2.get('query', '')}' 검색 결과"),
+        ("목표 KPI", f"노출 점유율 {p2.get('imp_share', 0)}% → {p2.get('goal_imp_share', 0)}% "
+                    "(배수 1.2배 이상 유지)"),
+        ("고정 요소", "소재 변경 없이 입찰가만 조정 (광고 소재가 필요 없는 가설)"),
+        ("테스트 방법", f"{p2.get('month', '')} 폭염 주(최고기온 {p2.get('heat_temp', 28):.0f}°C 이상) 입찰 상향 후 "
+                      "노출 점유율 비교 (평소 입찰·같은 요일대 대비, 변경 후 최소 3일 반영 대기)"),
+    ]))
+    st.caption("소재 외 문제(③ 광고 소재가 아니라 ④ 광고 타이밍)라 메인 이미지 테스트와 별개로 운영할 수 있습니다. "
+               "다만 A/B 테스트용 사진·영상 결과물이 따로 나오지는 않는 가설입니다.")
