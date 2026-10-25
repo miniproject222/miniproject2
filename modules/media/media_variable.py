@@ -10,7 +10,8 @@ import re
 import streamlit as st
 
 from common.common_store import store_get
-from modules.media.media_handoff import MEDIA_HANDOFF_PLAN, media_handoff_plan, media_handoff_set_plan
+from modules.media.media_handoff import (MEDIA_HANDOFF_PLAN, media_handoff_clear_plan, media_handoff_plan,
+                                         media_handoff_set_plan)
 from modules.media.media_variable_ai import MEDIA_VARIABLE_AI_RULE_SOURCE, media_variable_generate
 
 MEDIA_VARIABLE_TAB_LABEL = "가설에서 변수 도출"   # 하위 탭 ① 이름 (media_page.py와 다른 하위 탭의 '① 으로 가서 확정하기' 버튼이 씀)
@@ -58,8 +59,7 @@ MEDIA_VARIABLE_VERDICT_BADGE = {MEDIA_VARIABLE_PASS: "green", MEDIA_VARIABLE_NOT
 MEDIA_VARIABLE_SHOW = 3   # 변수 블럭을 보여 줄 수 (가설·후보 목록이 바뀌어도 이 수만큼만)
 MEDIA_VARIABLE_VAR_KEY = "media-variable-var"       # 사용자가 블럭에서 고른 변수 이름 (session_state)
 MEDIA_VARIABLE_PICK_KEY = "media-variable-pick"     # B안 체크박스 (st.checkbox) key 앞부분 (뒤에 변수 번호-B안 번호)
-# 사용자가 고른 B안 {변수 이름: B안 이름} (session_state). 체크박스 값은 다른 하위 탭에 가면 Streamlit이 지우므로 따로 둠
-MEDIA_VARIABLE_B_KEY = "media-variable-b"
+MEDIA_VARIABLE_LEAVE_KEY = "media-variable-need-confirm"   # ①을 떠나려다 막혔을 때 경고창에 보일 이유 (session_state)
 
 
 def media_variable_saved(fresh: bool = False) -> dict:
@@ -246,8 +246,8 @@ def media_variable_candidates() -> dict:
     rows = 블럭으로 보일 변수(진행 가능 → 진행 불가 순으로 MEDIA_VARIABLE_SHOW개, 변수마다 "ok"·"verdict"·"why"),
     hidden = 블럭에 못 들어간 변수, variable = 사용자가 블럭에서 고른 변수(어느 블럭이든),
     options / broken = 그 변수의 B로 쓸 수 있는 안 / 규칙 위반으로 못 쓰는 안,
-    picked = 사용자가 고른 B안 (+ "variable" 칸, 진행할 수 없는 변수면 빈 dict).
-    아직 고르지 않았으면 2단계로 확정해 둔 값 → 진행 가능한 첫 줄 → 첫 줄 순으로 고릅니다. 후보가 없으면 variable은 빈 dict."""
+    picked = 2단계로 확정해 둔 B안 (+ "variable" 칸). 체크 = 확정이라 확정 전이거나 고른 변수가 확정한 변수와 다르면 빈 dict.
+    variable은 블럭에서 고른 변수 → 2단계로 확정해 둔 변수 → 진행 가능한 첫 줄 → 첫 줄 순으로 고릅니다. 후보가 없으면 variable은 빈 dict."""
     cset = media_variable_candidate_set()
     good, bad = [], []
     for v in cset.get("variables", []):
@@ -266,10 +266,8 @@ def media_variable_candidates() -> dict:
     options, broken = media_variable_b_options(variable) if variable else ([], [])
     if not variable.get("ok"):   # 진행할 수 없는 변수: B안을 고르지 않음 (규칙 위반 안은 ⓘ에 그대로)
         options = []
-    chosen_b = st.session_state.get(MEDIA_VARIABLE_B_KEY, {}).get(variable["name"]) if variable else None
-    picked = (next((o for o in options if media_variable_label(o) == chosen_b), None)
-              or next((o for o in options if o["b"] == saved.get("b")), None)
-              or (options[0] if options else {}))
+    # 체크 = 확정: 2단계로 확정해 둔 변수·B안만 체크된 것으로 봄 (안 골랐으면 아무것도 체크하지 않음)
+    picked = next((o for o in options if saved.get("variable") == variable["name"] and o["b"] == saved.get("b")), {})
     if picked:
         picked = {**picked, "variable": variable["name"]}
     return {"set": cset, "rows": rows, "hidden": hidden, "variable": variable,
@@ -483,70 +481,109 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             st.warning(f"**{variable['name']}** · {MEDIA_VARIABLE_BLOCK_MSG[variable['verdict']][0]}", icon="⚠️")
             return
         if options:
-            media_variable_b_box(options, picked, variable["name"], rows.index(variable))
+            media_variable_b_box(options, picked, rows.index(variable), plan)
         # key="media-variable-picked": media_style.css가 구분 칸('A · 대조군')을 한 줄로 유지
         with st.container(key="media-variable-picked"):
             st.markdown("| 구분 | 내용 |\n| --- | --- |\n"
                         f"| **A · 대조군** | {plan['a']} (현재 사진 · 고정) |\n"
-                        f"| **B · 실험군** | {plan['b']} |")
+                        f"| **B · 실험군** | {plan['b'] or '위 옵션을 체크해 골라요'} |")
         if defaults:   # 리포트 탭을 아직 안 열었거나 리포트 칸 이름이 바뀌었을 때 바로 알아차리도록
             st.caption(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
 
 
-def media_variable_b_box(options: list[dict], picked: dict, name: str, index: int) -> None:
-    """B안 고르기 블럭: 한 블럭 안에 '체크박스 + 옵션 N'을 가로로 나란히 (하나만 고름).
+def media_variable_b_box(options: list[dict], picked: dict, index: int, plan: dict) -> None:
+    """B안 고르기 블럭: 한 블럭 안에 '체크박스 + 옵션 N'을 가로로 나란히 (하나만 고름). 체크 = 확정, 체크를 풀면 확정 취소.
     화면 글자는 B안 이름과 상관없이 항상 '옵션 1', '옵션 2' …이고, 고른 B안 내용은 아래 A·B 표의 B 줄에서 보입니다.
-    체크 상태는 매번 그리기 전에 고른 B안(picked)으로 맞춥니다 → 고른 것을 다시 눌러 체크가 풀려도 다음 화면에서 다시 체크됨."""
-    chosen = media_variable_label(picked)
+    체크 상태는 매번 그리기 전에 2단계로 확정해 둔 값(picked)으로 맞춥니다. 확정한 뒤 리포트 값이 바뀌면(state "changed") 체크를 비워
+    다시 체크하면 새 값으로 확정되게 합니다."""
+    chosen = media_variable_label(picked) if picked and media_variable_confirm_state(plan) == "same" else None
     # key="media-variable-b-box": media_style.css가 변수 블럭과 같은 카드 모양 + 옵션 사이 구분선을 그림
     with st.container(horizontal=True, vertical_alignment="center", key="media-variable-b-box"):
         for i, o in enumerate(options):
-            label = media_variable_label(o)   # 어떤 B안인지 구분하는 값 (저장·비교용, 화면에는 안 보임)
             key = f"{MEDIA_VARIABLE_PICK_KEY}-{index}-{i}"
-            st.session_state[key] = label == chosen   # 위젯을 그리기 전이라 값을 바꿀 수 있음 (value 인자는 쓰지 않음)
-            st.checkbox(f"옵션 {i + 1}", key=key, on_change=_media_variable_pick_b, args=(name, label), width="content")
+            st.session_state[key] = media_variable_label(o) == chosen   # 위젯을 그리기 전이라 값을 바꿀 수 있음 (value 인자는 쓰지 않음)
+            st.checkbox(f"옵션 {i + 1}", key=key, on_change=_media_variable_pick_b, args=(key, plan, o), width="content")
 
 
-def _media_variable_pick_b(name: str, label: str) -> None:
-    """B안 체크박스 콜백. 누른 B안을 체크박스와 따로 저장해, 다른 하위 탭에 갔다 와도 확정 전 선택이 남게 합니다."""
-    st.session_state.setdefault(MEDIA_VARIABLE_B_KEY, {})[name] = label
-
-
-def _media_variable_confirm(plan: dict) -> None:
-    """'이 변수로 확정' 버튼 콜백. A/B 설계를 2단계로 넘기고(modules/media/data/media_handoff_plan.json), 다음 화면에서 토스트를 띄웁니다."""
-    media_handoff_set_plan(plan)
-    st.session_state["media-variable-confirmed-toast"] = True
+def _media_variable_pick_b(key: str, plan: dict, option: dict) -> None:
+    """B안 체크박스 콜백. 체크하면 그 B안으로 A/B 설계를 2단계로 넘기고(확정), 체크를 풀면 넘긴 값을 지웁니다(확정 취소).
+    다음 화면에서 토스트를 띄웁니다."""
+    if st.session_state.get(key):
+        media_handoff_set_plan({**plan, "b": option["b"], "b_ref": option.get("ref_prompt", "")})
+        st.session_state["media-variable-confirmed-toast"] = "set"
+    else:
+        media_handoff_clear_plan()
+        st.session_state["media-variable-confirmed-toast"] = "clear"
 
 
 def media_variable_confirm_step(plan: dict, variable: dict):
-    """선정 표 아래 확정 줄: 사용자가 고른 단일 변수를 확인하고 확정해야 2단계로 넘어갑니다.
-    진행할 수 없는 변수(variable["ok"]가 아님)나 후보가 없으면 꺼진 확정 버튼과 '다음 단계 진행 불가' 안내만 보여 줍니다."""
-    state = media_variable_confirm_state(plan)
-    confirmed = state == "same"
-    if st.session_state.pop("media-variable-confirmed-toast", False):
+    """선정 표 아래 상태 줄 (확정 버튼은 없음, B안 옵션을 체크하면 확정). 진행할 수 없는 변수나 후보가 없으면 '다음 단계 진행 불가'."""
+    toast = st.session_state.pop("media-variable-confirmed-toast", None)
+    if toast == "set":
         st.toast("단일 변수를 확정했어요. 다음 단계들이 이 값을 받아요", icon="✅")
-    if not plan["b"]:
+    elif toast == "clear":
+        st.toast("확정을 취소했어요. 옵션을 다시 체크해야 다음 단계로 넘어가요", icon="↩️")
+    state = media_variable_confirm_state(plan)
+    if not variable.get("ok"):
         reason = (MEDIA_VARIABLE_BLOCK_MSG[variable["verdict"]][1] if variable.get("verdict") in MEDIA_VARIABLE_BLOCK_MSG
                   else "후보 변수가 없어요 · 2번 탭에서 다른 가설을 고르고 다시 불러와 주세요")
-        if not media_handoff_plan()["sample"]:   # 전에 확정한 값이 있으면 다음 단계는 그 값을 계속 받음
-            reason += " (다음 단계는 전에 확정한 값을 받아요)"
-        with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
-                          key="media-variable-confirm-row"):
-            st.markdown(f":orange-badge[🚫 다음 단계 진행 불가] {reason}")
-            st.button("이 변수로 확정", key="media-btn-variable-confirm", type="primary", disabled=True)
-        return
-    if confirmed:
-        note = ":green-badge[✅ 확정됨] 다음 단계(A/B 소재 준비부터)가 이 값을 받아요"
-    elif state == "changed":   # 확정한 뒤 고른 후보나 리포트 값이 바뀜
-        note = ":orange-badge[다시 확정 필요] 확정한 뒤 고른 값이 바뀌었어요. 다음 단계는 아직 이전 값을 받아요"
+        note = f":orange-badge[🚫 다음 단계 진행 불가] {reason}"
+    elif state == "same":
+        note = ":green-badge[✅ 확정됨] 다음 단계(A/B 소재 준비부터)가 이 값을 받아요 · 체크를 풀면 확정이 취소돼요"
+    elif state == "changed" and media_handoff_plan().get("variable") == variable["name"]:   # 같은 변수인데 리포트 값 등이 바뀜
+        note = ":orange-badge[다시 확정 필요] 확정한 뒤 리포트 값이 바뀌었어요. 옵션을 다시 체크하면 새 값으로 확정돼요"
     else:
-        note = "후보를 고르고 확정하면 다음 단계(A/B 소재 준비부터)로 넘어가요"
+        note = "옵션을 체크하면 확정되고 다음 단계(A/B 소재 준비부터)로 넘어가요"
     with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
                       key="media-variable-confirm-row"):
         st.markdown(note)
-        if not confirmed:   # 확정된 뒤에는 버튼을 숨기고, 값이 바뀌면 '다시 확정'으로 다시 보여 줌
-            st.button("다시 확정" if state == "changed" else "이 변수로 확정", key="media-btn-variable-confirm",
-                      type="primary", on_click=_media_variable_confirm, args=(plan,))
+
+
+def media_variable_can_leave(warn: bool = True) -> bool:
+    """하위 탭 ①을 떠날 때('다음' 버튼, 다른 하위 탭 클릭) 먼저 부르는 확인 (media_page.py).
+    ①에서 고른 값이 확정한 값과 같을 때(state "same")만 True. 아니면 False이고, warn이면 경고창 이유를 남깁니다
+    (다음 화면에서 media_variable_leave_notice()가 띄움)."""
+    plan, _, _ = media_variable_plan()
+    state = media_variable_confirm_state(plan)
+    if state == "same":
+        return True
+    if not warn:
+        return False
+    variable = media_variable_candidates()["variable"]
+    if variable and not variable["ok"]:
+        reason = ("이 변수는 지금 이미지로 해결할 수 없어 다음 단계로 갈 수 없어요 (기능 업데이트 예정). "
+                  "진행 가능한(✅) 변수를 골라 옵션을 체크해 주세요.")
+    elif state == "changed":
+        reason = "고른 변수·옵션이 확정한 값과 달라요. 옵션을 체크해 지금 값으로 확정해 주세요."
+    else:
+        reason = ("아직 확정한 단일 변수가 없어요. " + ("B안 옵션을 체크하면 확정돼요." if media_variable_loaded()
+                                                    else "오른쪽 위 '가설 불러오기'를 누르고 B안 옵션을 체크해 주세요."))
+    st.session_state[MEDIA_VARIABLE_LEAVE_KEY] = reason
+    return False
+
+
+@st.dialog("단일 변수를 확정해 주세요")
+def _media_variable_need_confirm_dialog(reason: str) -> None:
+    """①을 떠나려다 막혔을 때 가운데에 뜨는 경고창."""
+    st.markdown(reason)
+    st.caption("체크한 옵션이 2단계로 넘어가는 B안이에요. 체크를 풀면 확정이 취소돼요.")
+    if st.button("확인", key="media-btn-variable-need-confirm-ok", type="primary"):
+        st.rerun()
+
+
+def media_variable_leave_notice() -> None:
+    """①을 떠나려다 막혔으면(media_variable_can_leave가 이유를 남김) 가운데 경고창을 띄웁니다. media_render()가 매번 부릅니다."""
+    if reason := st.session_state.pop(MEDIA_VARIABLE_LEAVE_KEY, None):
+        _media_variable_need_confirm_dialog(reason)
+
+
+def media_variable_locked_step() -> None:
+    """①에서 확정 전에 ②~④ 하위 탭을 직접 눌렀을 때 그 탭 내용 대신 보이는 잠금 안내."""
+    with st.container(border=True, key="media-variable-locked"):
+        st.markdown("**🔒 단일 변수를 먼저 확정해 주세요**")
+        st.caption("① 가설에서 변수 도출에서 B안 옵션을 체크하면 확정되고, 이 단계부터 볼 수 있어요.")
+        st.button(f"← {MEDIA_VARIABLE_TAB_LABEL}로 가기", key="media-btn-variable-locked-go", type="primary",
+                  on_click=media_variable_go_step)
 
 
 def _media_variable_start_load() -> None:

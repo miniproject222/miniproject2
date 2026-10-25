@@ -4,10 +4,10 @@
 #
 # 넘긴 값은 Supabase의 공용 저장소(store "media"의 "handoff" 칸)에 저장됩니다. 프로젝트 파일은 바뀌지 않습니다.
 #   store("media") = {"results": [...], "handoff": {"plan": {...}, "prompt": {...}, "assets": {...}}}
-#   plan   : 1단계 '이 변수로 확정' 버튼   → 2단계가 읽음
+#   plan   : 1단계 B안 체크(체크 = 확정, 체크를 풀면 지움) → 2단계가 읽음
 #   prompt : 2단계 'A/B 소재 준비'의 '다음' 버튼 (media_page.py → media_s2_handoff_now()) → 3단계 '사진·영상 초안 제작'이 읽음
 #   assets : 3단계 '사진·영상 초안 제작'의 넘기기 버튼                               → 3단계 '외주 정리'가 읽음
-# 저장은 각 단계의 확정·넘기기 버튼을 눌렀을 때만 합니다. (화면을 열기만 해서는 저장되지 않음)
+# 저장은 각 단계의 확정(1단계는 B안 체크)·넘기기 버튼을 눌렀을 때만 합니다. (화면을 열기만 해서는 저장되지 않음)
 # 앞 단계가 아직 넘기지 않았으면 아래 예시 값에 "sample": True가 붙어 와서 각자 먼저 개발할 수 있습니다.
 # Supabase에 연결할 수 없으면 같은 브라우저 접속 안에서만 이어집니다.
 import time
@@ -100,6 +100,18 @@ def _media_handoff_put(name: str, value: dict) -> None:
 def media_handoff_set_plan(plan: dict) -> None:
     """1단계가 A/B 설계를 정하면 부릅니다. 모양은 MEDIA_HANDOFF_PLAN과 같게 넣습니다."""
     _media_handoff_put("plan", plan)
+
+
+def media_handoff_clear_plan() -> None:
+    """1단계가 확정을 취소하면(체크한 B안을 다시 눌러 체크를 풂) 부릅니다. 넘긴 A/B 설계만 지우고 다른 단계 값은 그대로 둡니다.
+    지운 뒤에는 media_handoff_plan()이 다시 예시 값("sample": True)을 돌려줍니다. 반드시 체크박스 콜백에서만 부릅니다."""
+    saved = store_get(MEDIA_HANDOFF_STORE, fresh=True)
+    data = dict(saved) if isinstance(saved, dict) else {}
+    handoff = dict(data.get("handoff") or {})
+    if handoff.pop("plan", None) is None:
+        return
+    data["handoff"] = handoff
+    store_set(MEDIA_HANDOFF_STORE, data)
 
 
 def media_handoff_plan() -> dict:
