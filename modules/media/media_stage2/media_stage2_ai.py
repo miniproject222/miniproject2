@@ -1,6 +1,6 @@
 # 3. 매체 제작 > 2단계 AI 다듬기: 재료 모으기 → 지시문 만들기 → AI 부르기 → 받은 답 확인 (화면 코드 없음)
 # 화면(버튼·결과 표)은 media_stage2.py에서 그립니다.
-# - 재료는 전부 리포트(store_get("report"))와 1단계 아마존 규칙(media_ab.MEDIA_AB_RULES)에서 가져오고 새로 지어내지 않습니다.
+# - 재료는 전부 리포트(store_get("report"))와 아마존 메인 이미지 규칙(MEDIA_S2_AMAZON_RULES)에서 가져오고 새로 지어내지 않습니다.
 # - AI 답은 믿지 않고 코드로 다시 확인합니다 ({slot} 1개, 고정 요소, A/B 확인, 금지 단어, 근거 ID).
 # - AI는 OpenAI만 씁니다 (PM 결정 2026-10-25). 키는 secrets.toml의 OPENAI_API_KEY를 함수 안에서만 읽고,
 #   새 라이브러리 없이 requests로 부릅니다.
@@ -11,8 +11,16 @@ import requests
 import streamlit as st
 
 from common.common_store import store_get
-from modules.media.media_ab import MEDIA_AB_RULES
 from modules.media.media_handoff import MEDIA_HANDOFF_SLOT, media_handoff_check, media_handoff_fill
+
+# 아마존 메인 이미지 규칙 (옛 media_ab.py의 MEDIA_AB_RULES를 그대로 옮김, 2026-10-25 A/B 소재 준비 탭을 2단계로 합치면서)
+# AI 다듬기 재료로 AMZ-1, AMZ-2 … 순서대로 ID를 붙여 보냅니다.
+MEDIA_S2_AMAZON_RULES = [
+    "흰 배경(RGB 255, 255, 255)에 텍스트·로고·워터마크 없는 실제 제품 사진",
+    "AI로 만든 연출 장면은 메인 이미지에 쓰지 않음 → 서브 이미지나 스폰서드 브랜드 광고에서만 사용",
+    "A/B 변수는 사진 안에서 바꿀 수 있는 것만: 각도, 구도, 접힌/펼친 상태, 두께감",
+    "AI는 촬영 각도 레퍼런스와 보정에만 쓰고, 실제 촬영은 외주로 진행",
+]
 
 # 모델 이름 (2026-10-25 공식 문서 확인: OpenAI 비용·성능 균형 모델, 같은 날 실제 호출 확인)
 MEDIA_S2_OPENAI_MODEL = "gpt-6.1-sol"
@@ -68,7 +76,7 @@ def media_s2_ai_material(draft: dict) -> dict:
     forbidden = [{"id": f"BAN-{i}", "text": str(t)} for i, t in enumerate(claims.get("forbidden") or [], 1)]
     rules = [{"id": r["id"], "text": f'{r.get("topic", "")}: {r.get("rule", "")}'}
              for r in report.get("marketing_rules") or [] if isinstance(r, dict) and r.get("id") in MEDIA_S2_PHOTO_RULE_IDS]
-    amazon = [{"id": f"AMZ-{i}", "text": t} for i, t in enumerate(MEDIA_AB_RULES, 1)]
+    amazon = [{"id": f"AMZ-{i}", "text": t} for i, t in enumerate(MEDIA_S2_AMAZON_RULES, 1)]
 
     facts = []
     seori = report.get("seori_profile") if isinstance(report.get("seori_profile"), dict) else {}

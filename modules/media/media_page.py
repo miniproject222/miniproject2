@@ -1,15 +1,16 @@
 # 3. 매체 제작 (단일 변수 → A/B 소재 → 프롬프트·AI 다듬기 → 사진·영상 초안 → 외주 정리)
 # 3단계로 나눠 동시에 개발합니다. 이 파일은 1단계 담당자(공용 파일)만 고칩니다.
-#   1단계 단일 변수 추출 ~ A/B 소재 선정: media_variable.py, media_ab.py (하위 탭 ①②)
-#   2단계 프롬프트 만들기 + AI 다듬기: media_stage2/ (media_s2_prompt_section(), 하위 탭 ② 'A/B 소재 준비' 아래쪽에 들어감)
-#   3단계 사진·영상 초안 → 외주 정리: media_stage3/ (media_stage3_render() ④, media_stage3_export_render() ⑤)
+#   1단계 단일 변수 추출: media_variable.py (하위 탭 ①)
+#   2단계 A/B 소재 준비 + 프롬프트 만들기·AI 다듬기: media_stage2/ (media_stage2_render(), 하위 탭 ②)
+#     (2026-10-25 PM 결정: 옛 media_ab.py와 '프롬프트 만들기' 탭을 media_stage2로 합침)
+#   3단계 사진·영상 초안 → 외주 정리: media_stage3/ (media_stage3_render() ③, media_stage3_export_render() ④)
 #   단계 사이 데이터: media_handoff.py
 from pathlib import Path
 
 import streamlit as st
 
 import ui_theme as ui
-from modules.media.media_ab import media_ab_plan_step
+from modules.media.media_stage2.media_stage2 import MEDIA_S2_TAB_LABEL, media_stage2_render
 from modules.media.media_stage3.media_stage3_export import MEDIA_S3_EXPORT_TAB_LABEL, media_stage3_export_render
 from modules.media.media_stage3.media_stage3 import MEDIA_S3_TAB_LABEL, media_stage3_render
 from modules.media.media_variable import MEDIA_VARIABLE_TAB_LABEL, media_variable_kpi_chip, media_variable_step
@@ -20,11 +21,10 @@ MEDIA_STAGE_CSS = [MEDIA_DIR / "media_stage2" / "media_stage2_style.css",
                    MEDIA_DIR / "media_stage3" / "media_stage3_style.css"]
 
 # 하위 탭(단계): (탭 이름, 화면 함수). 순서대로 '다음 단계' 버튼으로 넘어갑니다.
-# 3단계 탭 이름은 각 단계 파일의 MEDIA_S3_TAB_LABEL / MEDIA_S3_EXPORT_TAB_LABEL에서 정합니다 (단계 담당자가 바꿈)
-# 2단계 프롬프트 만들기는 2026-10-25 PM 결정으로 별도 탭 대신 'A/B 소재 준비' 탭 아래쪽에 들어감 (media_ab.py)
+# 2·3단계 탭 이름은 각 단계 파일의 MEDIA_S2_TAB_LABEL / MEDIA_S3_TAB_LABEL / MEDIA_S3_EXPORT_TAB_LABEL에서 정합니다 (단계 담당자가 바꿈)
 MEDIA_STEPS = [
     (MEDIA_VARIABLE_TAB_LABEL, media_variable_step),
-    ("A/B 소재 준비", media_ab_plan_step),
+    (MEDIA_S2_TAB_LABEL, media_stage2_render),
     (MEDIA_S3_TAB_LABEL, media_stage3_render),
     (MEDIA_S3_EXPORT_TAB_LABEL, media_stage3_export_render),
 ]
