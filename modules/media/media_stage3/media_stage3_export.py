@@ -11,6 +11,7 @@ import streamlit as st
 
 from modules.media.media_handoff import media_handoff_assets, media_handoff_check, media_handoff_prompt
 from modules.media.media_stage3.media_stage3 import MEDIA_S3_MEDIA_NOTE, MEDIA_S3_PHOTOS, MEDIA_S3_VIDEOS
+from modules.media.media_stage3.media_stage3_store import media_s3_store_load
 
 MEDIA_S3_EXPORT_TAB_LABEL = "외주 정리"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
 
@@ -63,6 +64,7 @@ def media_s3_package(src: dict, storyboard: list, photos: list, videos: list) ->
 
 def media_stage3_export_render():
     """3단계 ⑤ 하위 탭(이름은 MEDIA_S3_EXPORT_TAB_LABEL, 탭 이름이 제목 역할). 반드시 media_render() 안에서 부릅니다."""
+    media_s3_store_load()   # ④를 거치지 않고 바로 열어도 보관된 작업물을 씀
     src = media_handoff_prompt()
     assets = media_handoff_assets()   # ④에서 '⑤로 넘기기'로 넘긴 스토리보드·파일 이름
     storyboard = assets["storyboard"]
@@ -83,5 +85,5 @@ def media_stage3_export_render():
     ready = not assets["sample"] and media_handoff_check(src, src["prompt_a"], src["prompt_b"])["ok"]
     st.download_button("외주 전달 파일 다운로드 (.zip)", media_s3_package(src, storyboard, photos, videos),
                        file_name="media_outsourcing_reference.zip", mime="application/zip",
-                       key="media-s3-btn-export", disabled=not ready,
+                       key="media-s3-btn-export", type="primary", disabled=not ready,
                        help=None if ready else "④에서 '⑤로 넘기기'를 누르고, 프롬프트 확인을 통과해야 내려받을 수 있어요.")

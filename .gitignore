@@ -8,3 +8,5 @@ node_modules/
 Thumbs.db
 *.log
 .claude/settings.local.json
+.streamlit/hf_mcp_token.json
+modules/media/media_stage3/data/workspace/

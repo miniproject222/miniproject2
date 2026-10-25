@@ -23,6 +23,7 @@
 | 파일 | 내용 |
 |---|---|
 | `media_stage2.py` | 화면 + 기능. 진입 함수 `media_stage2_render()` 하나를 1단계의 `media_page.py`가 하위 탭 안에서 부릅니다 (이 함수 이름은 바꾸지 않음) |
+| `media_stage2_ai.py` | 2-4 AI 다듬기: 재료 모으기, 지시문, AI 호출, 받은 답 확인, 금지 단어 검사 (화면 코드 없음) |
 | `media_stage2_style.css` | 디자인 (class는 `media-s2-`로 시작). `media_page.py`가 3번 탭을 열 때 읽어 넣습니다 |
 | `media_stage2_prompt.md` | 프롬프트 기록 |
 | `media_stage2_judge.py` | (보관) 이전 A/B 결과·판정 코드, 지금 화면에는 연결하지 않음 |
@@ -56,6 +57,14 @@
 
 ## 지금 상태
 
-- `media_stage2.py`: 2-1~2-3은 예시 값(`media_s2_draft()`)으로 자리만 있음 (2단계 담당이 만들 곳). 단 **빈칸 B는 1단계에서 확정한 B안의 영어 문장(`plan["b_ref"]`)에서 기본 프롬프트 앞뒤를 잘라 씀** (`media_s2_slot_from_ref()`, 앞뒤가 다르거나 없으면 예시 빈칸). 1단계에서 다른 B를 확정하면 프롬프트 칸도 새 문장으로 바뀜, 2-4는 A·B 나란히 비교·되돌리기·확인·리포트 규칙 보기·3단계로 넘기기까지 있음. `AI로 다듬기` 버튼은 AI 키 연결 전이라 꺼져 있음
+- `media_stage2.py`: 2-1~2-3은 예시 값(`media_s2_draft()`)으로 자리만 있음 (2단계 담당이 만들 곳). 단 **빈칸 B는 1단계에서 확정한 B안의 영어 문장(`plan["b_ref"]`)에서 기본 프롬프트 앞뒤를 잘라 씀** (`media_s2_slot_from_ref()`, 앞뒤가 다르거나 없으면 예시 빈칸). 1단계에서 다른 B를 확정하면 프롬프트 칸도 새 문장으로 바뀜, 2-4는 A·B 나란히 비교·되돌리기·확인·리포트 규칙 보기·3단계로 넘기기까지 있음.
+- **2-4 AI로 다듬기 동작함** (`media_stage2_ai.py` + 화면은 `media_stage2.py`)
+  - 제목 줄 오른쪽 끝에 AI 고르기(`media-s2-ai-pick`, Gemini / OpenAI)와 `AI로 다듬기` 버튼(`media-s2-btn-refine`). 키가 하나도 없으면 버튼이 꺼지고 "secrets.toml에 GEMINI_API_KEY 또는 OPENAI_API_KEY를 넣어 주세요"가 보임
+  - 재료(`media_s2_ai_material()`, 여기서만 리포트를 읽음): `media_s2_draft()` 값 + 리포트 `ad_claims.forbidden`(BAN-n), `marketing_rules`의 LNG-002·004·006, `seori_profile.strength`(SEORI-1), `competitor_profiles[*].weakness`(RIVAL-n), `sqp.listing.main_image_issue`(LISTING-1) + 1단계 `MEDIA_AB_RULES`(AMZ-n). 리포트가 없으면 아마존 규칙만 쓰고 "리포트 규칙 없이 다듬었어요"를 보여 줌
+  - 지시문 `MEDIA_S2_AI_SYSTEM`, 보내는 글 `media_s2_ai_message()`, 호출 `media_s2_ai_call()` (requests로 직접 호출, 새 라이브러리 없음, 모델은 `MEDIA_S2_GEMINI_MODEL`·`MEDIA_S2_OPENAI_MODEL`)
+  - 받은 답 확인 `media_s2_ai_validate()`: JSON이 깨지면 한 번만 다시 요청, `{slot}` 정확히 1개·고정 요소·`media_handoff_check()`를 통과해야 칸을 바꿈, 금지 단어가 남으면 경고, 근거 ID가 보낸 목록에 없으면 "근거 확인 필요"
+  - 통과하면 프롬프트 A·B 칸을 다듬은 문장으로 바꾸고 "바꾼 곳" 표·찍지 말 것·넣을 것을 보여 줌. 결과는 `st.session_state["media-s2-ai-result"]`에 보관하고, 칸이 그 결과 그대로일 때만 `changes`·`avoid`·`include`를 3단계로 넘김 (되돌리거나 직접 고치면 빈 목록)
+  - 키가 없어도 리포트 금지 표현 검사는 프롬프트 A·B에 항상 돌아감 (괄호 안 한국어 설명과 한국어 설명 문장은 검사 단어에서 뺌)
+  - 호출 실패(키 오류, 사용량 초과, 시간 초과)는 경고만 띄우고 프롬프트는 그대로 둠
 - `media_stage2_judge.py`: 이전에 만든 A/B 결과·판정 코드 보관 (흐름에서 빠져 화면에 연결하지 않음, 다시 필요하면 `media_s2_judge_render()`를 연결)
 - `data/media_ab_result_dummy_202610.json`: 판정 코드가 쓰는 A/B 결과 더미 (보관)
