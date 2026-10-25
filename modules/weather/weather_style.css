@@ -1,11 +1,14 @@
 /* 4. 날씨 광고 타이밍 - class는 weather- 로 시작, 색상은 공통 변수만 사용
    (온도별 카드·막대·배지 색은 weather_page.py가 ui_theme 팔레트로 넣습니다) */
 
-/* ── 화면 폭: 광고 타이밍 탭(5번째 탭)을 연 동안만 폭을 넓히고 위·양옆 여백을 둠
-   (다른 탭에는 적용되지 않음. 탭 순서가 바뀌면 nth-of-type 숫자를 맞춰야 함) */
-[data-testid="stMainBlockContainer"]:has([role="tablist"] > [role="tab"]:nth-of-type(5)[aria-selected="true"]) {
-  max-width: 1720px;
-  padding: 5.5rem 3.5rem 5rem;
+/* ── 화면 폭·여백: 광고 타이밍 탭(최상위 탭 줄 5번째)을 연 동안만. 위 여백은 ①·② 탭과 같은 1rem
+   (예전 5.5rem은 다른 페이지보다 위가 비어 보였음). 최상위 탭 줄만 보도록 좁혀, ③ 탭 안 하위 탭(5개)에는 걸리지 않게
+   (탭 순서가 바뀌면 nth-of-type 숫자를 맞춰야 함) */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(5)[aria-selected="true"]) {
+    max-width: 1720px !important;
+    padding: 1rem 3.5rem 3rem !important;
+  }
 }
 
 .st-key-weather-root {
@@ -18,11 +21,7 @@
   gap: 1.5rem;
 }
 
-/* ── 팀 공용 글꼴 SUIT (weather_page.py가 불러옴). 아이콘 글꼴은 그대로 둠 */
-.st-key-weather-root,
-.st-key-weather-root *:not([data-testid="stIconMaterial"]) {
-  font-family: "SUIT", var(--font-main);
-}
+/* 글꼴: ① 문제 분석 탭과 같은 앱 기본 글꼴 (예전 SUIT 글꼴은 ①과 글씨가 달라 보여서 뺌) */
 
 /* ── 날씨 카드를 뺀 모든 박스: 흰 카드 배경 */
 [class*="st-key-weather-card-"] {
@@ -109,8 +108,8 @@
 .weather-kpi {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 18px 20px;
+  gap: 4px;
+  padding: 12px 18px;   /* 위아래 폭 줄임 (예전 18px) */
   border-radius: var(--radius);
   box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 7%, transparent);
 }
@@ -138,15 +137,15 @@
 .weather-kpi-emoji {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--color-card) 70%, transparent);
-  font-size: 23px;
+  font-size: 19px;
 }
 
 .weather-kpi-temp {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   line-height: 1.1;
 }
@@ -169,10 +168,13 @@
 
 .weather-kpi-cities {
   margin-top: 2px;
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
   font-size: 11.5px;
   opacity: 0.8;
+  white-space: nowrap;      /* 도시 줄이 두 줄로 꺾여 카드가 높아지지 않게 (넘치면 …, 마우스를 올리면 전체) */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── 예산 카드 */

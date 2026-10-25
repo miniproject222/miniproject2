@@ -122,7 +122,23 @@ def home_todo_html(todos, tabs):
   <div class="home-float home-first">{home_icon("bell", C["blue"])}<div><b>지금 할 일이 없어요</b>
   <div class="home-sub">A/B 결과, 폭염 예보, 광고 빈도 알림이 오면 여기에 순서대로 표시됩니다</div></div></div>
 </div>"""
-    first, rest = todos[0], todos[1:4]
+    # 큰 카드 2개: 위 ① 문제 분석 핵심 요약, 아래 ④ 광고 타이밍 알림 (slot). 나머지는 한 줄씩 접어서
+    cards = [t for t in todos if t.get("slot")][:2] or todos[:1]
+    rest = [t for t in todos if t not in cards][:3]
+
+    def card(n, t):
+        accent = "home-first" if n == 1 else "home-first home-second"
+        return f"""
+  <div class="home-float {accent}">
+    <div class="home-first-top"><span class="home-num-badge home-num-first">{n}</span>{home_when(t["when"])}<span class="home-sub">{tabs[t["goto"]][1]}</span></div>
+    <div class="home-first-body">{home_todo_icon(t)}<div class="home-first-title">{t["title"]}</div></div>
+    <p class="home-first-why"><b>왜?</b> {t["detail"]}</p>
+    <div class="home-row-between home-first-foot">
+      {home_go(tabs, t["goto"], t["action"], "home-go home-go-lg")}
+      <span class="home-next">다음 → {t["next"]}</span>
+    </div>
+  </div>"""
+
     rest_html = "".join(
         f'<details class="home-fold home-todo"><summary>'
         f'<span class="home-num-badge">{i}</span>'
@@ -130,20 +146,12 @@ def home_todo_html(todos, tabs):
         f'<span class="home-sub">{tabs[t["goto"]][1]}</span></div>'
         f'{home_go(tabs, t["goto"], "보기", "home-go home-go-sm")}</summary>'
         f'<p>{t["detail"]}<br><span class="home-next">다음 → {t["next"]}</span></p></details>'
-        for i, t in enumerate(rest, start=2)
+        for i, t in enumerate(rest, start=len(cards) + 1)
     )
     return f"""
 <div class="home-todo-col">
-  <div class="home-label">지금 할 일 <span class="home-count">{len(todos)}</span><span class="home-link">위에서부터 순서대로</span></div>
-  <div class="home-float home-first">
-    <div class="home-first-top"><span class="home-num-badge home-num-first">1</span>{home_when(first["when"])}<span class="home-sub">가장 먼저</span></div>
-    <div class="home-first-body">{home_todo_icon(first)}<div class="home-first-title">{first["title"]}</div></div>
-    <p class="home-first-why"><b>왜?</b> {first["detail"]}</p>
-    <div class="home-row-between home-first-foot">
-      {home_go(tabs, first["goto"], first["action"], "home-go home-go-lg")}
-      <span class="home-next">다음 → {first["next"]}</span>
-    </div>
-  </div>
+  <div class="home-label">지금 할 일 <span class="home-count">{len(todos)}</span><span class="home-link">위 ① 문제 분석 · 아래 ④ 광고 타이밍</span></div>
+  {"".join(card(n, t) for n, t in enumerate(cards, start=1))}
   {rest_html}
 </div>"""
 

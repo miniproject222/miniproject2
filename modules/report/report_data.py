@@ -14,7 +14,8 @@ from modules.report.report_competitor import (
     REPORT_SEORI_PROXY, report_seori_assumption,
     report_competitor_checklist, report_competitor_criteria, report_competitor_load, report_competitor_merge,
     report_competitor_slim, report_competitor_tests, report_external_factors, report_internal_factors,
-    report_hypothesis_problems, report_key_problems, report_marketing_rules, report_merge_key_problems, report_position_kpis,
+    report_four_problems, report_hypothesis_problems, report_marketing_rules, report_position_kpis,
+    report_severity_key,
     report_team_handoff,
 )
 # [보류] ③ 탭 결과 아침 자동 분석 (아래 report_load_data의 [보류] 주석과 함께 풀기)
@@ -154,26 +155,31 @@ def report_load_data():
     data["cooling_sales"] = report_cooling_sales()   # 냉감패드 실적만 (하위 카테고리·여름 순위)
     report_add_keepa_detail(data, rivals)
     data["review_analysis"] = report_review_analysis(rivals, snapshot["items"] if snapshot else None, keepa_time)
-    position_all = report_key_problems(data["internal"], data["external"])   # 내부·외부 위협을 섞어 심각도 순
-    data["position_key_problems"] = position_all[:3]
-    data["key_problems"] = data["position_key_problems"]
-    data["problems"] = report_hypothesis_problems(data["key_problems"], data["internal"], data["external"], rivals)
+    # 흐름: ① 모든 문제 파악 (경쟁 포지션 내부·외부 + 검색어 분석) → ② 내부 상위 2 + 외부(위협) 상위 2 = 카드에 보이는 4개
+    #       → ③ 4개를 다시 위험도 → 심각도 순으로 1~4순위 (결과 박스 = 1·2순위) → ④ 다른 탭 problems도 이 순서가 맨 앞
+    position_internal = list(data["internal"])
+    data["sqp"] = report_sqp_analyze(rivals, snapshot["items"] if snapshot else None)
+    data["sqp_store"] = None
+    sqp_problems, sqp_key_problems = [], []
+    if data["sqp"]:
+        sqp_problems, sqp_key_problems, data["sqp_store"] = report_sqp_handoff(data["sqp"], rivals)
+        # 검색어 문제(소재 개선·노출 확대)도 내부 요인 (제외 검토는 가설 없이 광고 제외 키워드로 처리라 뺌)
+        data["internal"] = sorted(data["internal"] + [
+            {"title": k["title"], "level": k["level"], "group": k["group"], "detail": k["detail"] + " (가상 SQP)",
+             "gap": k.get("gap"), "question": k["question"]} for k in sqp_key_problems if k["group"] != "제외 검토"],
+            key=report_severity_key)
+    data["key_problems"] = report_four_problems(data["internal"], data["external"])
+    sqp_titles = {k["title"] for k in sqp_key_problems}
+    base_problems = report_hypothesis_problems([k for k in data["key_problems"] if k["title"] not in sqp_titles],
+                                               position_internal, data["external"], rivals)
+    merged = sqp_problems + base_problems
+    first = [p for k in data["key_problems"] for p in merged if p["title"] == k["title"]]
+    data["problems"] = first + [p for p in merged if p not in first]
     ra = data["review_analysis"]
     if ra:   # 리뷰 문제에 분석 결과(지표·목표·근거)를 붙여 가설 탭에서 바로 쓰게 합니다
         for p in data["key_problems"] + data["problems"]:
             if p.get("group") == "신뢰":
                 p["metric"], p["target_value"], p["analysis"] = ra["metric"], ra["target"], ra["findings"]
-
-    # 검색어 클릭 분석 (문제 시나리오.md): 있으면 문제 도출·다른 탭 문제의 맨 앞을 이 결과로 바꿉니다
-    data["sqp"] = report_sqp_analyze(rivals, snapshot["items"] if snapshot else None)
-    data["sqp_store"] = None
-    if data["sqp"]:
-        sqp_problems, sqp_key_problems, data["sqp_store"] = report_sqp_handoff(data["sqp"], rivals)
-        # ① 결과 Top 3 = 검색어 문제 + 경쟁 포지션(내부·외부)을 섞어 심각도 순. 다른 탭 problems도 같은 순서로 맞춤
-        data["key_problems"] = report_merge_key_problems(sqp_key_problems, position_all)
-        merged = sqp_problems + data["problems"]
-        first = [next(p for p in merged if p["title"] == k["title"]) for k in data["key_problems"]]
-        data["problems"] = first + [p for p in merged if p not in first]
     report_attach_plans(data)   # ② 가설 재료: 문제마다 행동·이유·지금 값→목표 값·테스트 (데이터로, 고정값 없음)
     saved = store_get("report")
     # [보류] 해결안 A/B: ③ 탭이 UTM·GA4·A/B 실행 결과를 store("media")에 저장하면, 매일 아침(한국 08:00 이후 첫 접속)

@@ -83,7 +83,9 @@ def home_read_stores():
     stores, demo = {}, set()
     for code in HOME_STEPS:
         value = store_get(code)
-        if not value and code in HOME_DEMO:
+        # ④ 광고 타이밍은 이제 실제 값을 저장하므로 샘플(가짜 '경쟁사 A 품절' 알림)을 쓰지 않음.
+        # 홈이 ④보다 먼저 그려져 첫 화면에서 아직 저장 전이면, 광고 배수는 홈의 기온 규칙으로 대신함 (home_ad_multiplier)
+        if not value and code in HOME_DEMO and code != "weather":
             value = HOME_DEMO[code]
             demo.add(code)
         stores[code] = value
@@ -107,6 +109,22 @@ def home_todos(stores, temps):
                    "next": 끝나면 이어지는 일}] (급한 것 먼저)"""
     todos = []
     report = stores.get("report") or {}
+
+    # ① 문제 분석 핵심 요약 (맨 위): ① 탭이 '다음으로'로 저장한 1·2순위를 간략히
+    keys = [k for k in (report.get("key_problems") or []) if isinstance(k, dict) and k.get("title")]
+    if not report.get("version"):
+        # ① 탭이 아직 저장 전 (샘플 report) → 샘플 A/B·매출 할 일 대신 ① 먼저 하라는 할 일만
+        todos.append({"slot": "report", "level": "high", "when": "지금", "title": "① 1순위 · 문제 분석 결과가 아직 없어요",
+                      "detail": "① 문제 분석 탭에서 '불러오기' → '다음으로'를 누르면 핵심 문제 1·2순위가 여기에 나와요.",
+                      "goto": "report", "action": "문제 분석 하러 가기", "next": "저장하면 ② 가설 세우기로"})
+        report = {}
+    if keys and report:
+        first = keys[0]
+        second = f" · 2순위: {keys[1]['title']}" if len(keys) > 1 else ""
+        todos.append({"slot": "report", "level": "high", "when": "지금",
+                      "title": f"① 1순위 · {first.get('type', '')} | {first['title']}",
+                      "detail": f"{str(first.get('detail', ''))[:90]}{'…' if len(str(first.get('detail', ''))) > 90 else ''}{second}",
+                      "goto": "report", "action": "문제 분석 보기", "next": "확인 후 ② 가설 세우기로"})
 
     # ① A/B 테스트 결과
     ab = report.get("ab_test") or {}
@@ -137,11 +155,19 @@ def home_todos(stores, temps):
                       "goto": "weather", "action": "광고 빈도 조정 보기",
                       "when": "이번 주", "next": "폭염 전에 광고 빈도를 올려 두기"})
 
-    # ④ 광고 타이밍 탭 알림
-    for w in (stores.get("weather") or {}).get("alerts", []):
+    # ④ 광고 타이밍 탭 알림 (첫 알림 = 아래 큰 카드)
+    alerts = [w for w in (stores.get("weather") or {}).get("alerts", []) if isinstance(w, dict)]
+    for i, w in enumerate(alerts):
         level = w.get("level", "info")
-        todos.append({"level": level, "title": w.get("text", ""), "detail": w.get("detail", ""),
-                      "goto": "weather", "action": "광고 빈도 조정 보기",
+        todos.append({"slot": "weather" if i == 0 else None, "level": level, "title": w.get("text", ""), "detail": w.get("detail", ""),
+                      "goto": "weather", "action": "광고 타이밍 보기",
                       "when": w.get("when", "지금" if level == "high" else "오늘"), "next": "광고 노출을 늘리면 결과는 ① 문제 분석으로"})
+    if not alerts:
+        todos.append({"slot": "weather", "level": "info", "when": "오늘", "title": "④ 광고 타이밍 · 날씨 분석 결과가 아직 없어요",
+                      "detail": "④ 광고 타이밍 탭을 열면 독일 4개 권역 예보로 이번 주 아마존 예산 추천이 여기에 나와요.",
+                      "goto": "weather", "action": "광고 타이밍 보기", "next": "예산을 정하면 ① 문제 분석으로 결과 확인"})
 
-    return sorted(todos, key=lambda t: (HOME_WHEN_RANK.get(t["when"], 9), t["level"] != "high"))
+    # 정렬: 위 ① 핵심 요약, 아래 ④ 날씨 알림 (큰 카드 2개), 나머지는 급한 순 (같으면 넣은 순서 유지)
+    slot_rank = {"report": 0, "weather": 1}
+    return sorted(todos, key=lambda t: (slot_rank.get(t.get("slot"), 2),
+                                         HOME_WHEN_RANK.get(t["when"], 9), t["level"] != "high"))

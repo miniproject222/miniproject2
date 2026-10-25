@@ -339,12 +339,13 @@
 [data-testid="stMainBlockContainer"]:has(.st-key-hypothesis-candidate-tabs) {
   padding-bottom: 24px !important;
 }
-/* ② 탭을 연 동안만 페이지 폭·여백: 가로 폭은 ④ 광고 타이밍 탭(최대 1720px, 양옆 3.5rem),
-   위·아래 여백은 ③ 광고 소재 탭(위 1rem, 아래 3rem) 기준. 최상위 탭 3번째 기준 (탭 순서가 바뀌면 숫자 수정) */
+/* ② 탭을 연 동안만 페이지 폭·여백: 가로 폭은 ④ 광고 타이밍 탭(최대 1720px, 양옆 3.5rem), 위 여백은 ③ 탭(1rem) 기준.
+   아래 여백은 세로 스크롤이 생기지 않도록 1rem (3rem이면 화면 높이가 조금만 낮아도 스크롤이 생겼음).
+   최상위 탭 3번째 기준 (탭 순서가 바뀌면 숫자 수정) */
 @media (min-width: 768px) {
   [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(3)[aria-selected="true"]) {
     max-width: 1720px !important;
-    padding: 1rem 3.5rem 3rem !important;
+    padding: 1rem 3.5rem 1rem !important;
   }
 }
 
@@ -399,6 +400,17 @@
   color: #7B6CF2;
 }
 
+/* 지금 쓸 수 없는 아이콘은 자리는 그대로 두고 흐리게 (아이콘 줄이 가설마다 바뀌지 않게) */
+[class*="st-key-hypothesis-side-"] button:disabled span[data-testid="stIconMaterial"] {
+  color: #7B6CF2;
+  opacity: 0.3;
+}
+
+[class*="st-key-hypothesis-side-"] .stButton > button:disabled {
+  background: transparent;
+  cursor: not-allowed;
+}
+
 /* ── 제목 줄 오른쪽 위 '불러오기'·'저장하기' (① 탭 report_style.css와 같은 모양·색) ── */
 .st-key-hypothesis-head .st-key-hypothesis-head-title {
   flex: 1 1 auto;
@@ -447,4 +459,11 @@
 }
 @media (prefers-reduced-motion: reduce) {
   [class*="st-key-hypothesis-card-"], .st-key-hypothesis-selected-card { animation: none !important; }
+}
+
+/* 가설 카드 제목 줄: ① 문제 분석에서 몇 순위 문제인지 (출처 배지) */
+.hypothesis-badge-source {
+  background: var(--color-card) !important;
+  border: 1px solid #7B6CF2;   /* ① 탭과 같은 밝은 보라 */
+  color: #7B6CF2 !important;
 }
