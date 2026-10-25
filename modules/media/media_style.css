@@ -248,15 +248,41 @@
     margin-top: auto;
   }
 
-  /* 콜아웃 안을 두 칸으로: 왼쪽 If·Because, 오른쪽 Then(목표, 크게). 대상 줄은 맨 위에 두 칸을 가로질러.
-     줄 순서는 media_variable.py가 [대상], If, Because, Then으로 만듦 (Then = 마지막 문단) */
+  /* 2026-10-25 사용자 결정: 폭 맞춤보다 여백이 중요 → 콜아웃을 글자 폭(안쪽 여백 16px + 구분선 양옆 24px)만큼만 두고
+     오른쪽 끝은 '다시 불러오기' 버튼에 맞춤 (남는 폭은 요약 카드와 콜아웃 사이로). 글자가 길면 남는 폭까지 늘고 그다음부터 … */
+  .st-key-media-hypo-callout {
+    flex: 0 1 auto;
+    width: fit-content;
+    max-width: 100%;
+    margin-left: auto;
+  }
+
+  /* 콜아웃 안을 두 칸으로: 왼쪽 If·Because, 가운데 구분선, 오른쪽 Then(목표, 크게). 대상 줄은 맨 위에 가로질러.
+     줄 순서는 media_variable.py가 [대상], If, Because, Then으로 만듦 (Then = 마지막 문단).
+     왼쪽·Then은 글자 폭만큼, 남는 폭은 가운데 칸이 모두 가져 구분선을 그 한가운데에 둠
+     → 구분선 양옆 간격이 같고, Then 오른쪽 끝이 콜아웃 안쪽 여백에 붙어 왼쪽과 대칭 (글자가 길면 왼쪽부터 …) */
   .st-key-media-hypo-callout [data-testid="stMarkdownContainer"]:has(> p:nth-child(3)) {
     display: grid;
-    /* 왼쪽(If·Because)은 글자 길이만큼 먼저 차지, Then 칸이 나머지 폭을 모두 씀 → 글자가 짧아도 칸 안 가운데가 비지 않음.
-       Then 칸은 글자가 다 보이는 폭 아래로는 안 줄어듦 (좁은 화면에서는 아래 1600px 규칙이 Then을 두 줄로 좁힘) */
-    grid-template-columns: minmax(0, max-content) minmax(min-content, 1fr);
-    column-gap: 24px;
+    grid-template-columns: minmax(0, max-content) minmax(48px, 1fr) max-content;
     align-items: center;
+    /* 줄 높이 여백 때문에 글자 위가 아래보다 2~3px 넓음 → 위아래를 좌우 여백(16px)과 맞춤 (실제 화면에서 잰 값) */
+    margin-top: -3px !important;
+    margin-bottom: -1px !important;
+  }
+
+  /* 가운데 구분선 (글자 칸의 ::after를 가운데 칸에 둠. 파란 배경에서도 보이게 메인 색을 섞음) */
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"]:has(> p:nth-child(3))::after {
+    content: "";
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    justify-self: center;
+    align-self: stretch;
+    width: 2px;
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"]:has(> p:nth-child(4))::after {
+    grid-row: 2 / span 2;
   }
 
   .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:first-child:nth-last-child(4) {
@@ -264,56 +290,40 @@
   }
 
   .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:nth-child(4) {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 2 / span 2;
   }
 
   .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:nth-child(3) {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 1 / span 2;
   }
 
-  /* Then 칸: 1줄 배지, 2줄 '지표 이름 + 숫자'(media_variable.py가 따로 굵게 둠), 남는 폭의 가운데에.
+  /* Then 칸: 1줄 배지, 2줄 '지표 이름 + 숫자'(media_variable.py가 따로 굵게 둠), 가운데 정렬.
+     grid 대신 일반 줄 배치: grid로 쌓으면 브라우저가 칸 폭을 한 줄 폭으로 잘못 재 If·Because가 잘림.
      한 칸 화면에서는 배지와 목표가 한 줄 그대로 */
   .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:not(:only-child) {
-    display: grid;
-    grid-template-columns: auto auto;
-    justify-content: center;
-    align-items: center;
-    gap: 2px 6px;
-    padding-left: 20px;
-    /* 파란 콜아웃 배경에서도 보이게 메인 색을 섞은 구분선 (안 보이면 왼쪽 글자와 Then 사이가 빈칸처럼 보임) */
-    border-left: 2px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
+    text-align: center;
     font-size: 17px;
     line-height: 1.5;
   }
 
   .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:not(:only-child) > :first-child {
-    grid-column: 1 / -1;
-    justify-self: center;
-  }
-
-  /* 숫자 모양이 아니라 굵은 글이 하나뿐이면 두 칸을 가로질러 가운데 */
-  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:not(:only-child) > strong:only-of-type {
-    grid-column: 1 / -1;
+    display: table;
+    margin: 0 auto 2px;
   }
 }
 
-/* 두 칸인데 콜아웃이 아직 좁은 화면: Then 칸이 '배지 + 지표 이름' / '숫자' 두 줄로 좁아져 If·Because 자리를 내줌
+/* 두 칸인데 콜아웃이 아직 좁은 화면: Then 칸을 '배지 + 지표 이름' / '숫자' 두 줄로 좁혀 If·Because 자리를 내줌
    (Then 칸 줄 수 = 왼쪽 If·Because 줄 수라 콜아웃 높이는 그대로. 1600px은 실제 화면에서 잰 값) */
 @media (min-width: 1400px) and (max-width: 1599.98px) {
-  /* 두 줄 Then의 최소 폭을 브라우저가 한 줄 폭으로 잡아 If·Because를 자르므로, 실제 두 줄 폭(약 190px)으로 정해 둠 */
-  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"]:has(> p:nth-child(3)) {
-    grid-template-columns: minmax(0, max-content) minmax(200px, 1fr);
-  }
-
   .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:not(:only-child) > :first-child {
-    grid-column: auto;
+    display: inline;
+    margin: 0;
   }
 
   .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:not(:only-child) > strong:last-of-type:not(:only-of-type) {
-    grid-column: 1 / -1;
-    justify-self: center;
+    display: block;
   }
 }
 
