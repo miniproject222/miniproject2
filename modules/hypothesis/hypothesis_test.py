@@ -98,9 +98,12 @@ def test_core_flow() -> None:
         any("냉감 부족" in m.value for m in at.markdown),
         "[핵심] 경쟁사 부정 리뷰 원문이 근거·출처 토글 안에 표시됨",
     )
+    # 가설 후보 탭 안에서는 If·Because·Then 카드를 안 그립니다 — 선택하면 맨 위 "지금 선택된
+    # 가설" 칸에서 보이므로 탭 안에서 또 보여주면 중복이라는 지적 반영. 아직 아무것도 선택
+    # 안 한 상태라 그 칸도 비어 있어서(안내 문구만), 카드는 0개여야 함.
     check(
-        sum("hypothesis-ibt-box" in m.value for m in at.markdown) == 3,
-        "[핵심] 가설 후보마다 If · Because · Then 카드가 펼치지 않아도 바로 보임 (3개)",
+        sum("hypothesis-ibt-box" in m.value for m in at.markdown) == 0,
+        "[핵심] 가설 후보 탭 안에는 If · Because · Then 카드를 안 그림 (선택 전, 0개)",
     )
     check(
         [b.label for b in at.button if b.key and b.key.startswith("hypothesis-btn-save-")] == ["선택하기"] * 3,
@@ -450,10 +453,10 @@ SQP_SAMPLE = {
 
 
 def test_scenario_section() -> None:
-    # SAMPLE_REPORT 문제들은 sqp_type이 없어서 이 sqp와 무관함 → 그래도 가설 후보마다
-    # If·Because·Then 카드는 뜨되(hypothesis_generic_evidence_section, 규칙 기반 근거 —
-    # 펼치지 않아도 바로 보이는 형태), sqp 전용 "KPI 표" expander는 뜨면 안 됨
-    # (엉뚱한 근거를 끌어오지 않음)
+    # SAMPLE_REPORT 문제들은 sqp_type이 없어서 이 sqp와 무관함 → 가설 후보 탭 안에는
+    # If·Because·Then 카드를 안 그리므로(선택하면 맨 위 칸에서 보이는 걸로 충분 — 중복 지적
+    # 반영) 아직 아무것도 선택 안 한 상태에서는 카드가 0개여야 함. sqp 전용 "판단 기준"
+    # expander도 뜨면 안 됨(엉뚱한 근거를 끌어오지 않음).
     report = dict(SAMPLE_REPORT)
     report["sqp"] = SQP_SAMPLE
     at = _new_apptest()
@@ -462,8 +465,8 @@ def test_scenario_section() -> None:
     check(not at.exception, "[시나리오] sqp가 있는 report를 넣어도 예외 없음")
     md_values = [m.value for m in at.markdown]
     check(
-        sum("hypothesis-ibt-box" in v for v in md_values) == len(SAMPLE_REPORT["problems"]),
-        f"[시나리오] 모든 가설 후보에 If·Because·Then 카드가 하나씩 바로 뜸 (실제: {sum('hypothesis-ibt-box' in v for v in md_values)}개)",
+        sum("hypothesis-ibt-box" in v for v in md_values) == 0,
+        f"[시나리오] 선택 전에는 가설 후보 탭 안에 If·Because·Then 카드가 안 뜸 (실제: {sum('hypothesis-ibt-box' in v for v in md_values)}개)",
     )
     expander_labels = [e.label for e in at.get("expander")]
     check(
@@ -480,15 +483,15 @@ def test_scenario_section() -> None:
     s2 = hypothesis_scenario_problem2_sentence(SQP_SAMPLE["problem2"])
     check(s2.startswith("만약 ") and s2.endswith("것이다."), "[시나리오] 노출 확대 가설 문장도 '만약~것이다.' 템플릿을 따름")
 
-    # report에 sqp가 없어도(일반적인 경우) 가설 후보마다 규칙 기반 If·Because·Then 카드는 그대로 바로 보임
+    # report에 sqp가 없어도(일반적인 경우) 마찬가지로 선택 전에는 카드가 안 뜸
     at2 = _new_apptest()
     at2.session_state["store-report"] = SAMPLE_REPORT
     at2.run()
     check(not at2.exception, "[시나리오] sqp가 없는 report는 예외 없음")
     md_values2 = [m.value for m in at2.markdown]
     check(
-        sum("hypothesis-ibt-box" in v for v in md_values2) == len(SAMPLE_REPORT["problems"]),
-        "[시나리오] sqp가 없어도 가설 후보마다 규칙 기반 If·Because·Then 카드는 그대로 바로 보임",
+        sum("hypothesis-ibt-box" in v for v in md_values2) == 0,
+        "[시나리오] sqp가 없어도 선택 전에는 가설 후보 탭 안에 If·Because·Then 카드가 안 뜸",
     )
 
 
@@ -602,13 +605,13 @@ def test_sqp_single_hypothesis() -> None:
         sum("판단 기준 자세히" in lb for lb in expander_labels) == 1,
         f"[시나리오 통합] sqp 전용 '목표 KPI · 판단 기준' expander는 소재 개선(가설 1) 탭에만 1개 뜸 (실제: {sum('판단 기준 자세히' in lb for lb in expander_labels)}개)",
     )
-    # 가설 1 탭(1개) + 가설 2 탭(선택 여부와 관계없이 항상 카드를 그림, 1개) + 맨 위
-    # "지금 선택된 가설" 칸(가설 2 내용, 1개) = 총 3개
+    # 가설 후보 탭 안에는 If·Because·Then 카드를 안 그리므로(중복 지적 반영), 맨 위
+    # "지금 선택된 가설" 칸(가설 2 내용)에서만 1개 뜸
     md_values = [m.value for m in at.markdown]
     check(
-        sum("hypothesis-ibt-box" in v for v in md_values) == 3,
-        f"[시나리오 통합] 가설 1·2 탭(2개, 선택 여부와 무관하게 항상 카드를 그림) + 선택된 가설 칸(1개) = "
-        f"총 3개의 If·Because·Then 카드가 뜸 (실제: {sum('hypothesis-ibt-box' in v for v in md_values)}개)",
+        sum("hypothesis-ibt-box" in v for v in md_values) == 1,
+        f"[시나리오 통합] 가설 후보 탭 안에는 카드가 없고, 선택된 가설 칸에서만 1개 뜸 "
+        f"(실제: {sum('hypothesis-ibt-box' in v for v in md_values)}개)",
     )
 
 

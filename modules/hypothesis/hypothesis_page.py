@@ -575,21 +575,15 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
                 type="primary" if not is_saved else "secondary",
             )
 
-        # "실행 방법"을 If·Because·Then 카드보다 먼저 보여줍니다 — 가설 1/2/3을 비교할 때
-        # 실행 방법(과 목표 KPI)부터 보고 고를 수 있어야 한다는 요청 반영. 선택 여부와
-        # 관계없이 모든 후보가 똑같은 구성입니다.
+        # 가설 후보 탭 안에서는 "실행 방법"만 보여주고 If·Because·Then 카드는 그리지 않습니다
+        # — 선택하면 어차피 맨 위 "지금 선택된 가설" 칸에 카드로 뜨니, 탭 안에서 또 보여주는
+        # 건 중복이라는 지적을 반영했습니다. ibt 자체는 선택 시 저장할 값으로는 계속 씁니다.
         if is_sqp_main:
             hypothesis_scenario_detail_section(sqp)
         elif is_sqp_problem2:
             hypothesis_scenario_problem2_detail_section(p2)
         else:
             hypothesis_generic_detail_section(problem)
-
-        hypothesis_if_then_card([
-            ("If", "if", ibt["if"]),
-            ("Because", "because", ibt["because"]),
-            ("Then", "then", ibt["then"]),
-        ])
 
         hypothesis_evidence_section(problem)
 
