@@ -21,7 +21,7 @@ REPORT_PRICE_ALERT = 0.10         # Keepa 90일 평균 대비 이만큼 오르�
 REPORT_SEASON_MONTHS = (6, 7, 8)  # 냉감패드 성수기 (독일 DB CAL-002, 추론)
 REPORT_SCORE_COLS = ["Novilla", "RIBECO", "Traumnacht", "Paradies", "potow", "웰크론(세사)", "GlacialPad", "Mara Vital", "Herlag", "SEORI (목표)"]
 REPORT_LEVEL_ORDER = {"높음": 0, "중간": 1, "낮음": 2}
-REPORT_SEORI_PROXY = "Herlag"   # 가정: 서리 = 독일 냉감패드 실적 3위 Herlag (2026 여름 순위 기준, Traumnacht는 비냉감 실적 혼재로 제외). 서리의 판매 실적(Keepa)은 이 브랜드 값을 씀
+REPORT_SEORI_PROXY = "SleepCOOL"   # 가정: 서리 = 독일 냉감패드 실적 3위 SleepCOOL (냉감 전용 + 1년 판매 신호 기준, 2026-10-25). 양면(2-in-1)·비냉감 혼재 상품은 순위에서 제외. 서리의 판매 실적(Keepa)은 이 브랜드 값을 씀
 REPORT_TOP_RIVALS = 2   # 대시보드에 보여 줄 경쟁사 수: 경쟁사 DB '구분'의 "독일 N위"(Keepa 판매 순위) 상위 N개 + 서리(가정 3위)
 
 
@@ -140,14 +140,18 @@ def report_competitor_merge(rows, keepa_products, keepa_items):
     """경쟁사 행에 Keepa 값(현재가, 90일 평균 대비, 평점, 리뷰, 재고, ㎡당 가격)을 붙입니다."""
     by_brand = {p["db_brand"]: p for p in keepa_products}
     for r in rows:
-        # 서리는 판매 전이라, 가정에 따라 REPORT_SEORI_PROXY(Herlag)의 Amazon 실적을 서리 값으로 씀
+        # 서리의 Amazon 실적은 가정에 따라 REPORT_SEORI_PROXY(SleepCOOL)의 값을 씀
         p = by_brand.get(REPORT_SEORI_PROXY if r["kind"] == "자사" else r["brand"])
         r["proxy"] = REPORT_SEORI_PROXY if r["kind"] == "자사" and p else ""
         k = (keepa_items or {}).get(p["asin"]) if p else None
+        cmp_ = (p or {}).get("compare")   # 대표 상품이 다른 사이즈면, 서리와 같은 90x200 변형 가격으로 비교
+        if k and cmp_:
+            k = {**k, "price": cmp_["price"], "avg90": cmp_.get("avg90"), "change": cmp_.get("change"),
+                 "price_note": cmp_["note"]}
         r["asin"] = p["asin"] if p else r.get("asin_db", "")
         r["keepa"] = k
-        r["keepa_sqm"] = (k["price"] / (p["width_cm"] * p["length_cm"] / 10000)
-                          if k and k["price"] and p.get("width_cm") else None)
+        w, l = (cmp_["width_cm"], cmp_["length_cm"]) if cmp_ else ((p or {}).get("width_cm"), (p or {}).get("length_cm"))
+        r["keepa_sqm"] = k["price"] / (w * l / 10000) if k and k["price"] and w else None
     return rows
 
 
@@ -217,15 +221,17 @@ def report_internal_factors(rows, criteria, checklist, tests, keepa_time):
     k = seori.get("keepa") or {}
     tops_rank = [r for r in rivals if (r.get("keepa") or {}).get("rank")]
     detail = report_keepa_detail().get("items", {})
-    summer = {r["brand"]: (detail.get(r.get("asin") or "") or {}).get("rank_root_summer_median") for r in rows}
-    own_summer = summer.get(seori["brand"])
-    rivals_summer = [(summer[r["brand"]], r["brand"]) for r in rivals if summer.get(r["brand"])]
-    if own_summer and rivals_summer:   # 냉감패드 실적 기준: 2026년 여름(6~8월) 순위 중앙값
-        best_rank, best_brand = min(rivals_summer)
-        out.append({"title": f"여름 판매 순위 {own_summer:,}위 (냉감패드 1위 {best_brand} {best_rank:,}위)",
+    sig = {r["brand"]: ((detail.get(r.get("asin") or "") or {}).get("rank_drops") or {}).get("365") for r in rows}
+    own_sig = sig.get(seori["brand"])
+    rivals_sig = [(sig[r["brand"]], r["brand"]) for r in rivals if sig.get(r["brand"])]
+    if own_sig and rivals_sig:   # 냉감패드 실적 기준: 1년 판매 신호 (Keepa 순위가 좋아진 횟수 = 판매 횟수 추정)
+        best_sig, best_brand = max(rivals_sig)
+        own_summer = (detail.get(seori.get("asin") or "") or {}).get("rank_root_summer_median")
+        out.append({"title": f"1년 판매 신호 {own_sig}회 (냉감패드 1위 {best_brand} {best_sig}회)",
                     "level": "중간", "group": "판매",
-                    "detail": f"{seori['proxy']} 실적 가정 · 2026년 6~8월 Amazon.de 판매 순위 중앙값, 1위의 약 {own_summer / best_rank:.0f}배 · "
-                              f"지금(10월) {k.get('rank') or 0:,}위, 평점 {k.get('rating') or '-'} (Keepa 상세 2026-10-24)"})
+                    "detail": f"{seori['proxy']} 실적 가정 · 1위의 약 {own_sig / best_sig * 100:.0f}% 수준"
+                              + (f" · 여름(6~8월) 순위 중앙값 {own_summer:,}위" if own_summer else "")
+                              + f", 평점 {k.get('rating') or '-'} (Keepa 상세)"})
     elif k.get("rank") and tops_rank:
         best = min(tops_rank, key=lambda r: r["keepa"]["rank"])
         out.append({"title": f"Amazon 판매 순위 {k['rank']:,}위 (1위 {best['brand']} {best['keepa']['rank']:,}위)",

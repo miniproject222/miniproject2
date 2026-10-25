@@ -26,7 +26,7 @@ REPORT_SQP_INTENT_GAP = 10.0      # 클릭된 상품 중앙 가격이 우리보�
 REPORT_SQP_HEAT_TEMP = 28.0       # 폭염일: 5개 도시 평균 최고기온
 REPORT_SQP_HEAT_DAYS = 3          # 폭염일이 이만큼 있는 주를 '폭염 주'로 표시
 REPORT_SQP_ROLES = {              # 경쟁 제품 역할 (Keepa 조회값이 있는 브랜드)
-    "Mara Vital": "같은 자리 경쟁자", "RIBECO Germany": "같은 자리 경쟁자",   # 냉감패드 실적 1·2위 (2026 여름 순위, Keepa 상세)
+    "Novilla": "같은 자리 경쟁자", "Mara Vital": "같은 자리 경쟁자",   # 냉감패드 실적 1·2위 (냉감 전용 + 1년 판매 신호, Keepa 상세)
 }
 REPORT_SQP_TYPE_DIRECTION = {
     "소재 개선": "메인 이미지·제목 A/B (③ 광고 소재)",
@@ -294,7 +294,7 @@ def report_sqp_kpis(sqp):
 
 
 def report_sqp_context(x, by_query, kb):
-    """문제 종류별 현지 근거 한 줄. 맞는 근거가 없으면 빈칸 (제외 검토는 가설 대상이 아니라 억지로 붙이지 않음)."""
+    """문제 종류별 현지 근거 한 줄. 맞는 근거가 없으면 빈칸 (억지로 다른 근거를 붙이지 않음)."""
     ctx = kb.get("CLI-005") if x["type"] == "노출 확대" else by_query.get(x["query"].lower())
     if not ctx:
         return ""
@@ -308,7 +308,8 @@ def report_sqp_handoff(sqp, rivals):
     # 가설 탭 '현지 특성'(local_context): 문제 종류에 맞는 독일 DB 근거
     # 소재 개선·제외 검토 → 그 검색어 자체의 의미(KEY-1xx), 노출 확대(더운 날 입찰) → 열대야(CLI-005)
     kb = report_knowledge({"CLI-005"} | {f"KEY-10{i}" for i in range(1, 9)})
-    by_query = {r["소분류"].lower(): r for k, r in kb.items() if k.startswith("KEY-")}
+    # 소분류에 표현이 여러 개면 쉼표로 묶여 있음 (예: KEY-105 "Kühltopper, kühlender Topper") → 하나씩 매칭
+    by_query = {term.strip().lower(): r for k, r in kb.items() if k.startswith("KEY-") for term in r["소분류"].split(",")}
     eur = [r for r in rivals if r["kind"] != "자사" and r["currency"] == "EUR"]
     weak = [f"{r['brand'].split()[0]} {r['weakness'].split(',')[0].strip()}" for r in eur[:3] if r["weakness"]]
     review = " / ".join(weak) + " (경쟁사 DB 약점, 실제 리뷰 원문 아님)" if weak else ""

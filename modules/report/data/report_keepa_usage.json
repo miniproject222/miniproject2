@@ -1,7 +1,7 @@
 {
   "budget": 600,
   "note": "프로젝트 완료까지 쓸 수 있는 Keepa 토큰 한도. 조회할 때마다 앱이 실제 사용량(tokensConsumed)을 여기에 더합니다. 로컬에서 조회한 뒤 이 파일과 스냅샷을 함께 커밋하면 배포 앱은 토큰 없이 마지막 값을 보여 줍니다.",
-  "used": 245,
+  "used": 268,
   "log": [
     {
       "date": "2026-10-24",
@@ -42,6 +42,16 @@
       "date": "2026-10-24",
       "tokens": 8,
       "what": "냉감패드 실적 재확인: Traumnacht 패드·Mara Vital·Herlag·RIBECO 상품 상세(히스토리 포함) 조회 (Keepa 응답의 실제 사용량)"
+    },
+    {
+      "date": "2026-10-25",
+      "tokens": 8,
+      "what": "4위 후보 확인: Novilla·Ehrenkind·SleepCOOL·Paradies 상품 상세(히스토리 포함) (Keepa 응답의 실제 사용량)"
+    },
+    {
+      "date": "2026-10-25",
+      "tokens": 15,
+      "what": "Novilla 상품군 변형 15개 확인 (냉감 여부·순위 공유 확인, Keepa 응답의 실제 사용량)"
     }
   ]
 }
