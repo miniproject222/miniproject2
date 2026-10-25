@@ -31,7 +31,20 @@ REPORT_SEVERITY_BASIS = {
 }
 REPORT_SEVERITY_DATA = {"실제": 1.0, "가정": 0.7, "가상": 0.5}   # 실제(Keepa·DB) > 가정(서리 설정) > 가상(시연 SQP)
 REPORT_SEVERITY_URGENCY = {"현재": 1.0, "잠재": 0.6}             # 지금 생기는 손실 > 조건이 맞으면 생길 위험
-REPORT_SEVERITY_GAP = 0.5                                       # 차이를 숫자로 잴 수 없는 문제의 기본값
+REPORT_REVIEW_HIGH, REPORT_REVIEW_MID = 0.3, 0.7   # 리뷰 위험도 구간: 1위 경쟁사 대비 30% 미만 높음, 70% 미만 중간
+# UWG 점검: Q-max 광고 문구에 숫자 옆 필수 표기 (독일 DB LNG-005). '…'(빈칸)이면 미기재
+REPORT_UWG_REQUIRED = [("완제품", r"Fertigprodukt"), ("온도차 10 °C", r"ΔT\s*10"), ("시험 규격", r"JIS L 1927"),
+                       ("시험기관", r"Prüfinstitut:\s*[^…,)\s]"), ("성적서 번호", r"Prüfbericht-Nr\.:\s*[^…,)\s]")]
+REPORT_UWG_FORBIDDEN = ["Körpertemperatur senken", "eiskalt", "0,4 W"]   # 체온 표현·과장·원사 수치 (ad_claims.forbidden)
+REPORT_SEVERITY_GAP = 0.5
+# 시즌 시점별 가중치: 같은 데이터라도 지금 시점에 먼저 할 일이 위로 (여름 전용 제품, 성수기 6~8월)
+REPORT_SEASON_PHASE = {3: "준비기", 4: "준비기", 5: "준비기", 6: "성수기", 7: "성수기", 8: "성수기"}   # 나머지 달 = 비수기
+REPORT_PHASE_FOCUS = {
+    "준비기": {"신뢰": 1.3, "규제": 1.3, "소재 개선": 1.3, "시험": 1.2, "인증": 1.2, "노출 확대": 1.1},   # 시즌 전에 끝내야 하는 것
+    "성수기": {"노출 확대": 1.5, "소재 개선": 1.3, "경쟁사": 1.4, "판매": 1.3, "가격": 1.2, "신뢰": 0.9},   # 지금 매출이 걸린 것
+    "비수기": {"시험": 1.3, "인증": 1.3, "제품·물류": 1.3, "경쟁력": 1.2, "신뢰": 1.1,
+               "경쟁사": 0.7, "노출 확대": 0.6, "판매": 0.8},                                        # 다음 시즌 준비 (장기 과제)
+}                                       # 차이를 숫자로 잴 수 없는 문제의 기본값
 REPORT_SEORI_PROXY = "SleepCOOL"   # 가정: 서리 = 독일 냉감패드 실적 3위 SleepCOOL (냉감 전용 + 1년 판매 신호 기준, 2026-10-25). 양면(2-in-1)·비냉감 혼재 상품은 순위에서 제외. 서리의 판매 실적(Keepa)은 이 브랜드 값을 씀
 REPORT_TOP_RIVALS = 2   # 대시보드에 보여 줄 경쟁사 수: 경쟁사 DB '구분'의 "독일 N위"(Keepa 판매 순위) 상위 N개 + 서리(가정 3위)
 
@@ -130,7 +143,7 @@ def report_competitor_checklist():
 
 
 def report_competitor_tests():
-    """서리 시험·표시 F: 출시 전 완제품 시험 계획과 결과 입력 여부."""
+    """서리 시험·표시 F: 완제품 시험 항목과 결과 입력 여부 (가정 파일 값으로 덮어씀)."""
     assume = (report_seori_assumption() or {}).get("tests", [])
     out = []
     for r in report_db_rows(REPORT_COMPETITOR_DB):
@@ -161,7 +174,7 @@ def report_competitor_merge(rows, keepa_products, keepa_items):
                  "price_note": cmp_["note"]}
         own = (report_seori_assumption() or {}).get("price") if r["kind"] == "자사" else None
         if k and own:   # 서리 판매가는 SleepCOOL 현재가 대신 서리 자체 가격 (가정 파일, 검색어 분석과 같은 값)
-            k = {**k, "price": own["now"], "avg90": own["now"], "change": 0.0, "price_note": own["basis"]}
+            k = {**k, "price": own["now"], "avg90": None, "change": None, "price_note": own["basis"]}   # 가정 가격이라 가격 이력 없음
             cmp_ = {"width_cm": own["width_cm"], "length_cm": own["length_cm"]}
         r["asin"] = p["asin"] if p else r.get("asin_db", "")
         r["keepa"] = k
@@ -203,11 +216,11 @@ def report_position_kpis(rows, checklist):
              "tip": f"서리 ㎡당 가격 €{own:.1f} · 중앙값 €{mid:.1f}" if mid else ""}]
     if reviews:
         top = max(reviews)
-        kpis.append({"label": "리뷰 수", "value": f"{own_reviews:,}건", "badge": f"최다 {top[0]:,}건 ({top[1].split()[0]})",
+        kpis.append({"label": "리뷰 수", "value": f"{own_reviews:,}건", "badge": f"경쟁사 최다 {top[0]:,}건 ({top[1].split()[0]})",
                      "tip": f"서리 리뷰 {own_reviews:,}건 · 경쟁사 최다 {top[1]} {top[0]:,}건",
                      "good": own_reviews >= top[0]})
     kpis.append({"label": "판매 채널", "value": f"{report_channel_count(seori)}개",
-                 "badge": f"최다 {report_channel_count(wide)}개 ({wide['brand'].split()[0]})",
+                 "badge": f"경쟁사 최다 {report_channel_count(wide)}개 ({wide['brand'].split()[0]})",
                  "tip": f"서리 {seori['channels']} · 경쟁사 최다 {wide['brand']}: {wide['channels']}",
                  "good": report_channel_count(seori) >= report_channel_count(wide)})
     kpis.append({"label": "필수 인증·규제", "value": f"{len(done)}/{len(must)} 완료",
@@ -229,9 +242,10 @@ def report_internal_factors(rows, criteria, checklist, tests, keepa_time):
     own_reviews = (seori.get("keepa") or {}).get("reviews") or 0
     if reviews and own_reviews < reviews[0][0]:
         tops = ", ".join(f"{b} {n:,}건" for n, b in reviews[:2])
-        who = f" ({seori['proxy']} 실적 가정)" if seori.get("proxy") else " (신규 브랜드)"
-        out.append({"title": f"리뷰 {own_reviews:,}건, 경쟁사의 {own_reviews / reviews[0][0] * 100:.0f}% 수준",
-                    "level": "높음", "group": "신뢰", "gap": 1 - own_reviews / reviews[0][0],
+        who = f" ({seori['proxy']} 실적 가정)" if seori.get("proxy") else ""
+        ratio = own_reviews / reviews[0][0]
+        out.append({"title": f"리뷰 {own_reviews:,}건, 경쟁사의 {ratio * 100:.0f}% 수준",
+                    "level": report_review_level(ratio), "group": "신뢰", "gap": 1 - ratio,
                     "detail": f"서리{who} · 경쟁사 {tops} (Keepa {keepa_time}) · 온라인 쇼핑객 54%가 구매 전 리뷰 확인 (독일 DB SHP-006)"})
     k = seori.get("keepa") or {}
     tops_rank = [r for r in rivals if (r.get("keepa") or {}).get("rank")]
@@ -296,6 +310,33 @@ def report_internal_factors(rows, criteria, checklist, tests, keepa_time):
     return sorted(out, key=report_severity_key)
 
 
+def report_review_level(ratio):
+    """리뷰 위험도: 1위 경쟁사 리뷰 수 대비 비율로 (30% 미만 높음, 30~70% 중간, 70% 이상 낮음)."""
+    return "높음" if ratio < REPORT_REVIEW_HIGH else "중간" if ratio < REPORT_REVIEW_MID else "낮음"
+
+
+def report_uwg_risk(assume, base):
+    """UWG 경고장 위험도: 가정 파일의 Q-max 광고 문구(ad_claims)에 필수 표기가 모두 있는지, 금지 표현이 없는지 점검.
+    금지 표현 사용 또는 입증 자료(시험기관·성적서 번호) 미기재 → 높음 / 그 밖의 표기 누락 → 중간 / 모두 갖춤 → 낮음."""
+    claims = (assume.get("ad_claims") or {}).get("claims") or []
+    q = next((c for c in claims if "Q-max" in c.get("topic", "")), None)
+    if not q:
+        return {"level": base["level"], "detail": base["detail"] + " · 광고 문구(ad_claims) 없음 → 점검 못 함"}
+    text = " ".join(c.get("de", "") for c in claims)
+    bad = [w for w in REPORT_UWG_FORBIDDEN if w.lower() in text.lower()]
+    missing = [name for name, pat in REPORT_UWG_REQUIRED if not re.search(pat, q["de"])]
+    proof = [m for m in missing if m in ("시험기관", "성적서 번호")]
+    level = "높음" if bad or proof else "중간" if missing else "낮음"
+    if bad:
+        title = f"광고 문구에 금지 표현({', '.join(bad)}) → 독일 경쟁법(UWG) 경고장 위험"
+    elif missing:
+        title = f"Q-max 광고 문구에 {'·'.join(missing)} 미기재 → 독일 경쟁법(UWG) 경고장 위험"
+    else:
+        title = "Q-max 광고 문구 필수 표기 완료 (UWG 위험 낮음, 성적서 보관 필요)"
+    checked = " · ".join(f"{name} {'✗' if name in missing else '✓'}" for name, _ in REPORT_UWG_REQUIRED)
+    return {"title": title, "level": level, "detail": f"광고 문구 점검: {checked} · 금지 표현 {'있음' if bad else '없음'} → {base['detail']}"}
+
+
 def report_price_factor(r, k, keepa_time):
     """경쟁사 가격 변화 판정. 90일 평균은 계절(여름 성수기)이 섞여 비수기에 '인하'로 보이므로,
     Keepa 상세의 작년 같은 날 가격과 비교해 계절 가격인지 실제 인하·인상인지 나눕니다."""
@@ -358,7 +399,13 @@ def report_external_factors(rows, keepa_time, today=None):
     # 가정(완제품 판매 중)에서 보완이 남은 항목 중 외부 규칙·시장이 요구하는 것 → 외부 위협
     assume = report_seori_assumption()
     if assume:
-        out += [{"kind": "위협", **{k: v for k, v in x.items() if k != "side"}} for x in assume["remaining"] if x["side"] == "외부"]
+        for x in assume["remaining"]:
+            if x["side"] != "외부":
+                continue
+            f = {"kind": "위협", **{k: v for k, v in x.items() if k != "side"}}
+            if x["group"] == "규제" and "UWG" in x["title"]:   # 고정 '높음' 대신 실제 광고 문구 점검 결과로 위험도 결정
+                f.update(report_uwg_risk(assume, x))
+            out.append(f)
 
     # 기회
     hidden = [r["brand"] for r in rivals if r["currency"] == "EUR" and "미공개" in r["qmax"]]
@@ -413,16 +460,19 @@ REPORT_RULE_IDS = ["LNG-001", "LNG-002", "LNG-003", "LNG-004", "LNG-005", "LNG-0
 
 
 def report_severity(f):
-    """심각도 점수 (0~1): 데이터 신뢰도 × 시급성 × (0.5 + 0.5 × 차이 크기). 차이 크기 gap은 0~1 (클수록 경쟁사·목표와 멀다)."""
+    """심각도 점수 (0~1): 데이터 신뢰도 × 시급성 × (0.5 + 0.5 × 차이 크기) × 시즌 시점 가중치.
+    차이 크기 gap은 0~1 (클수록 경쟁사·목표와 멀다). 시점: 준비기(3~5월)·성수기(6~8월)·비수기(9~2월)."""
     data, urgency = REPORT_SEVERITY_BASIS.get(f["group"], ("가정", "잠재"))
     gap = f.get("gap")
     g = REPORT_SEVERITY_GAP if gap is None else min(max(gap, 0.0), 1.0)
-    score = REPORT_SEVERITY_DATA[data] * REPORT_SEVERITY_URGENCY[urgency] * (0.5 + 0.5 * g)
+    phase = REPORT_SEASON_PHASE.get(date.today().month, "비수기")
+    focus = REPORT_PHASE_FOCUS[phase].get(f["group"], 1.0)
+    score = min(1.0, REPORT_SEVERITY_DATA[data] * REPORT_SEVERITY_URGENCY[urgency] * (0.5 + 0.5 * g) * focus)
     gap_text = "차이 측정 불가(기본 50%)" if gap is None else f"차이 {g * 100:.0f}%"
     return {"score": round(score, 2), "data": data, "urgency": "지금 손실" if urgency == "현재" else "생길 수 있는 위험",
-            "gap": None if gap is None else round(g, 2),
+            "gap": None if gap is None else round(g, 2), "phase": phase, "focus": focus,
             "basis": f"{data} 데이터 {REPORT_SEVERITY_DATA[data]} × {'지금 손실' if urgency == '현재' else '잠재 위험'} "
-                     f"{REPORT_SEVERITY_URGENCY[urgency]} × {gap_text}"}
+                     f"{REPORT_SEVERITY_URGENCY[urgency]} × {gap_text}" + (f" × {phase} {focus}" if focus != 1.0 else "")}
 
 
 def report_severity_key(f):

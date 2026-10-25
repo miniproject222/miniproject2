@@ -11,6 +11,8 @@ REPORT_REVIEW_RATING_GOALS = (4.0, 4.1)   # 서리 평점 목표: 경쟁사 2곳
 
 def report_review_need(reviews, rating, goal):
     """평점 goal에 닿으려면 별 5개 리뷰가 몇 건 더 필요한지 (단순 평균 기준, Amazon 표시 평점은 가중 평균이라 근사값)."""
+    if rating is None:   # 평점 기록이 없으면 계산하지 않음
+        return None
     if rating >= goal:
         return 0
     return math.ceil(round((goal - rating) * reviews / (5 - goal), 6))   # 부동소수 오차로 4.0000001 → 5가 되지 않게
@@ -68,13 +70,16 @@ def report_review_analysis(rivals, snapshot_items, keepa_time):
     findings = [
         f"서리 리뷰 {seori['reviews']}건 · 평점 {seori['rating']} → 냉감패드 실적 1위 {leader['brand']} {leader['reviews']}건 · 평점 {leader['rating']}"
         f" (리뷰 {max(leader['reviews'] - seori['reviews'], 0)}건 차이)",
-        f"비교 상품 {len(others)}개의 리뷰 수 중앙값 {median:g}건 · 서리는 그 {seori['reviews'] / median * 100:.0f}%",
-        f"리뷰가 가장 많은 {many['brand']}({many['reviews']}건)의 판매 순위는 {many['rank']:,}위"
+        f"비교 상품 {len(others)}개의 리뷰 수 중앙값 {median:g}건"
+        + (f" · 서리는 그 {seori['reviews'] / median * 100:.0f}%" if median else ""),   # 리뷰가 모두 0건이면 비율 생략
+        f"리뷰가 가장 많은 {many['brand']}({many['reviews']}건)의 판매 순위는 "
+        + (f"{many['rank']:,}위" if many["rank"] else "확인 안 됨")
         + (f" (리뷰 수와 판매 순위의 순위 상관 {rho:+.2f}, 상품 {len(ranked)}개라 참고용)" if rho is not None else ""),
         *[f"{r['brand']}: {r['note']}" for r in rows if r.get("note")],
         *[f"{r['brand']} 최근 1년 리뷰 {r['reviews_1y']:+d}건" + (f" · 여름(6~8월) 판매 순위 중앙값 {r['summer_rank']:,}위" if r["summer_rank"] else "")
           for r in rows if r.get("reviews_1y") is not None],
-        f"평점 4.0까지 별 5개 리뷰 약 {needs['4.0']}건, 4.1까지 약 {needs['4.1']}건 추가 필요 (단순 평균 기준 근사)",
+        *([f"평점 4.0까지 별 5개 리뷰 약 {needs['4.0']}건, 4.1까지 약 {needs['4.1']}건 추가 필요 (단순 평균 기준 근사)"]
+          if needs["4.0"] is not None else ["서리 평점 기록이 없어 필요한 리뷰 수는 계산하지 않음"]),
     ]
     return {
         "rows": rows,
