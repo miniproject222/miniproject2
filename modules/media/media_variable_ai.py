@@ -103,7 +103,9 @@ def media_variable_ai_call(provider: str, message: str) -> str:
 
 def media_variable_ai_message(hypo: dict, listing: dict) -> str:
     """AI에게 보내는 글. 가설 · 문제 · 지금 메인 이미지 · 아마존 규칙 · 예시 묶음을 칸마다 제목을 붙여 나눕니다."""
-    from modules.media.media_ab import MEDIA_AB_RULES   # media_ab가 media_variable을 불러오므로 여기서 불러옴 (순환 방지)
+    # 아마존 메인 이미지 규칙: 2026-10-25 media_ab.py가 media_stage2로 합쳐지면서 규칙도 media_stage2_ai.py로 옮김 (PM)
+    # (media_stage2가 media_variable을 불러오므로 여기서 불러옴, 순환 방지)
+    from modules.media.media_stage2.media_stage2_ai import MEDIA_S2_AMAZON_RULES as MEDIA_AB_RULES
 
     def block(title, lines):
         lines = [str(x) for x in lines if x]
