@@ -299,7 +299,7 @@ def hypothesis_build_components(problem: dict) -> dict:
     group = str(problem.get("group") or "").strip()
     competitor_review = str(problem.get("competitor_review") or "").strip()
 
-    action, amount, _is_visual, test_method = hypothesis_pick_action(desc, is_external, competitor_review, title, group)
+    action, amount, is_visual, test_method = hypothesis_pick_action(desc, is_external, competitor_review, title, group)
     sensitivity = hypothesis_pick_sensitivity(desc, is_external, competitor_review, group)
 
     # 이유(because)는 항상 title(문제 제목 — report가 늘 짧고 깔끔한 명사구로 줌)을 바탕으로
@@ -314,6 +314,13 @@ def hypothesis_build_components(problem: dict) -> dict:
     title_for_reason = (title or "분석 결과").rstrip(". !?。")
     reason_fragment = f"{title_for_reason}로 미루어 볼 때 고객이 {sensitivity}에 민감하게 반응할 가능성이 크기"
 
+    # "준비할 소재"/"고정 요소"는 sqp 기반 가설(hypothesis_scenario.py)과 같은 구성으로 맞춰서
+    # "가설 2,3도 가설 1처럼 자세하게 나오게 해달라"는 요구를 반영합니다. 사진·영상이 필요한
+    # 액션(is_visual)이면 action 자체가 곧 준비할 소재이고, 아니면 소재 없이 운영만 바뀝니다.
+    prep_material = action if is_visual else "별도 소재 불필요 (운영성 액션)"
+    fixed_factor = ("가격·상세페이지 설명 등 소재 외 조건은 테스트 기간 동안 그대로 유지"
+                     if is_visual else "기존 운영 방식 그대로, 위 액션만 추가로 적용")
+
     return {
         "target": target,
         "kpi": kpi,
@@ -321,6 +328,8 @@ def hypothesis_build_components(problem: dict) -> dict:
         "amount": amount,
         "reason_fragment": reason_fragment,
         "test_method": test_method,
+        "prep_material": prep_material,
+        "fixed_factor": fixed_factor,
     }
 
 
@@ -354,22 +363,23 @@ def hypothesis_build_sentence(problem: dict) -> str:
 
 def hypothesis_generic_detail_section(problem: dict) -> None:
     """sqp(검색어 클릭 분석) 근거가 없는 — 즉 규칙 기반으로 문장을 만든 — 가설 후보 탭 안에서,
-    If·Because·Then 카드(hypothesis_page.py가 공통으로 그림) 바로 아래 실행 세부사항을
-    보여줍니다. 타깃·목표 KPI·테스트 방법을 표로 보여줘서 "실행 방법이 너무 간단해 보인다"는
-    피드백을 반영했습니다. 테스트 방법은 카테고리마다 전부 똑같던 "A/B 테스트로 적용 전/후
-    {kpi} 비교" 대신, hypothesis_pick_action()이 액션(카테고리)별로 고른 구체적인 비교 방식·
-    기간·표본 기준을 그대로 씁니다. 문제 설명·현지 특성·경쟁사 근거 원문·출처는 여기 말고
-    hypothesis_evidence_section()이 바로 아래 별도 토글("📚 근거·출처 보기")로 모아 보여줍니다."""
+    If·Because·Then 카드보다 먼저 "실행 방법"을 보여줍니다(실행 방법을 보고 가설을 비교·
+    선택할 수 있어야 한다는 요구 반영). 타깃·목표 KPI·준비할 소재·고정 요소·테스트 방법을
+    전부 토글 없이 메인 표 하나로 보여줍니다(sqp 기반 가설과 같은 구성 — "가설 2,3도 가설
+    1처럼 자세하게" 요구 반영. 목표 KPI도 실행 방법과 같이 보는 게 비교에 더 편하다고 판단해
+    같은 표에 포함). 문제 설명·현지 특성·경쟁사 근거 원문·출처는 여기 말고
+    hypothesis_evidence_section()이 별도 토글("📚 근거·출처 보기")로 모아 보여줍니다."""
     c = hypothesis_build_components(problem)
     kpi_particle = hypothesis_particle(c["kpi"], "이", "가")
-    rows = [
+    st.markdown("**🧪 실행 방법**")
+    st.markdown(hypothesis_scenario_table([
         ("타깃", c["target"]),
         ("목표 KPI", f"{c['kpi']}{kpi_particle} {c['amount']} 개선"),
+        ("준비할 소재", c["prep_material"]),
+        ("고정 요소", c["fixed_factor"]),
         ("테스트 방법", c["test_method"]),
-    ]
-    with st.expander("🔧 실행 세부사항 보기 (타깃 · 목표 KPI · 테스트 방법)", expanded=False):
-        st.markdown(hypothesis_scenario_table(rows))
-        st.caption("규칙 기반으로 자동 구성된 근거예요. 실제 실행 전에 내용을 검토해 주세요.")
+    ]))
+    st.caption("규칙 기반으로 자동 구성된 근거예요. 실제 실행 전에 내용을 검토해 주세요.")
 
 
 def hypothesis_evidence_section(problem: dict) -> None:
@@ -514,11 +524,12 @@ def _hypothesis_handle_save(problem: dict, text: str, ibt: dict) -> None:
 
 
 def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, saved: dict | None) -> None:
-    """가설 후보 1개(탭)를 그립니다. 가설 문장은 따로 수정 가능한 칸으로 보여주지 않고,
-    제목 → If·Because·Then 가설 카드(짧고 읽기 좋게) → 실행 세부사항·근거·출처 토글을 쭉
-    읽은 뒤 맨 아래에서 "이 가설 선택하기"를 누르는 흐름입니다. 가설 문장 자체
-    (hypothesis_resolve_sentence)는 화면에 그대로 노출하지 않고, 선택 시 저장할 값으로만
-    씁니다. index는 위젯 key를 후보마다 다르게 만드는 데만 씁니다."""
+    """가설 후보 1개(탭)를 그립니다. 제목 줄(오른쪽 끝에 작은 선택 버튼) → "🧪 실행 방법"
+    메인 표(실행 방법을 보고 가설을 비교·선택할 수 있도록, If·Because·Then보다 먼저) →
+    If·Because·Then 가설 카드 → 근거·출처 토글 순서입니다. 선택 여부와 관계없이 모든 후보를
+    똑같은 구성으로 그립니다(예전에는 이미 선택된 후보만 카드를 생략했는데, "선택 안 한
+    가설들도 실행 방법이 위에 뜨면 좋겠다"는 요청으로 전부 통일). index는 위젯 key를
+    후보마다 다르게 만드는 데만 씁니다."""
     # report_sqp.py(검색어 클릭 분석)의 "소재 개선"/"노출 확대" 문제면, 가설 문장이 이미 sqp
     # 원본 근거로 만들어진 것이므로 그 근거(타깃·액션·이유·KPI 등)를 이 탭 안에 이어서 보여줍니다.
     is_sqp_main = bool(
@@ -539,49 +550,42 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
     # 붙여줘서, hypothesis_style.css가 (와일드카드 선택자로) 이 카드들만 정확히 골라 스타일을 고칩니다.
     with st.container(border=True, key=f"hypothesis-card-{index}"):
         is_external = problem.get("type") == "외부"
-        # 배지 + 제목을 한 줄로.
+        # 배지 + 제목 줄 오른쪽 끝에 작은 선택 버튼을 바로 붙입니다 — 예전에는 맨 아래에
+        # 가로로 꽉 찬 "이 가설 선택하기" 버튼 + "✅ 선택됨" 안내 박스가 따로 있었는데,
+        # "선택됨 박스는 지우고 이 위치 오른쪽 끝에 조그맣게 선택 버튼만 넣어 달라"는
+        # 요청으로 제목 줄에 통합했습니다.
         badge_label = "⚠️ 외부 요인 · 경쟁사" if is_external else "🏷️ 내부 요인"
         badge_class = "hypothesis-badge-external" if is_external else "hypothesis-badge-internal"
-        st.markdown(
-            f'<p class="hypothesis-factor-line"><span class="hypothesis-badge {badge_class}">{badge_label}</span>'
-            f' <b>{problem.get("title", "")}</b></p>',
-            unsafe_allow_html=True,
-        )
+        title_col, button_col = st.columns([5, 1])
+        with title_col:
+            st.markdown(
+                f'<p class="hypothesis-factor-line"><span class="hypothesis-badge {badge_class}">{badge_label}</span>'
+                f' <b>{problem.get("title", "")}</b></p>',
+                unsafe_allow_html=True,
+            )
+        with button_col:
+            # media, home 탭이 읽을 수 있게 "hypothesis" 키에 가설 1개만 저장 (가설 1/2/3 중
+            # 사용자가 "선택"한 1개만 최종 저장됨 — 다른 후보를 선택하면 이 값이 바뀜).
+            st.button(
+                "✓ 선택됨" if is_saved else "선택하기",
+                key=f"hypothesis-btn-save-{index}",
+                disabled=is_saved,
+                on_click=_hypothesis_handle_save,
+                args=(problem, text, ibt),
+                type="primary" if not is_saved else "secondary",
+            )
 
-        # 가설(If·Because·Then)을 내부/외부 요인 배지·제목 바로 아래, 펼치지 않아도 보이는
-        # 형태로 먼저 보여줍니다 (가설을 가장 먼저 보고 싶다는 요청 반영). 설명·현지 특성·
-        # 경쟁사 부정 리뷰 같은 근거 원문은 문장 안에 안 섞고, 바로 아래 토글들(실행
-        # 세부사항 · 근거·출처 보기)로 모았습니다 ("문장을 읽고 한번에 이해하기 좋게
-        # 정리해 달라"는 피드백 반영). 소재 개선/노출 확대/규칙 기반 어느 쪽이든 같은
-        # 카드로 통일해서 그립니다.
-        hypothesis_if_then_card([
-            ("If", "if", ibt["if"]),
-            ("Because", "because", ibt["because"]),
-            ("Then", "then", ibt["then"]),
-        ])
-
+        # 가설 후보 탭 안에서는 "실행 방법"만 보여주고 If·Because·Then 카드는 그리지 않습니다
+        # — 선택하면 어차피 맨 위 "지금 선택된 가설" 칸에 카드로 뜨니, 탭 안에서 또 보여주는
+        # 건 중복이라는 지적을 반영했습니다. ibt 자체는 선택 시 저장할 값으로는 계속 씁니다.
         if is_sqp_main:
             hypothesis_scenario_detail_section(sqp)
         elif is_sqp_problem2:
             hypothesis_scenario_problem2_detail_section(p2)
         else:
             hypothesis_generic_detail_section(problem)
-        hypothesis_evidence_section(problem)
 
-        st.divider()
-        # media, home 탭이 읽을 수 있게 "hypothesis" 키에 가설 1개만 저장 (가설 1/2/3 중
-        # 사용자가 "선택"한 1개만 최종 저장됨 — 다른 후보를 선택하면 이 값이 바뀜).
-        st.button(
-            "✓ 선택됨" if is_saved else "이 가설 선택하기",
-            key=f"hypothesis-btn-save-{index}",
-            disabled=is_saved,
-            on_click=_hypothesis_handle_save,
-            args=(problem, text, ibt),
-            type="primary",
-            width="stretch",
-        )
-        if is_saved:
-            st.caption("✅ 이 가설을 선택해 저장했어요. 다음 탭(매체 제작 등)에서 이 가설을 사용해요.")
+        hypothesis_evidence_section(problem)
 
 
 def hypothesis_render():
@@ -641,7 +645,6 @@ def hypothesis_render():
             )
 
     st.markdown("### 🧪 가설 후보")
-    st.caption("A/B 테스트용 사진·영상 결과물로 바로 이어지는 문제를 우선 보여드려요. 하나씩 열어보고 선택하세요.")
 
     tabs = st.tabs([f"가설 {i + 1}" for i in range(len(candidates))], key="hypothesis-candidate-tabs")
     for i, (tab, problem) in enumerate(zip(tabs, candidates)):
