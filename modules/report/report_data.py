@@ -124,6 +124,7 @@ def report_load_data():
     data = {
         "period": date.today().strftime("%Y-%m"),
         "keepa_status": f"{last} · 토큰 사용 {usage['used']}/{usage['budget']}",
+        "keepa_time": keepa_time,                                # Keepa 마지막 조회 시각 (현재 순위의 기준 달)
         "keepa_auto": keepa_auto,                                # 아침 자동 갱신 상태 문구
         "data_rules": report_data_rules(keepa_time),              # 지표별 비교 기준·출처·날짜·구분·신선도
         "seori_proxy": REPORT_SEORI_PROXY,                       # 서리 판매 실적에 쓰는 가정 브랜드
