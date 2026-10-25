@@ -1,7 +1,7 @@
 # 3. 매체 제작 > 가설에서 변수 도출
 # '가설 불러오기'를 누르면 2번 탭이 저장한 가설(store "hypothesis")을 다시 읽고, 그 가설로 후보 변수 묶음을 만들어
 # (AI 또는 규칙, media_variable_ai.py) 사용자가 표에서 A/B로 실험할 변수 하나와 그 변수의 B안을 고릅니다.
-# 어떤 가설이 와도 화면이 그려지고, 메인 이미지 변수가 없으면 2·3단계로 넘기는 확정만 막습니다.
+# 표의 어떤 변수든 고를 수 있고, 메인 이미지로 진행할 수 없는 변수를 고르면 경고를 보여 주고 2·3단계로 넘기는 확정만 막습니다.
 # 3번 탭의 하위 탭 ①(가설에서 변수 도출)에서 부릅니다.
 # 고른 A/B 설계(plan)는 1번 리포트 값으로 채워 화면에 보여 주고, 사용자가 확정하면 2단계로 넘깁니다 (media_handoff.py).
 # 바깥 값을 읽는 곳은 두 함수뿐입니다: 가설 media_variable_saved(), 리포트 media_variable_report_sqp()
@@ -36,15 +36,25 @@ MEDIA_VARIABLE_HYPO_KPIS = [MEDIA_VARIABLE_KPI_RAW, MEDIA_VARIABLE_KPI]
 MEDIA_VARIABLE_SQP_LABEL = "가상 데이터"
 
 # 후보 묶음 모양 (media_variable_ai.py가 만듦): {"kpi", "note", "variables"}
-# 표의 한 줄 = 사용자가 고를 수 있는 변수 하나. 판정(통과/제외)은 묶음에 쓰지 않고 media_variable_judge()가 규칙으로 계산합니다.
+# 표의 한 줄 = 사용자가 고를 수 있는 변수 하나 (어느 줄이든 고를 수 있음).
+# 판정(이미지로 진행 / 진행 불가)은 묶음에 쓰지 않고 media_variable_judge()가 규칙으로 계산합니다.
 # 변수 칸: name(표 이름 = 독립 변수), kind(main_image·title·price 등), if_match(가설의 If와 맞는지),
 #          fallback(제외되면 대신 쓸 곳), reason(If와 안 맞는 이유), b_options(이 변수로 만들 B안 목록)
 # B안 칸: label(고르기 버튼 이름), b, ref_prompt / 메인 이미지 규칙을 어긴 안만: rule_break, fallback
 # 목록 순서 = 화면에 보일 우선순위
 MEDIA_VARIABLE_STAGE_KIND = "main_image"   # 2·3단계(프롬프트 → 매체 제작)가 이어받을 수 있는 변수 종류
-MEDIA_VARIABLE_PASS = "✅ 통과"     # 고를 수 있는 변수의 판정 값
+# 판정 값: 2·3단계로 진행 / 메인 이미지 변수가 아님 / 메인 이미지 변수지만 B안이 없음 (뒤 둘은 골라도 확정만 막음)
+MEDIA_VARIABLE_PASS = "✅ 이미지로 진행"
+MEDIA_VARIABLE_NOT_IMAGE = "⚠️ 이미지로 해결 불가"
+MEDIA_VARIABLE_NO_B = "⚠️ B안 없음"
+# 진행할 수 없는 변수를 골랐을 때 오른쪽 경고와 확정 줄 안내 {판정: (경고, 확정 줄 안내)}
+MEDIA_VARIABLE_BLOCK_MSG = {
+    MEDIA_VARIABLE_NOT_IMAGE: ("지금은 메인 이미지 문제만 해결할 수 있어요. 이 변수의 솔루션 기능은 추후 업데이트 예정이에요.",
+                               "기능 업데이트 예정 · 지금은 메인 이미지 변수만 확정할 수 있어요"),
+    MEDIA_VARIABLE_NO_B: ("이 변수로 만들 메인 이미지 B안이 없어요. B안이 있는 메인 이미지 변수를 골라 주세요.",
+                          "이 변수로 만들 B안이 없어요 · B안이 있는 메인 이미지 변수를 골라 주세요"),
+}
 MEDIA_VARIABLE_SHOW = 3   # 변수 표에 보여 줄 줄 수 (가설·후보 목록이 바뀌어도 이 수만큼만)
-MEDIA_VARIABLE_PICK_MAX = MEDIA_VARIABLE_SHOW - 1   # 고를 수 있는 변수 수 (표의 한 줄은 걸러낸 예시로 남김)
 MEDIA_VARIABLE_VAR_KEY = "media-variable-var"       # 사용자가 표에서 고른 변수 이름 (session_state)
 MEDIA_VARIABLE_TABLE_KEY = "media-variable-table"   # 변수 표 (st.dataframe) key 앞부분 (뒤에 붙는 번호를 바꿔 선택을 되돌림)
 MEDIA_VARIABLE_PICK_KEY = "media-variable-pick"     # B안 고르기 버튼 (st.segmented_control) key 앞부분 (뒤에 변수 번호)
@@ -213,16 +223,18 @@ def media_variable_b_options(v: dict) -> tuple[list[dict], list[dict]]:
 
 
 def media_variable_judge(v: dict) -> tuple[bool, str, str]:
-    """변수 하나의 (고를 수 있는지, 판정, 이유).
-    걸러내는 순서: 가설의 If → 2·3단계가 이어받을 수 있는 종류(메인 이미지) → 메인 이미지 규칙 안에서 만들 B안이 있는지."""
-    if not v.get("if_match"):
-        return False, f"제외 → {v.get('fallback') or '다음 테스트'}", v.get("reason") or "가설의 If가 아님"
+    """변수 하나의 (2·3단계로 진행할 수 있는지, 판정, 이유). 고르는 것은 막지 않고, 진행할 수 없으면 확정만 막습니다.
+    보는 순서: 2·3단계가 이어받을 수 있는 종류(메인 이미지)인지 → 메인 이미지 규칙 안에서 만들 B안이 있는지.
+    가설의 If와 맞는지(if_match)는 진행 조건이 아니라 이유 칸에 참고로만 적습니다."""
+    off_if = "" if v.get("if_match") else " · 가설의 If와 다름"
     if v.get("kind") != MEDIA_VARIABLE_STAGE_KIND:
-        return False, "제외 → 다음 테스트", "2·3단계는 메인 이미지 변수만 이어받음"
+        return False, MEDIA_VARIABLE_NOT_IMAGE, "지금은 메인 이미지 문제만 해결 가능" + off_if
     ok, broken = media_variable_b_options(v)
-    if not ok:
-        return False, "제외 → 서브 이미지", "메인 이미지 규칙 안에서 만들 B안이 없음"
-    return True, MEDIA_VARIABLE_PASS, f"가설의 If · 규칙 안 B안 {len(ok)}개" + (f" (규칙 위반 {len(broken)}개 제외)" if broken else "")
+    if not ok:   # AI는 가설의 If와 맞는 변수에만 B안을 만듦 (media_variable_ai.py)
+        why = "가설의 If와 달라 B안을 만들지 않음" if off_if else "메인 이미지 규칙 안에서 만들 B안이 없음"
+        return False, MEDIA_VARIABLE_NO_B, why + (f" (규칙 위반 {len(broken)}개)" if broken else "")
+    return True, MEDIA_VARIABLE_PASS, (f"메인 이미지 · 규칙 안 B안 {len(ok)}개" + (f" (규칙 위반 {len(broken)}개 제외)" if broken else "")
+                                       + off_if)
 
 
 def media_variable_label(c: dict) -> str:
@@ -231,32 +243,37 @@ def media_variable_label(c: dict) -> str:
 
 
 def media_variable_candidates() -> dict:
-    """지금 가설의 변수 판정 결과 {"set", "passed", "dropped", "variable", "options", "broken", "picked"}.
-    passed = 고를 수 있는 변수(MEDIA_VARIABLE_PICK_MAX개까지), dropped = 제외 변수, variable = 사용자가 표에서 고른 변수,
-    options / broken = 그 변수의 B로 쓸 수 있는 안 / 규칙 위반으로 못 쓰는 안, picked = 사용자가 고른 B안 (+ "variable" 칸).
-    아직 고르지 않았으면 2단계로 확정해 둔 값 → 첫 통과 변수·첫 B안 순으로 고릅니다. 고를 변수가 없으면 variable·picked는 빈 dict."""
+    """지금 가설의 변수 판정 결과 {"set", "rows", "hidden", "variable", "options", "broken", "picked"}.
+    rows = 표에 보일 변수(진행 가능 → 진행 불가 순으로 MEDIA_VARIABLE_SHOW줄, 줄마다 "ok"·"verdict"·"why"),
+    hidden = 표에 못 들어간 변수, variable = 사용자가 표에서 고른 변수(어느 줄이든),
+    options / broken = 그 변수의 B로 쓸 수 있는 안 / 규칙 위반으로 못 쓰는 안,
+    picked = 사용자가 고른 B안 (+ "variable" 칸, 진행할 수 없는 변수면 빈 dict).
+    아직 고르지 않았으면 2단계로 확정해 둔 값 → 진행 가능한 첫 줄 → 첫 줄 순으로 고릅니다. 후보가 없으면 variable은 빈 dict."""
     cset = media_variable_candidate_set()
-    passed, dropped = [], []
+    good, bad = [], []
     for v in cset.get("variables", []):
         if not isinstance(v, dict) or not v.get("name"):
             continue
         ok, verdict, why = media_variable_judge(v)
-        (passed if ok else dropped).append({**v, "verdict": verdict, "why": why})
-    passed = passed[:MEDIA_VARIABLE_PICK_MAX]
+        (good if ok else bad).append({**v, "ok": ok, "verdict": verdict, "why": why})
+    rows, hidden = (good + bad)[:MEDIA_VARIABLE_SHOW], (good + bad)[MEDIA_VARIABLE_SHOW:]
     saved = media_handoff_plan()
     saved = {} if saved["sample"] else saved
     chosen = st.session_state.get(MEDIA_VARIABLE_VAR_KEY)
-    variable = (next((v for v in passed if v["name"] == chosen), None)
-                or next((v for v in passed if v["name"] == saved.get("variable")), None)
-                or (passed[0] if passed else {}))
+    variable = (next((v for v in rows if v["name"] == chosen), None)
+                or next((v for v in rows if v["name"] == saved.get("variable")), None)
+                or next((v for v in rows if v["ok"]), None)
+                or (rows[0] if rows else {}))
     options, broken = media_variable_b_options(variable) if variable else ([], [])
+    if not variable.get("ok"):   # 진행할 수 없는 변수: B안을 고르지 않음 (규칙 위반 안은 ⓘ에 그대로)
+        options = []
     chosen_b = st.session_state.get(MEDIA_VARIABLE_B_KEY, {}).get(variable["name"]) if variable else None
     picked = (next((o for o in options if media_variable_label(o) == chosen_b), None)
               or next((o for o in options if o["b"] == saved.get("b")), None)
               or (options[0] if options else {}))
     if picked:
         picked = {**picked, "variable": variable["name"]}
-    return {"set": cset, "passed": passed, "dropped": dropped, "variable": variable,
+    return {"set": cset, "rows": rows, "hidden": hidden, "variable": variable,
             "options": options, "broken": broken, "picked": picked}
 
 
@@ -271,7 +288,7 @@ def media_variable_plan() -> tuple[dict, str, list[str]]:
     """(A/B 설계 plan, 가격 문구, 기본값을 쓴 항목 이름 목록).
     plan은 media_handoff.py의 기본값(MEDIA_HANDOFF_PLAN)에서 시작해, 사용자가 고른 후보(독립 변수·B)와
     1번 리포트 값(검색어·A·KPI)으로 덮어씁니다.
-    가설을 불러왔는데 고를 메인 이미지 변수가 없으면 variable은 표 첫 줄, b는 빈 문자열입니다 (확정 버튼이 꺼짐).
+    가설을 불러왔는데 고른 변수가 진행할 수 없는 변수면 variable은 그 변수 이름, b는 빈 문자열입니다 (확정이 막힘).
     가설이 리포트 검색어 클릭 분석의 KPI가 아니면 KPI 이름은 후보 묶음·문제의 지표로, 지금·목표 숫자는 None입니다."""
     sqp = media_variable_report_sqp()
     listing = sqp.get("listing") if isinstance(sqp.get("listing"), dict) else {}
@@ -284,8 +301,7 @@ def media_variable_plan() -> tuple[dict, str, list[str]]:
         plan["b"] = picked["b"]
         plan["b_ref"] = picked.get("ref_prompt", "")   # B안의 영어 레퍼런스 프롬프트 (2단계가 프롬프트 B로 씀)
     elif hypo:
-        rows = media_variable_rows(cands)
-        plan.update(variable=rows[0]["name"] if rows else "", b="", b_ref="")
+        plan.update(variable=cands["variable"].get("name", ""), b="", b_ref="")
     sqp_kpi = not hypo or media_variable_uses_sqp(hypo)
     if not sqp_kpi:
         plan.update(kpi=cands["set"].get("kpi") or (hypo.get("problem") or {}).get("metric") or "가설의 Then 지표",
@@ -377,10 +393,13 @@ def media_variable_kpi_chip() -> None:
         st.markdown(f":green-badge[🎯 A/B 목표 KPI] {media_variable_kpi_text(plan)}{label}", help="\n\n".join(tip))
 
 
-def media_variable_hypothesis_step(plan: dict, picked: dict, hypo: dict):
+def media_variable_hypothesis_step(plan: dict, cands: dict, hypo: dict):
     """2번 가설 탭에서 가져온 가설 콜아웃 + 핵심 요약 카드 (media_variable_step()의 윗부분)."""
     # 넓은 화면: 왼쪽(하위 탭 바 아래 빈자리)에 핵심 요약, 오른쪽(탭 바와 같은 줄)에 가설 콜아웃 (media_style.css)
+    picked, chosen = cands["picked"], cands["variable"]
     variable = f"{plan['variable']} ({media_variable_label(picked)})" if picked else (plan["variable"] or "없음")
+    if chosen and not chosen["ok"]:   # 고른 변수가 진행할 수 없는 변수: 카드에도 표시 (이유는 아래 오른쪽 경고)
+        variable += " :orange-badge[⚠️ 진행 불가]"
     with st.container(horizontal=True, key="media-hypo-top"):
         with st.container(key="media-hypo-summary"):
             # KPI 목표는 콜아웃 Then 줄과 겹쳐서 빼고 독립 변수만 (하위 탭 ②~④는 목표 KPI 칩에 보임)
@@ -394,47 +413,40 @@ def media_variable_hypothesis_step(plan: dict, picked: dict, hypo: dict):
                          "같은 가설은 다시 만들지 않아요. 키를 넣은 뒤 새로고침하고 다시 불러오면 AI 후보로 바뀌어요.")
 
 
-def media_variable_rows(cands: dict) -> list[dict]:
-    """변수 표에 보일 줄: 통과 변수 → 제외 변수 순으로 MEDIA_VARIABLE_SHOW줄까지."""
-    return (cands["passed"] + cands["dropped"])[:MEDIA_VARIABLE_SHOW]
-
-
 def _media_variable_table_key() -> str:
     """변수 표 key. 뒤 번호를 올리면 새 표가 되어 선택이 고른 변수로 되돌아갑니다."""
     return f"{MEDIA_VARIABLE_TABLE_KEY}-{st.session_state.get('media-variable-table-ver', 0)}"
 
 
 def _media_variable_select(rows: list[dict]) -> None:
-    """변수 표에서 줄을 고를 때 콜백. 통과 변수면 그 변수로 바꾸고,
-    제외 변수를 누르거나 고른 줄을 다시 눌러 선택이 풀리면 이유를 알리고 표 선택을 고른 변수로 되돌립니다."""
+    """변수 표에서 줄을 고를 때 콜백. 어떤 줄이든 그 변수로 바꿉니다 (진행할 수 없는 변수는 오른쪽 경고 + 확정만 막음).
+    고른 줄을 다시 눌러 선택이 풀리면 빈 선택 대신 표 선택을 고른 변수로 되돌립니다."""
     state = st.session_state.get(_media_variable_table_key())
     picked_rows = state.selection.rows if state else []
-    row = rows[picked_rows[0]] if picked_rows and picked_rows[0] < len(rows) else None
-    if row and row["verdict"] == MEDIA_VARIABLE_PASS:
-        st.session_state[MEDIA_VARIABLE_VAR_KEY] = row["name"]
+    if picked_rows and picked_rows[0] < len(rows):
+        st.session_state[MEDIA_VARIABLE_VAR_KEY] = rows[picked_rows[0]]["name"]
         return
-    if row:   # 제외 변수: 왜 A/B로 못 쓰는지 토스트로 보여 줌
-        st.toast(f"**{row['name']}**: A/B로 못 써요 · {row['why']} ({row['verdict']})", icon="🚫")
     st.session_state["media-variable-table-ver"] = st.session_state.get("media-variable-table-ver", 0) + 1
 
 
 def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cands: dict):
     """후보 변수 걸러내기(표에서 변수 하나 고르기) → 고른 변수를 A/B로 나누기 (media_variable_step()의 아랫부분).
     선정 표의 값은 plan에서 가져옵니다."""
-    passed, variable, options, picked = cands["passed"], cands["variable"], cands["options"], cands["picked"]
-    rows = media_variable_rows(cands)
+    rows, variable, options, picked = cands["rows"], cands["variable"], cands["options"], cands["picked"]
     # 왼쪽(변수 표)을 조금 넓혀 긴 문장이 한 줄에 들어가게 함 → 오른쪽(B안 고르기 버튼 + A·B 표)과 높이를 맞춤
     c1, c2 = st.columns([1.2, 1], gap="medium")
     with c1:
-        # 걸러내는 기준은 제목 옆 ⓘ에 마우스를 올리면 보임 (설명 줄이 빠져 오른쪽 선정 표와 위쪽 끝이 맞음)
-        hidden = cands["dropped"][max(0, MEDIA_VARIABLE_SHOW - len(passed)):]
+        # 판정 기준은 제목 옆 ⓘ에 마우스를 올리면 보임 (설명 줄이 빠져 오른쪽 선정 표와 위쪽 끝이 맞음)
+        hidden = cands["hidden"]
         st.markdown("**후보 변수 걸러내기**", help=(
-            "가설에서 바꿀 수 있는 변수를 한 줄에 하나씩 보여 줘요. 통과한 줄을 눌러 A/B로 실험할 변수를 골라요.\n\n"
+            "가설에서 바꿀 수 있는 변수를 한 줄에 하나씩 보여 줘요. 어느 줄이든 눌러 A/B로 실험할 변수를 골라요.\n\n"
             f"**후보를 만든 곳**: {(st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}).get('source') or '-'} "
             "(판정은 아래 기준으로 코드가 다시 계산)\n\n"
-            "**통과 기준**: 가설의 If와 맞고, 2·3단계가 이어받을 수 있는 메인 이미지 변수이며, "
-            "아마존 메인 이미지 규칙 안에서 Manage Your Experiments로 돌릴 B안이 있어야 해요."
-            + ("\n\n**표에 안 보이는 제외 변수**: " + ", ".join(f"{v['name']} ({v['verdict']})" for v in hidden)
+            f"**{MEDIA_VARIABLE_PASS}**: 2·3단계가 이어받을 수 있는 메인 이미지 변수이고, "
+            "아마존 메인 이미지 규칙 안에서 Manage Your Experiments로 돌릴 B안이 있어요.\n\n"
+            f"**{MEDIA_VARIABLE_NOT_IMAGE} · {MEDIA_VARIABLE_NO_B}**: 골라도 되지만 다음 단계로 확정할 수는 없어요 "
+            "(지금은 메인 이미지 문제만 해결 가능, 기능 업데이트 예정). 가설의 If와 다른 변수는 이유 칸에 적어요."
+            + ("\n\n**표에 안 보이는 변수**: " + ", ".join(f"{v['name']} ({v['verdict']})" for v in hidden)
                if hidden else "")))
         if rows:
             sel = [rows.index(variable)] if variable in rows else []
@@ -470,16 +482,17 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             + f"**안전장치**: CVR(단위 세션 비율)이 A보다 {plan['cvr_tolerance']:g}%p 넘게 떨어지면 B 실패"
             + (f"\n\n**B로 못 쓰는 안 (메인 이미지 규칙 위반)**\n{broken}" if broken else "")
             + (f"\n\n{note}" if note else "")))
+        if not variable:   # 후보가 없음 (왼쪽에 안내, 확정 줄에서 확정을 막음)
+            return
+        if not variable["ok"]:   # 진행할 수 없는 변수: 고른 것은 그대로 두고 경고만 (확정 줄에서 확정을 막음)
+            st.warning(f"**{variable['name']}** · {MEDIA_VARIABLE_BLOCK_MSG[variable['verdict']][0]}", icon="⚠️")
+            return
         if options:   # 고른 변수의 B안 중 하나 (required=True: 고른 것을 다시 눌러도 빈 선택이 되지 않음)
-            pick_key = f"{MEDIA_VARIABLE_PICK_KEY}-{passed.index(variable)}"
+            pick_key = f"{MEDIA_VARIABLE_PICK_KEY}-{rows.index(variable)}"
             st.segmented_control("B안 고르기", [media_variable_label(o) for o in options],
                                  default=media_variable_label(picked), required=True, key=pick_key,
                                  on_change=partial(_media_variable_pick_b, pick_key, variable["name"]),
                                  label_visibility="collapsed")
-        if not passed:   # 메인 이미지 변수가 없는 가설: 표는 보여 주고 확정만 막음 (확정 줄에도 같은 안내)
-            st.info("이 가설에는 메인 이미지로 실험할 변수가 없어요. 2·3단계(프롬프트 → 사진·영상)는 메인 이미지 "
-                    "변수만 이어받아서 이 가설은 확정할 수 없어요.", icon="🚫")
-            return
         # key="media-variable-picked": media_style.css가 구분 칸('A · 대조군')을 한 줄로 유지
         with st.container(key="media-variable-picked"):
             st.markdown("| 구분 | 내용 |\n| --- | --- |\n"
@@ -500,14 +513,22 @@ def _media_variable_confirm(plan: dict) -> None:
     st.session_state["media-variable-confirmed-toast"] = True
 
 
-def media_variable_confirm_step(plan: dict):
-    """선정 표 아래 확정 줄: 사용자가 고른 단일 변수를 확인하고 확정해야 2단계로 넘어갑니다."""
+def media_variable_confirm_step(plan: dict, variable: dict):
+    """선정 표 아래 확정 줄: 사용자가 고른 단일 변수를 확인하고 확정해야 2단계로 넘어갑니다.
+    진행할 수 없는 변수(variable["ok"]가 아님)나 후보가 없으면 꺼진 확정 버튼과 '다음 단계 진행 불가' 안내만 보여 줍니다."""
     state = media_variable_confirm_state(plan)
     confirmed = state == "same"
     if st.session_state.pop("media-variable-confirmed-toast", False):
         st.toast("단일 변수를 확정했어요. 다음 단계들이 이 값을 받아요", icon="✅")
-    if not plan["b"]:   # 고를 메인 이미지 변수가 없음 → 확정 버튼 없이 안내만
-        st.markdown(":gray-badge[확정 불가] 메인 이미지 변수가 있는 가설을 2번 탭에서 고르고 다시 불러와 주세요")
+    if not plan["b"]:
+        reason = (MEDIA_VARIABLE_BLOCK_MSG[variable["verdict"]][1] if variable.get("verdict") in MEDIA_VARIABLE_BLOCK_MSG
+                  else "후보 변수가 없어요 · 2번 탭에서 다른 가설을 고르고 다시 불러와 주세요")
+        if not media_handoff_plan()["sample"]:   # 전에 확정한 값이 있으면 다음 단계는 그 값을 계속 받음
+            reason += " (다음 단계는 전에 확정한 값을 받아요)"
+        with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
+                          key="media-variable-confirm-row"):
+            st.markdown(f":orange-badge[🚫 다음 단계 진행 불가] {reason}")
+            st.button("이 변수로 확정", key="media-btn-variable-confirm", type="primary", disabled=True)
         return
     if confirmed:
         note = ":green-badge[✅ 확정됨] 다음 단계(A/B 소재 준비부터)가 이 값을 받아요"
@@ -560,9 +581,9 @@ def media_variable_step():
     plan, price, defaults = media_variable_plan()
     cands = media_variable_candidates()
     with st.container(key="media-hypo-box"):
-        media_variable_hypothesis_step(plan, cands["picked"], hypo)
+        media_variable_hypothesis_step(plan, cands, hypo)
         # key="media-hypo-divider": media_style.css가 구분선 위아래 기본 여백(2em)을 줄여 윗줄 바로 아래에 붙임
         with st.container(key="media-hypo-divider"):
             st.divider()
         media_variable_derive_step(plan, price, defaults, cands)
-        media_variable_confirm_step(plan)
+        media_variable_confirm_step(plan, cands["variable"])
