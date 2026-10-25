@@ -9,7 +9,7 @@ import streamlit as st
 
 MEDIA_S3_IMAGE_MODEL = "gpt-image-1-mini"   # 사진 초안 (레퍼런스용이라 싼 모델)
 MEDIA_S3_IMAGE_QUALITY = "low"              # low / medium / high (높을수록 비쌈)
-MEDIA_S3_TEXT_MODEL = "gpt-4.1-mini"        # 스토리보드
+MEDIA_S3_TEXT_MODEL = "gpt-4.1-mini"        # 스토리보드, 프롬프트 한국어 번역
 MEDIA_S3_VIDEO_MODEL = "bytedance/seedance-2.5/text-to-video"   # 영상 초안 (Higgsfield API, 선불 잔액에서 차감)
 MEDIA_S3_VIDEO_SECONDS = 5                  # 4~30초 (길수록 비쌈)
 MEDIA_S3_VIDEO_RESOLUTION = "720p"          # 480p / 720p / 1080p (높을수록 비쌈)
@@ -175,3 +175,19 @@ def media_s3_make_video(prompt: str, on_status=None) -> bytes:
         except Exception as err:
             raise MediaS3AIError(f"영상을 만들지 못했어요: {err}") from err
     return _media_s3_make_video_api(prompt, on_status)
+
+
+@st.cache_data(show_spinner=False, max_entries=100)
+def media_s3_translate(text: str) -> str:
+    """프롬프트를 한국어로 번역합니다 ('프롬프트 보기' 팝업용). 같은 문장은 다시 부르지 않고 기억한 번역을 씀."""
+    try:
+        res = _media_s3_client().chat.completions.create(
+            model=MEDIA_S3_TEXT_MODEL, temperature=0,
+            messages=[{"role": "system", "content": "다음 이미지·영상 생성 프롬프트를 자연스러운 한국어로 번역해. "
+                                                    "줄 바꿈과 번호는 그대로 두고, 이미 한국어인 부분은 그대로 둬. 번역문만 답해."},
+                      {"role": "user", "content": text}])
+        return res.choices[0].message.content.strip()
+    except MediaS3AIError:
+        raise
+    except Exception as err:
+        raise MediaS3AIError(f"번역하지 못했어요: {err}") from err
