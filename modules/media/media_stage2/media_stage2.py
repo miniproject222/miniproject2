@@ -1,8 +1,10 @@
-# 3. 매체 제작 > 2단계: 프롬프트 만들기 + AI 다듬기 (2단계 담당 · JY 브랜치)
-# 1단계가 정한 단일 변수와 A/B 소재(media_handoff_plan())를 받아
-# 2-1 기본 프롬프트 쓰기 → 2-2 단일 변수 칸 비워 두기 → 2-3 빈칸 채워 A, B 만들기 →
-# 2-4 리포트 값(store_get("report"))으로 AI 다듬기 + 확인을 하고,
-# '④로 넘기기' 버튼을 누르면 결과를 media_handoff_set_prompt()로 3단계에 넘깁니다. 화면은 media_stage2_render() 안에서만 그립니다.
+# 3. 매체 제작 > 하위 탭 ② A/B 소재 준비 (2단계 폴더 · PM 담당)
+# 2026-10-25 PM 결정: 1단계의 'A/B 소재 준비'(옛 media_ab.py)와 2단계 '프롬프트 만들기' 탭을 이 파일 한 곳으로 합침.
+# 화면 순서: ①에서 확정한 A·B 카드 → 기본 프롬프트·빈칸 → AI로 다듬기 + 확인 → '프롬프트 넘기기'
+#   - A/B 설계는 1단계가 '이 변수로 확정'으로 넘긴 값(media_variable_confirmed_plan(), 안에서 media_handoff_plan())
+#   - AI 다듬기 재료는 리포트 값(store_get("report"))과 아마존 메인 이미지 규칙(media_stage2_ai.MEDIA_S2_AMAZON_RULES)
+#   - 넘기기 버튼을 누르면 결과를 media_handoff_set_prompt()로 3단계(사진·영상 초안 제작)에 넘깁니다.
+# 화면은 media_stage2_render() 안에서만 그립니다 (media_page.py가 하위 탭에서 부름).
 # 이름 규칙: 함수 media_s2_..., 위젯 key·session_state 키·CSS class media-s2-...
 # (이전 A/B 결과·판정 코드는 media_stage2_judge.py에 보관, AI 다듬기 재료·호출·확인은 media_stage2_ai.py)
 from pathlib import Path
@@ -14,11 +16,16 @@ from common.common_store import store_get
 from modules.media.media_handoff import (MEDIA_HANDOFF_PROMPT_SAMPLE, MEDIA_HANDOFF_SLOT, media_handoff_check,
                                          media_handoff_fill,
                                          media_handoff_plan, media_handoff_prompt, media_handoff_set_prompt)
-from modules.media.media_stage2.media_stage2_ai import (MEDIA_S2_AI_PROVIDERS, media_s2_ai_material, media_s2_ai_ready,
+from modules.media.media_stage2.media_stage2_ai import (MEDIA_S2_AI_KEY, MEDIA_S2_OPENAI_MODEL, media_s2_ai_material,
+                                                        media_s2_ai_ready,
                                                         media_s2_ai_run, media_s2_forbidden_hits,
                                                         media_s2_forbidden_terms)
+# 1단계(min)가 다른 하위 탭용으로 만든 함수: 확정한 A/B 설계 + 상태, '① 으로 가서 확정하기' 버튼 콜백
+from modules.media.media_variable import media_variable_confirmed_plan, media_variable_go_step
 
-MEDIA_S2_TAB_LABEL = "프롬프트 만들기"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
+MEDIA_S2_TAB_LABEL = "A/B 소재 준비"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
+# B 카드 설명 (옛 media_ab.py 문구 그대로)
+MEDIA_S2_B_NOTE = "저가 제품과의 품질 차이(두께·원단)가 검색 결과에서 바로 보이게"
 MEDIA_S2_DIR = Path(__file__).resolve().parent   # 2단계 폴더 (data/ 경로 만들 때 사용)
 
 
@@ -58,12 +65,12 @@ def _media_s2_reset(name: str, text: str) -> None:
     st.session_state[f"media-s2-prompt-{name}"] = text
 
 
-def _media_s2_ai_refine(draft: dict, provider: str) -> None:
+def _media_s2_ai_refine(draft: dict) -> None:
     """'AI로 다듬기' 버튼 콜백 (프롬프트 칸이 그려지기 전에 실행되어 칸 값을 바꿀 수 있음).
     확인을 통과하면 프롬프트 A·B 칸을 다듬은 문장으로 바꾸고 결과를 media-s2-ai-result에 보관합니다.
     실패하면 칸은 그대로 두고 경고 문구만 남깁니다."""
     try:
-        check = media_s2_ai_run(provider, draft)
+        check = media_s2_ai_run(draft)
     except RuntimeError as err:
         st.session_state["media-s2-ai-msg"] = [f"AI 다듬기 실패: {err}. 프롬프트는 그대로 두었어요."]
         return
@@ -86,25 +93,16 @@ def media_s2_ai_current(prompt_a: str, prompt_b: str) -> dict | None:
 
 
 def media_s2_ai_header(draft: dict) -> None:
-    """2-4 제목 줄: 왼쪽 제목, 오른쪽 끝에 AI 고르기 + 'AI로 다듬기' 버튼 (프롬프트 A·B 칸 바로 위)."""
+    """'AI로 다듬기 + 확인' 제목 줄: 왼쪽 제목, 오른쪽 끝에 'AI로 다듬기' 버튼 (프롬프트 A·B 칸 바로 위). AI는 OpenAI만 씀."""
     ready = media_s2_ai_ready()
-    title, pick_col, btn_col = st.columns([3.2, 1, 1.1], vertical_alignment="center")
+    title, btn_col = st.columns([4.2, 1.1], vertical_alignment="center")
     with title:
-        st.markdown("**2-4 AI로 다듬기 + 확인**")
-    with pick_col:
-        provider = st.selectbox("다듬을 AI", list(MEDIA_S2_AI_PROVIDERS), key="media-s2-ai-pick",
-                                index=list(MEDIA_S2_AI_PROVIDERS).index(ready[0]) if ready else 0,
-                                label_visibility="collapsed")
-    if not ready:
-        help_text = "secrets.toml에 GEMINI_API_KEY 또는 OPENAI_API_KEY를 넣어 주세요"
-    elif provider not in ready:
-        help_text = f"{provider} 키({MEDIA_S2_AI_PROVIDERS[provider]})가 없어요. 다른 AI를 고르거나 키를 넣어 주세요"
-    else:
-        help_text = "리포트 규칙으로 기본 프롬프트의 공통 부분만 다듬어요 (빈칸·고정 요소는 그대로)"
+        st.markdown("**AI로 다듬기 + 확인**")
     with btn_col:
-        st.button("AI로 다듬기", key="media-s2-btn-refine", type="primary", width="stretch",
-                  disabled=provider not in ready, help=help_text,
-                  on_click=_media_s2_ai_refine, args=(draft, provider))
+        st.button("AI로 다듬기", key="media-s2-btn-refine", type="primary", width="stretch", disabled=not ready,
+                  help=(f"OpenAI({MEDIA_S2_OPENAI_MODEL})로 리포트 규칙에 맞춰 기본 프롬프트의 공통 부분만 다듬어요 "
+                        "(빈칸·고정 요소는 그대로)" if ready else f"secrets.toml에 {MEDIA_S2_AI_KEY}를 넣어 주세요"),
+                  on_click=_media_s2_ai_refine, args=(draft,))
 
 
 def media_s2_ai_report(draft: dict, prompt_a: str, prompt_b: str) -> None:
@@ -226,29 +224,63 @@ def _media_s2_handoff(draft: dict) -> None:
 def media_s2_handoff_step(draft: dict, prompt_a: str, prompt_b: str, ok: bool) -> None:
     """넘기기 줄: 버튼을 눌러야만 3단계로 넘어갑니다. 넘기기 전 / 넘김 완료 / 바뀌어서 다시 넘겨야 함을 보여 줍니다."""
     if st.session_state.pop("media-s2-handoff-toast", False):
-        st.toast("프롬프트를 ④ 사진·영상 초안 제작으로 넘겼어요", icon="✅")
+        st.toast("프롬프트를 사진·영상 초안 제작으로 넘겼어요", icon="✅")
     saved = media_handoff_prompt()
     now = media_s2_handoff_value(draft, prompt_a, prompt_b)
     sent = not saved["sample"] and all(saved.get(k) == v for k, v in now.items())
     if sent:
-        note = ":green-badge[✅ 넘김 완료] ④ 사진·영상 초안 제작이 이 프롬프트를 받아요"
+        note = ":green-badge[✅ 넘김 완료] 사진·영상 초안 제작이 이 프롬프트를 받아요"
     elif not saved["sample"]:
-        note = ":orange-badge[다시 넘기기 필요] 넘긴 뒤 프롬프트가 바뀌었어요. ④는 아직 이전 값을 받아요"
+        note = ":orange-badge[다시 넘기기 필요] 넘긴 뒤 프롬프트가 바뀌었어요. 사진·영상 초안 제작은 아직 이전 값을 받아요"
     else:
-        note = "확인을 통과하면 '④로 넘기기'를 눌러 주세요. 누르기 전에는 ④가 예시 프롬프트를 받아요"
+        note = "확인을 통과하면 '프롬프트 넘기기'를 눌러 주세요. 누르기 전에는 사진·영상 초안 제작이 예시 프롬프트를 받아요"
     with st.container(horizontal=True, vertical_alignment="center", key="media-s2-handoff-row"):
         st.markdown(note)
         if not sent:
-            st.button("다시 넘기기" if not saved["sample"] else "④로 넘기기", key="media-s2-btn-handoff",
+            st.button("다시 넘기기" if not saved["sample"] else "프롬프트 넘기기", key="media-s2-btn-handoff",
                       type="primary", disabled=not ok, on_click=_media_s2_handoff, args=(draft,),
                       help=None if ok else "위 확인을 통과해야 넘길 수 있어요")
 
 
-def media_stage2_render():
-    """2단계 하위 탭(이름은 MEDIA_S2_TAB_LABEL, 탭 이름이 제목 역할). 반드시 media_render() 안에서 부릅니다."""
-    plan = media_handoff_plan()   # 1단계 A/B 설계 (단일 변수, A 소재, B 소재)
-    st.caption("A와 B에 똑같이 들어갈 기본 프롬프트를 쓰고, 단일 변수 자리만 빈칸으로 남겨 A, B를 채운 뒤 AI로 다듬어요.")
-    st.markdown(f"단일 변수: **{plan['variable']}** · A: {plan['a']} · B: {plan['b']}")
+def media_s2_ab_section() -> bool:
+    """위쪽: ①에서 '이 변수로 확정'한 A·B 소재 카드 (옛 media_ab.py의 media_ab_plan_step() 위쪽을 옮김).
+    확정 전이면 빈 카드와 '① 으로 가서 확정하기' 버튼만 보여 주고 False (그 아래 프롬프트 만들기도 그리지 않음)."""
+    plan, state = media_variable_confirmed_plan()
+    if plan is None:   # 아직 확정 전: 빈 카드로 ①에서 확정하도록 안내
+        with st.container(border=True, key="media-s2-ab-empty"):
+            st.markdown("**아직 확정한 변수가 없어요**")
+            st.caption("① 에서 변수와 B안을 고르고 '이 변수로 확정'을 누르면 여기에 A/B 소재와 프롬프트가 나와요.")
+            st.button("① 으로 가서 확정하기", key="media-s2-btn-go-confirm", type="primary",
+                      on_click=media_variable_go_step)
+        return False
+    if state == "changed":   # ①에서 다른 값을 골랐지만 아직 확정하지 않음
+        with st.container(horizontal=True, vertical_alignment="center", key="media-s2-ab-pending"):
+            st.markdown(":orange-badge[확정 안 됨] ① 에서 새로 고른 값이 아직 확정되지 않아, 이전에 확정한 값으로 보여 줘요")
+            st.button("① 으로 가서 확정하기", key="media-s2-btn-go-confirm", type="secondary",
+                      on_click=media_variable_go_step)
+
+    # 지금 메인 이미지의 문제점은 리포트(검색어 분석 sqp의 listing)에서 읽음 (검색어·KPI는 탭 바 오른쪽 KPI 칩에 있음)
+    report = store_get("report") or {}
+    sqp = report.get("sqp") if isinstance(report.get("sqp"), dict) else {}
+    listing = sqp.get("listing") if isinstance(sqp.get("listing"), dict) else {}
+    c1, c2 = st.columns(2)
+    with c1:
+        with st.container(border=True):
+            st.markdown("**A · 현재 (대조군)**")
+            st.markdown(f"{plan['a']}  \n"
+                        f'<span class="media-desc">{listing.get("main_image_issue", "")}</span>', unsafe_allow_html=True)
+    with c2:
+        with st.container(border=True):
+            st.markdown("**B · 제안 (실험군)**")
+            st.markdown(f"{plan['b']}  \n<span class=\"media-desc\">{MEDIA_S2_B_NOTE}</span>", unsafe_allow_html=True)
+    return True
+
+
+def media_s2_prompt_section():
+    """아래쪽: 프롬프트 만들기 (기본 프롬프트·빈칸 → AI로 다듬기 + 확인 → 넘기기).
+    A·B 소재 설명은 위쪽 카드에 이미 있어서 여기서는 다시 보여 주지 않습니다."""
+    st.markdown("**📝 프롬프트 만들기**")
+    st.caption("A와 B에 똑같이 들어갈 기본 프롬프트에서 단일 변수 자리만 빈칸으로 남겨 A, B를 채운 뒤 AI로 다듬어요.")
 
     # 2-1 ~ 2-3: 2단계 담당이 만들 자리 (기본 프롬프트 → 빈칸 {slot} → A, B 빈칸 채우기). 지금은 예시 값
     draft = media_s2_draft()
@@ -259,3 +291,12 @@ def media_stage2_render():
 
     prompt_a, prompt_b, ok = media_s2_refine_section(draft)
     media_s2_handoff_step(draft, prompt_a, prompt_b, ok)
+
+
+def media_stage2_render():
+    """하위 탭 ② A/B 소재 준비 (이름은 MEDIA_S2_TAB_LABEL). 반드시 media_render() 안에서 부릅니다.
+    위쪽 A·B 소재 카드 → 아래쪽 프롬프트 만들기. ①에서 확정하기 전에는 빈 카드만 보여 줍니다."""
+    if not media_s2_ab_section():
+        return
+    st.divider()
+    media_s2_prompt_section()

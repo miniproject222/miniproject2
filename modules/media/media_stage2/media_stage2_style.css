@@ -1,3 +1,10 @@
 /* 3. 매체 제작 > 2단계: 프롬프트 만들기 - class는 media-s2- 로 시작, 색상은 공통 변수만 사용
    이 파일은 media_page.py가 3번 탭을 열 때 읽어 화면에 넣습니다.
    위젯에 key="media-s2-이름"을 붙이면 .st-key-media-s2-이름 class로 꾸밀 수 있습니다. */
+
+/* ①에서 확정하기 전 빈 상태 카드 (media_stage2.py key="media-s2-ab-empty") - 하위 탭 ①의 빈 카드와 같은 점선 모양 */
+.st-key-media-s2-ab-empty {
+  border-style: dashed !important;
+  background: var(--color-bg);
+  text-align: center;
+}
