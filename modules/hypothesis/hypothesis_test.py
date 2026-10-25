@@ -20,15 +20,19 @@ from streamlit.testing.v1 import AppTest  # noqa: E402
 
 from modules.hypothesis.hypothesis_page import (  # noqa: E402
     SAMPLE_REPORT,
+    hypothesis_build_ibt,
     hypothesis_build_sentence,
     hypothesis_has_batchim,
     hypothesis_pick_action,
     hypothesis_pick_candidates,
     hypothesis_pick_problem,
+    hypothesis_resolve_ibt,
     hypothesis_pick_sensitivity,
     hypothesis_resolve_sentence,
 )
 from modules.hypothesis.hypothesis_scenario import (  # noqa: E402
+    hypothesis_scenario_ibt,
+    hypothesis_scenario_problem2_ibt,
     hypothesis_scenario_problem2_sentence,
     hypothesis_scenario_sentence,
 )
@@ -72,24 +76,38 @@ def test_core_flow() -> None:
 
     at.button(key="hypothesis-btn-sample").click().run()
     check(not at.exception, "[핵심] 샘플 클릭 후 예외 없음")
-    check(any("경쟁사 가격 인하" in m.value for m in at.markdown), "[핵심] 가설 1(문제 1)의 제목이 표시됨")
+    # SAMPLE_REPORT 3문제 중 "경쟁사 가격 인하"/"장바구니 이탈 증가"는 사진·영상 결과물로
+    # 바로 이어지는 액션(visual=True)이라 우선순위가 높고, "배송 지연 리뷰"(알림·쿠폰 액션,
+    # visual=False)는 맨 뒤로 밀려서 가설 1=경쟁사 가격 인하, 가설 2=장바구니 이탈 증가,
+    # 가설 3=배송 지연 리뷰 순서가 됩니다 (hypothesis_pick_candidates의 A/B 테스트 우선순위).
+    check(any("경쟁사 가격 인하" in m.value for m in at.markdown), "[핵심] 가설 1(문제 1)의 제목이 표시됨 (A/B 테스트 우선순위)")
     check([t.label for t in at.tabs] == ["가설 1", "가설 2", "가설 3"], "[핵심] SAMPLE_REPORT 문제 3개가 가설 1/2/3 탭으로 뜸")
     check(
         any("아직 선택한 가설이 없어요" in m.value for m in at.markdown),
         "[핵심] 처음에는 '지금 선택된 가설' 칸이 비어있다고 안내함",
     )
-    check(any("📍" in m.value and "현지 특성" in m.value for m in at.markdown), "[핵심] 현지 특성 줄 표시")
-    check(any("💬" in m.value and "경쟁사 부정 리뷰" in m.value for m in at.markdown), "[핵심] 경쟁사 부정 리뷰 줄 표시")
+    # 현지 특성/경쟁사 부정 리뷰 원문은 더 이상 캡션(📍/💬)으로 상시 노출되지 않고,
+    # "📚 근거 · 출처 보기" 토글 안에 모여 있습니다(가설 문장을 짧고 읽기 좋게 하기 위함).
+    evidence_labels = [e.label for e in at.get("expander") if "근거 · 출처" in e.label]
+    check(len(evidence_labels) == 3, f"[핵심] 가설 후보마다 '근거·출처' 토글이 1개씩 뜸 (실제: {len(evidence_labels)}개)")
     check(
-        any("가설 근거" in m.value for m in at.markdown),
-        "[핵심] 가설 근거 표 제목이 펼치지 않아도 바로 보임 (경쟁사 부정 리뷰 바로 아래)",
+        any("가격 비교 사이트(idealo)" in m.value for m in at.markdown),
+        "[핵심] 현지 특성 원문이 근거·출처 토글 안에 표시됨",
+    )
+    check(
+        any("냉감 부족" in m.value for m in at.markdown),
+        "[핵심] 경쟁사 부정 리뷰 원문이 근거·출처 토글 안에 표시됨",
+    )
+    check(
+        sum("hypothesis-ibt-box" in m.value for m in at.markdown) == 3,
+        "[핵심] 가설 후보마다 If · Because · Then 카드가 펼치지 않아도 바로 보임 (3개)",
     )
     check(
         [b.label for b in at.button if b.key and b.key.startswith("hypothesis-btn-save-")] == ["이 가설 선택하기"] * 3,
-        "[핵심] '되돌리기' 버튼 없이 가설 후보마다 '이 가설 선택하기' 버튼 1개만 있음",
+        "[핵심] 가설 후보마다 '이 가설 선택하기' 버튼 1개만 있음",
     )
 
-    expected_text = hypothesis_build_sentence(SAMPLE_REPORT["problems"][0])
+    expected_text = hypothesis_build_sentence(SAMPLE_REPORT["problems"][0])   # 가설 1 = 경쟁사 가격 인하
     at.button(key="hypothesis-btn-save-0").click().run()
     check(at.button(key="hypothesis-btn-save-0").label == "✓ 선택됨", "[핵심] 선택 후 버튼 라벨 변경")
     check(at.button(key="hypothesis-btn-save-0").disabled, "[핵심] 이미 선택된 가설의 버튼은 다시 못 누르게 비활성화")
@@ -97,14 +115,19 @@ def test_core_flow() -> None:
     check(isinstance(saved, dict), "[핵심] 저장된 hypothesis가 dict 1개 (배열 아님)")
     check(saved.get("hypothesis") == saved.get("text"), "[핵심] home_data.py가 기대하는 'hypothesis' 키도 같이 저장됨")
     check(saved.get("text") == expected_text, "[핵심] 저장된 문장이 hypothesis_build_sentence() 결과와 정확히 같음")
+    # "지금 선택된 가설" 칸도 If·Because·Then 카드로 보이므로(요청 반영), 하나의 문장 대신
+    # if_text/because_text/then_text가 각각 markdown에 그대로 보이는지 확인합니다.
+    expected_ibt = hypothesis_build_ibt(SAMPLE_REPORT["problems"][0])
     check(
-        any(expected_text in m.value for m in at.markdown),
-        "[핵심] '지금 선택된 가설' 칸에 선택한 문장이 그대로 보임",
+        any(expected_ibt["if"] in m.value for m in at.markdown)
+        and any(expected_ibt["because"] in m.value for m in at.markdown)
+        and any(expected_ibt["then"] in m.value for m in at.markdown),
+        "[핵심] '지금 선택된 가설' 칸에 If·Because·Then 카드로 선택한 내용이 그대로 보임",
     )
 
     # 가설 2를 선택하면, "선택된 가설"이 가설 2로 바뀌고 가설 1의 버튼은 다시 "선택하기"로
     # 풀려야 함 (최종 저장은 항상 1개만 — 가설은 1개를 "고르는" 것이지 여러 개를 동시에 저장하지 않음)
-    expected_text2 = hypothesis_build_sentence(SAMPLE_REPORT["problems"][1])
+    expected_text2 = hypothesis_build_sentence(SAMPLE_REPORT["problems"][2])   # 가설 2 = 장바구니 이탈 증가
     at.button(key="hypothesis-btn-save-1").click().run()
     check(at.button(key="hypothesis-btn-save-1").label == "✓ 선택됨", "[핵심] 가설 2를 선택하면 가설 2 버튼이 '선택됨'으로 바뀜")
     check(at.button(key="hypothesis-btn-save-0").label == "이 가설 선택하기", "[핵심] 가설 2를 선택하면 가설 1 버튼은 '선택됨'에서 풀림")
@@ -188,12 +211,12 @@ def check_sentence_quality(label: str, s: str) -> None:
 # ─────────────────────────────────────────────
 def test_regression_bugs() -> None:
     # "배송 지연 리뷰"(내부)가 '리뷰'라는 단어 때문에 경쟁사 대응으로 잘못 분류되면 안 됨
-    action, _ = hypothesis_pick_action("최근 7일 부정 리뷰 12건 중 7건이 배송 지연을 언급했습니다.", False, "")
+    action, _, _, _ = hypothesis_pick_action("최근 7일 부정 리뷰 12건 중 7건이 배송 지연을 언급했습니다.", False, "")
     check("배송" in action, "[회귀] 내부 '배송+리뷰' 설명은 배송 관련 액션으로 분류됨")
     check("경쟁사" not in action, "[회귀] 내부 문제는 '경쟁사' 대응 액션으로 가지 않음")
 
     # "장바구니 이탈" 설명에 "배송비"가 섞여 있어도 배송 액션으로 잘못 가면 안 됨
-    action, _ = hypothesis_pick_action("결제 단계 이탈률 68%. 배송비가 마지막 단계에 보이는 것이 원인입니다.", False, "")
+    action, _, _, _ = hypothesis_pick_action("결제 단계 이탈률 68%. 배송비가 마지막 단계에 보이는 것이 원인입니다.", False, "")
     check("장바구니" in action, "[회귀] 설명에 '배송비'가 섞여도 장바구니 관련 액션으로 분류됨")
 
     # 경쟁사와 무관한 외부 요인(구글 광고 등)을 "경쟁사 대비"라고 설명하면 안 됨
@@ -226,7 +249,7 @@ def test_regression_bugs() -> None:
         "detail": "Amazon.de는 일반 PayPal 결제를 받지 않습니다.",
         "competitor_review": same_competitor_review,
     }
-    action, _ = hypothesis_pick_action(
+    action, _, _, _ = hypothesis_pick_action(
         paypal_problem["detail"], True, same_competitor_review,
         paypal_problem["title"], paypal_problem["group"],
     )
@@ -236,7 +259,7 @@ def test_regression_bugs() -> None:
     check("경쟁사 부정 리뷰" not in s, "[회귀] hypothesis_build_sentence()도 group 기준으로 같은 competitor_review를 걸러냄")
 
     # group == "경쟁사"면 (키워드가 안 걸려도) 여전히 competitor_review를 액션에 반영해야 함
-    action, _ = hypothesis_pick_action(
+    action, _, _, _ = hypothesis_pick_action(
         "90일 평균 €29.41 → 현재 €25.66", True, same_competitor_review,
         "Novilla 가격 13% 인하", "경쟁사",
     )
@@ -260,9 +283,9 @@ def test_deterministic() -> None:
 
     # 어떤 설명을 넣어도(키워드가 하나도 안 걸려도) action/amount는 항상 나와야 함
     for desc in ["", "아무 키워드도 없는 설명입니다", "배송 이탈 장바구니 리뷰 품질 환율"]:
-        action, amount = hypothesis_pick_action(desc, False, "")
+        action, amount, _, _ = hypothesis_pick_action(desc, False, "")
         check(bool(action) and bool(amount), f"[결정성] desc={desc!r} 에도 action/amount가 항상 나옴")
-        action2, amount2 = hypothesis_pick_action(desc, False, "")
+        action2, amount2, _, _ = hypothesis_pick_action(desc, False, "")
         check((action, amount) == (action2, amount2), f"[결정성] desc={desc!r} 를 두 번 불러도 결과가 같음")
 
 
@@ -404,7 +427,7 @@ NEW_CATEGORY_PROBLEMS = [
 
 def test_new_categories() -> None:
     for p in NEW_CATEGORY_PROBLEMS:
-        action, _ = hypothesis_pick_action(
+        action, _, _, _ = hypothesis_pick_action(
             p["detail"], p["type"] == "외부", "", p["title"], p["group"],
         )
         check(p["expect"] in action, f"[신규카테고리:{p['title']}] 기대 키워드 '{p['expect']}'가 액션에 들어감 (실제: {action})")
@@ -428,8 +451,8 @@ SQP_SAMPLE = {
 
 def test_scenario_section() -> None:
     # SAMPLE_REPORT 문제들은 sqp_type이 없어서 이 sqp와 무관함 → 그래도 가설 후보마다
-    # "가설 근거" 표 제목은 뜨되(hypothesis_generic_evidence_section, 규칙 기반 근거 — 이제
-    # 펼치기가 아니라 바로 보이는 형태), sqp 전용 "KPI 표" expander는 뜨면 안 됨
+    # If·Because·Then 카드는 뜨되(hypothesis_generic_evidence_section, 규칙 기반 근거 —
+    # 펼치지 않아도 바로 보이는 형태), sqp 전용 "KPI 표" expander는 뜨면 안 됨
     # (엉뚱한 근거를 끌어오지 않음)
     report = dict(SAMPLE_REPORT)
     report["sqp"] = SQP_SAMPLE
@@ -439,8 +462,8 @@ def test_scenario_section() -> None:
     check(not at.exception, "[시나리오] sqp가 있는 report를 넣어도 예외 없음")
     md_values = [m.value for m in at.markdown]
     check(
-        sum("가설 근거" in v for v in md_values) == len(SAMPLE_REPORT["problems"]),
-        f"[시나리오] 모든 가설 후보에 근거 표 제목이 하나씩 바로 뜸 (실제: {sum('가설 근거' in v for v in md_values)}개)",
+        sum("hypothesis-ibt-box" in v for v in md_values) == len(SAMPLE_REPORT["problems"]),
+        f"[시나리오] 모든 가설 후보에 If·Because·Then 카드가 하나씩 바로 뜸 (실제: {sum('hypothesis-ibt-box' in v for v in md_values)}개)",
     )
     expander_labels = [e.label for e in at.get("expander")]
     check(
@@ -457,15 +480,15 @@ def test_scenario_section() -> None:
     s2 = hypothesis_scenario_problem2_sentence(SQP_SAMPLE["problem2"])
     check(s2.startswith("만약 ") and s2.endswith("것이다."), "[시나리오] 노출 확대 가설 문장도 '만약~것이다.' 템플릿을 따름")
 
-    # report에 sqp가 없어도(일반적인 경우) 가설 후보마다 규칙 기반 근거 표는 그대로 바로 보임
+    # report에 sqp가 없어도(일반적인 경우) 가설 후보마다 규칙 기반 If·Because·Then 카드는 그대로 바로 보임
     at2 = _new_apptest()
     at2.session_state["store-report"] = SAMPLE_REPORT
     at2.run()
     check(not at2.exception, "[시나리오] sqp가 없는 report는 예외 없음")
     md_values2 = [m.value for m in at2.markdown]
     check(
-        sum("가설 근거" in v for v in md_values2) == len(SAMPLE_REPORT["problems"]),
-        "[시나리오] sqp가 없어도 가설 후보마다 규칙 기반 근거 표는 그대로 바로 보임",
+        sum("hypothesis-ibt-box" in v for v in md_values2) == len(SAMPLE_REPORT["problems"]),
+        "[시나리오] sqp가 없어도 가설 후보마다 규칙 기반 If·Because·Then 카드는 그대로 바로 보임",
     )
 
 
@@ -537,7 +560,7 @@ def test_sqp_single_hypothesis() -> None:
 
     # (3) '검색 클릭' 문제도 (sqp 없이) 규칙 기반만으로 만들 때, 더 이상 안 맞는 기본값(타깃 맞춤
     # 프로모션)이 아니라 그럴듯한 액션이 나와야 함 (sqp_type별)
-    action, _ = hypothesis_pick_action(
+    action, _, _, _ = hypothesis_pick_action(
         SQP_MAIN_PROBLEM["detail"], False, "", SQP_MAIN_PROBLEM["title"], "검색 클릭",
     )
     check("메인 이미지" in action, "[시나리오 통합] '안 눌림'(소재 개선) 문제는 메인 이미지 관련 액션으로 분류됨")
@@ -579,10 +602,12 @@ def test_sqp_single_hypothesis() -> None:
         sum("KPI 표" in lb for lb in expander_labels) == 1,
         f"[시나리오 통합] sqp 전용 'KPI 표' expander는 소재 개선(가설 1) 탭에만 1개 뜸 (실제: {sum('KPI 표' in lb for lb in expander_labels)}개)",
     )
+    # 가설 1·2 탭에 각각 If·Because·Then 카드가 하나씩(2개) + 방금 선택한 가설 2가 맨 위
+    # "지금 선택된 가설" 칸에도 같은 카드로 보이므로(+1개) 총 3개가 뜸
     md_values = [m.value for m in at.markdown]
     check(
-        sum("가설 근거" in v for v in md_values) == 2,
-        f"[시나리오 통합] 가설 1·2 탭에 각각 근거 표 제목이 하나씩, 총 2개만 바로 뜸 (실제: {sum('가설 근거' in v for v in md_values)}개)",
+        sum("hypothesis-ibt-box" in v for v in md_values) == 3,
+        f"[시나리오 통합] 가설 1·2 탭(2개) + 선택된 가설 칸(1개), 총 3개의 If·Because·Then 카드가 뜸 (실제: {sum('hypothesis-ibt-box' in v for v in md_values)}개)",
     )
 
 
