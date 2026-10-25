@@ -1,3 +1,237 @@
 /* 3. 매체 제작 > 3단계: 솔루션 제안 - class는 media-s3- 로 시작, 색상은 공통 변수만 사용
    이 파일은 media_page.py가 3번 탭을 열 때 읽어 화면에 넣습니다.
    위젯에 key="media-s3-이름"을 붙이면 .st-key-media-s3-이름 class로 꾸밀 수 있습니다. */
+
+/* ④ 사진 초안 제작: 사진 넘겨 보기 (media_s3_photo_carousel)
+   사진이 카드 폭 전체를 3:2로 채우고(폭에 따라 높이가 정해짐), ← → 버튼은 사진 위 양옆에 띄움 */
+.media-s3-frame {
+  position: relative;
+  /* 높이는 화면 높이를 따라가고 폭은 3:2 (아래 고르기 줄 높이만큼 뺌) */
+  height: calc(var(--media-s3-h) - 70px);
+  width: calc((var(--media-s3-h) - 70px) * 1.5);
+  max-width: 48vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--color-bg);
+  border-radius: calc(var(--radius) - 6px);
+}
+.media-s3-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.media-s3-frame-empty {
+  text-align: center;
+  color: var(--color-sub);
+  font-size: 0.9rem;
+}
+.st-key-media-s3-carousel {
+  position: relative;
+}
+.st-key-media-s3-carousel .st-key-media-s3-prev,
+.st-key-media-s3-carousel .st-key-media-s3-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: auto;
+}
+.st-key-media-s3-carousel .st-key-media-s3-prev { left: 10px; }
+.st-key-media-s3-carousel .st-key-media-s3-next { right: 10px; }
+
+/* ← → 버튼: 사진 위에 뜨는 반투명 흰 동그라미 */
+.st-key-media-s3-prev button,
+.st-key-media-s3-next button {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--color-card) 85%, transparent);
+}
+.st-key-media-root .st-key-media-s3-prev button p,
+.st-key-media-root .st-key-media-s3-next button p {
+  color: var(--color-text) !important;
+  font-size: 1.2rem;
+}
+
+/* 넘겨 보기 카드: 흰 카드, 안쪽 여백을 줄여 사진을 크게 */
+.st-key-media-s3-carousel-card {
+  background: var(--color-card);
+  padding: 10px;
+  gap: 8px;
+}
+/* 아래 줄의 사진 A/B 고르기 (선택 안 된 글자는 진한 색) */
+.st-key-media-s3-carousel-info [data-testid="stButtonGroup"] button p {
+  color: inherit !important;
+}
+
+/* 왼쪽 사진 A·B 칸 */
+[class*="st-key-media-s3-photo-card-"] {
+  background: var(--color-card);
+}
+/* 프롬프트 전체를 보여 주는 칸: 화면이 높을수록 길게, 넘치면 칸 안에서만 스크롤 */
+.media-s3-prompt {
+  height: max(44px, calc(var(--media-s3-h) - 370px));
+  overflow-y: auto;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--color-sub);
+}
+
+/* 프롬프트 아래 'A만 다른 점' (단일 변수) */
+/* 두 칸 높이가 항상 같게: 글이 길어도 한 줄씩만 (넘치면 …, 마우스를 올리면 전체) */
+.media-s3-slot {
+  padding: 8px 12px;
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+  font-size: 0.85rem;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-s3-slot span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-sub);
+  font-size: 0.8rem;
+}
+
+/* 사진·영상 초안 제작 한 줄: 쓸 수 있는 높이 (화면 높이 - 위쪽 제목·탭 - 아래 이전/다음 줄) */
+.st-key-media-s3-photo-row,
+.st-key-media-s3-video-row {
+  --media-s3-h: max(270px, calc(100vh - 382px));
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+.st-key-media-s3-photo-left,
+.st-key-media-s3-video-left {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* 사진·영상 초안 제작 탭을 연 동안만 ③ 탭의 최대 폭(media_style.css의 1400px)을 풀어 화면 양옆까지 씀
+   (영상 초안 제작·만든 결과 보기 탭과 다른 단계는 그대로. 속성 선택자를 반복해 media_style.css 규칙보다 우선) */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"][data-testid][data-testid][data-testid]:has(.st-key-media-s3-sub [role="tab"]:nth-of-type(1)[aria-selected="true"]),
+  [data-testid="stMainBlockContainer"][data-testid][data-testid][data-testid]:has(.st-key-media-s3-sub [role="tab"]:nth-of-type(2)[aria-selected="true"]) {
+    max-width: none !important;
+  }
+}
+/* 낮은 화면(노트북 등)에서는 'A만 다른 점' 칸을 숨기고 프롬프트 칸을 그만큼 늘려 스크롤이 생기지 않게 */
+@media (max-height: 820px) {
+  [class*="st-key-media-s3-photo-card-"] [data-testid="stElementContainer"]:has(.media-s3-slot) {
+    display: none;
+  }
+  .media-s3-prompt {
+    height: max(44px, calc(var(--media-s3-h) - 270px));
+  }
+}
+
+/* 사진 A·B 칸: 두 칸 높이를 항상 같게 (짧은 칸도 긴 칸만큼 늘어남) */
+.st-key-media-s3-photo-left [data-testid="stHorizontalBlock"]:has([class*="st-key-media-s3-photo-card-"]) {
+  align-items: stretch;
+}
+.st-key-media-s3-photo-left [data-testid="stColumn"]:has([class*="st-key-media-s3-photo-card-"]) > [data-testid="stVerticalBlock"],
+[class*="st-key-media-s3-photo-card-"] {
+  height: 100%;
+}
+/* 사진 A·B 제목 줄은 줄바꿈하지 않게 (좁아지면 버튼 글자만 줄어듦) */
+[class*="st-key-media-s3-photo-card-"] > [data-testid="stLayoutWrapper"]:first-child > div {
+  flex-wrap: nowrap;
+}
+
+/* 넘겨 보기 아래 내려받기·지우기: 연한 동그라미 아이콘 버튼 */
+.st-key-media-s3-photo-tools button {
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  transition: background 0.15s, color 0.15s;
+}
+.st-key-media-s3-photo-tools button:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-card);
+}
+.st-key-media-s3-photo-tools button [data-testid="stIconMaterial"] {
+  font-size: 1.25rem;
+  color: inherit;
+}
+
+/* ④ 영상 초안 제작 (media_s3_video_tab): 사진 초안 제작과 같은 배치·크기 */
+/* 왼쪽 스토리보드 카드: 표 높이가 화면 높이를 따라감 (넘치면 표 안에서만 스크롤) */
+.st-key-media-s3-sb-card {
+  background: var(--color-card);
+}
+/* 스토리보드 카드가 왼쪽 칸의 남는 높이를 모두 채우게 (아래 올리기·넘기기 줄은 그대로) */
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-sb-card) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-sb-card) > .st-key-media-s3-sb-card {
+  height: 100%;
+}
+.st-key-media-s3-sb-card [data-testid="stDataFrameResizable"] {
+  height: calc(var(--media-s3-h) - 208px) !important;
+  max-height: calc(var(--media-s3-h) - 208px);
+}
+.st-key-media-s3-sb-head {
+  flex-wrap: nowrap;
+}
+/* 오른쪽 영상 만들기 카드: 사진 넘겨 보기와 같은 크기 */
+.st-key-media-s3-video-card {
+  background: var(--color-card);
+  height: calc(var(--media-s3-h) - 20px);   /* 사진 넘겨 보기 카드와 같은 높이 */
+  width: calc((var(--media-s3-h) - 70px) * 1.5 + 22px);
+  max-width: 48vw;
+  overflow-y: auto;
+}
+/* 영상 프롬프트: 남는 높이만큼, 넘치면 칸 안에서만 스크롤 */
+.media-s3-vprompt {
+  height: max(60px, calc(var(--media-s3-h) - 190px));
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  color: var(--color-text);
+}
+.media-s3-vprompt-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--color-sub);
+  white-space: normal;
+}
+.st-key-media-s3-video-note [data-testid="stCaptionContainer"] p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-key-media-s3-video-card {
+  box-sizing: border-box;
+}
+/* 아주 낮은 화면(예: 1366×657)에서는 영상 탭 아래 안내 줄을 숨겨 스크롤이 생기지 않게 (안내는 ⓘ 대신 넘기기 버튼 설명에도 있음) */
+@media (max-height: 700px) {
+  .st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-note),
+  .st-key-media-s3-video-note {
+    display: none;
+  }
+  .media-s3-vprompt {
+    height: max(40px, calc(var(--media-s3-h) - 235px));
+  }
+}
