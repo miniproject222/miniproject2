@@ -25,7 +25,7 @@
 |---|---|
 | `media_stage3.py` | 하위 탭 ④ 사진·영상 초안 제작. 진입 함수 `media_stage3_render()` (이름은 바꾸지 않음) |
 | `media_stage3_ai.py` | ④의 AI 호출: 사진 초안 `media_s3_make_image()`·스토리보드 `media_s3_make_storyboard()`(OpenAI), 영상 초안 `media_s3_make_video()`(Higgsfield Seedance 2.5). 모델·화질·영상 길이는 파일 맨 위 상수 |
-| `media_stage3_hf_login.py` | Higgsfield 계정 로그인 (처음 한 번, 터미널: `python -m modules.media.media_stage3.media_stage3_hf_login`). 로그인 열쇠를 `.streamlit/hf_mcp_token.json`에 저장 (`.gitignore`에 등록됨) |
+| `media_stage3_hf_login.py` | Higgsfield 계정 로그인 (컴퓨터마다 처음 한 번). ④ 영상 초안 제작의 **'Higgsfield 로그인 창 열기'** 버튼을 누르면 시크릿 창(크롬 `--incognito`, 엣지 `--inprivate`, 없으면 기본 브라우저)으로 로그인 화면이 뜨고, 로그인하면 앱이 3초 안에 알아챔. '계정 바꾸기'로 로그인 지우기. 앱을 **자기 컴퓨터에서 켰을 때만** 동작(돌아오는 주소가 127.0.0.1:8765). 터미널로도 가능: `python -m modules.media.media_stage3.media_stage3_hf_login`. 로그인 열쇠를 `.streamlit/hf_mcp_token.json`에 저장 (`.gitignore`에 등록됨) |
 | `media_stage3_hf_mcp.py` | Higgsfield MCP(`https://mcp.higgsfield.ai/mcp`)로 영상 만들기: `generate_video` → `jobs_wait`. 구독 크레딧 사용, 열쇠 자동 갱신 |
 | `media_stage3_store.py` | 작업물 보관: 사진·영상·스토리보드·만드는 중인 영상 작업 번호를 `data/workspace/`에 저장하고, 화면을 그릴 때 다시 읽음 (탭을 옮기거나 새로고침해도 유지, `.gitignore`에 등록) |
 | `media_stage3_export.py` | 하위 탭 ⑤ 외주 정리. 진입 함수 `media_stage3_export_render()` (이름은 바꾸지 않음) |
@@ -66,15 +66,17 @@
 
 ### ④ 사진·영상 초안 제작 (`media_stage3.py`, AI는 `media_stage3_ai.py`)
 - AI 버튼은 `.streamlit/secrets.toml`에 키가 있으면 켜지고 (사진·스토리보드는 `OPENAI_API_KEY`, 영상은 `HF_KEY` = "키ID:키시크릿"), 없으면 꺼진 채 "키를 넣어 주세요" 안내가 보입니다. 키가 없어도 파일을 직접 올려서 끝까지 진행할 수 있습니다.
-- 화면 맨 위에서 받은 프롬프트 A·B를 확인하고, 안쪽 하위 탭 2개(`st.tabs(key="media-s3-sub")`)로 나눕니다.
+- 화면 맨 위에서 받은 프롬프트 A·B를 확인하고, 안쪽 하위 탭 3개(`st.tabs(key="media-s3-sub")`: 사진 초안 제작 / 영상 초안 제작 / 만든 결과 보기)로 나눕니다.
+- **가설 묶음** (`media_s3_group()`): 2단계 프롬프트 A·B가 같으면 같은 묶음. 사진·영상을 넣을 때 그 묶음(가설 문장·단일 변수·A·B)을 함께 기록합니다. 작업 공간, '방금 만든 영상', ⑤로 넘기는 값은 **지금 가설 묶음 것만** 보여 줘서, 가설이 바뀌면 작업 공간이 비고 예전 결과가 섞이지 않습니다.
+- **만든 결과 보기** (`media_s3_history_section()`): 지금까지 만든 사진·영상을 가설 묶음별로 (최근 묶음부터) 모아 보기·내려받기만. 사본은 `data/workspace/history/`, 목록은 `history.json`. 각 결과의 만든 프롬프트도 펼쳐 볼 수 있음. 결과마다 **'⑤로 보내기' 체크**가 있어 ⑤ 외주 정리로 넘길 것을 고름 (예전 가설의 결과도 고를 수 있음). 고른 목록은 `pick.json`. 아직 고른 적이 없으면 지금 가설로 작업 공간에 있는 것을 고른 것으로 보고, 새로 만든 결과는 자동으로 체크되며 같은 이름으로 바뀐 예전 것은 빠짐. 기록 이름은 `만든 시각_가설 묶음_파일 이름`
 - **사진 초안 제작**: 사진 A·B 칸마다 다듬은 프롬프트와 `사진 A 만들기`·`사진 B 만들기` 버튼
   - 누르면 그 프롬프트로 사진을 만들어(`gpt-image-1-mini`, 화질 low, 10~30초) 칸 안에 보여 주고 `photo_A_ai.png`·`photo_B_ai.png`로 보관 (다시 누르면 바꿔 끼움)
   - 직접 만든 사진도 올릴 수 있음 (AI 사진과 같이 보관)
 - **영상 초안 제작**: 순서대로 진행
   1. **스토리보드 만들기**: `스토리보드 만들기` 버튼을 누르면 리포트 값(허용 장면 `ad_claims.allowed_scenes`, 쓸 수 있는 문구 `ad_claims.claims`, 금지 표현 `ad_claims.forbidden`, 서리 강점)과 프롬프트 A·B로 문제 → 해결 → 증거 → 신뢰 → 마무리 장면 표를 채움 (`gpt-4.1-mini`). 표는 직접 고칠 수 있고, 금지 표현이 남아 있으면 경고 → **`스토리보드 확정`**
   2. **영상 초안 만들기**: 스토리보드를 확정해야 열림. 확정한 장면을 이어 붙인 영상 프롬프트(`media_s3_video_prompt()`)로 `영상 초안 만들기`를 누르면 **Higgsfield 계정 로그인(MCP)이 되어 있으면 구독 크레딧으로**(Seedance 2.5, 5초 약 35크레딧), 아니면 **Higgsfield API 잔액(HF_KEY)으로** 영상을 만들어(`bytedance/seedance-2.5/text-to-video`, 5초, 720p, 16:9, 소리 없음, 1~5분) 화면에 보여 주고 `video_draft_ai.mp4`로 보관. **Higgsfield API는 선불 잔액에서 차감**(사이트 구독 크레딧과 별개, 최소 충전 $5). 잔액 부족·실패·검열이면 경고만 띄움. 직접 만든 영상도 올릴 수 있음
-- 화면 맨 아래 **'⑤로 넘기기'** 버튼(`media_s3_handoff_step()`, 스토리보드를 확정해야 눌림)을 눌렀을 때만 확정한 스토리보드와 파일 이름이 Supabase(`handoff.assets`)로 넘어갑니다. 넘긴 뒤 바뀌면 '다시 넘기기 필요'가 보입니다.
-- **작업 공간** (`media_s3_workspace()`): 사진 초안 제작 탭과 영상 초안 제작 탭 아래에 각각 하나씩. AI로 만든 파일(🤖)과 직접 올린 파일(📁)을 한곳에 미리 보기로 모으고, 파일마다 `내려받기`·`지우기`. **작업 공간에 있는 파일이 ⑤ 외주 정리로 갑니다.** 사진은 OpenAI 키(`OPENAI_API_KEY`), 영상은 Higgsfield 키(`HF_KEY`)로 만듭니다.
+- 화면 맨 아래 **'⑤로 넘기기'** 버튼(`media_s3_handoff_step()`, 스토리보드를 확정해야 눌림)을 눌렀을 때만 확정한 스토리보드와 '만든 결과 보기'에서 고른 사진·영상의 기록 이름이 Supabase(`handoff.assets`)로 넘어갑니다. 넘기기 줄에 '보낼 것: 사진 n · 영상 m'이 보입니다. 넘긴 뒤 바뀌면 '다시 넘기기 필요'가 보입니다.
+- **작업 공간** (`media_s3_workspace()`): 사진 초안 제작 탭과 영상 초안 제작 탭 아래에 각각 하나씩. AI로 만든 파일(🤖)과 직접 올린 파일(📁)을 한곳에 미리 보기로 모으고, 파일마다 `내려받기`·`지우기`. ⑤ 외주 정리로 갈 파일은 '만든 결과 보기'의 체크로 고릅니다. 사진은 OpenAI 키(`OPENAI_API_KEY`), 영상은 Higgsfield 키(`HF_KEY`)로 만듭니다.
 - 버튼은 모두 `type="primary"`로 둡니다. media 탭 공용 CSS(`media_style.css`)가 탭 안 버튼 글자를 흰색으로 바꿔서, 흰 바탕 버튼은 글자가 안 보이기 때문입니다.
 - Higgsfield가 영상 대신 **비슷한 프리셋 추천**(`notice.type == "preset_recommendation"`)을 돌려주면, 추천을 거절(`declined_preset_id`)하고 프롬프트 그대로 다시 요청합니다. 작업 번호는 `results[].id`에서만 받고, 없는 작업(404)이면 기다리지 않고 다시 누르라고 안내합니다.
 - **방금 만든 영상** (`media_s3_latest_video()`): 영상 만들기 바로 아래에 가장 최근 AI 영상을 크게 보여 주고, 막 완성된 경우에는 자동 재생(브라우저 규칙상 소리 없이)합니다. 저작권 확인 대기(`ip_detected`)면 Higgsfield 사이트에서 확인해야 한다고 안내합니다.
@@ -86,7 +88,7 @@
 ### ⑤ 외주 정리 (`media_stage3_export.py`)
 - 촬영 브리프 미리 보기 (`media_s3_brief()`): 맨 위에 단일 변수 "A와 B는 이것만 다르게", 조명·배경·보정은 똑같이, 고정 요소, 찍지 말 것 / 넣을 것, 받을 것, "법률 자문 아님" 안내
 - zip 내려받기 (`media_s3_package()`, 스토리보드는 확정본이 있으면 확정본): `README_촬영브리프.txt`, `prompt_A.txt`, `prompt_B.txt`, `prompts.json`, `video_storyboard.csv`, `photo_reference/`, `video_draft/`
-- ④에서 넘긴 값(`media_handoff_assets()`)만 씁니다. 안 넘겼으면 안내를 보여 주고 내려받기를 막습니다. 사진·영상 파일은 같은 브라우저 접속에서 ④에 올린 것 중 넘긴 이름만 zip에 넣습니다.
+- ④에서 넘긴 값(`media_handoff_assets()`)만 씁니다. 안 넘겼으면 안내를 보여 주고 내려받기를 막습니다. 사진·영상 파일은 이 컴퓨터의 기록 폴더(`data/workspace/history/`)에서 넘긴 기록 이름으로 찾아 zip에 넣습니다 (zip 안 이름도 기록 이름이라 다른 가설의 같은 이름 파일이 겹치지 않음). '넣을 파일 보기'로 목록 확인.
 - 받은 프롬프트 A·B가 확인을 통과하지 못해도 내려받기를 막습니다.
 
 ## 넘기는 값
