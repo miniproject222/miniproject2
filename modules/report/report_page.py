@@ -11,6 +11,7 @@ from common.common_store import store_get, store_set
 from modules.report.report_ab import REPORT_AB_TEMPLATE, report_ab_analyze, report_ab_p, report_ab_parse_csv, report_ab_verdict
 from modules.report.report_competitor import REPORT_SEORI_PROXY
 from modules.report.report_data import report_load_data, report_utm_rows
+from modules.report.report_review import report_shop_reviews
 from modules.report.report_download import report_download_pdf
 from modules.report.report_keepa import (
     report_keepa_can_fetch, report_keepa_detail, report_keepa_estimate, report_keepa_fetch_and_save, report_keepa_usage,
@@ -135,9 +136,14 @@ REPORT_PROFILE_KEYS = ("brand", "product", "type", "price", "currency", "sqm_pri
                        "strength", "weakness", "amazon_price", "price_change_90d", "rating", "reviews", "in_stock", "amazon_fees")
 
 
-def report_store_profile(profile):
+def report_store_profile(profile, ad_claims=None):
     """서리 프로필 중 다른 탭이 쓸 칸만 (분석용 세부 표는 ① 화면에만, 광고 문구는 ad_claims에 따로)."""
     out = {k: profile[k] for k in REPORT_PROFILE_KEYS if k in profile}
+    # qmax는 분석용(원단·원사 값 포함). 광고에는 원사 0.4가 금지 표현이라, 광고에 써도 되는 문구를 따로 줌
+    q = next((c for c in (ad_claims or {}).get("claims", []) if "Q-max" in c.get("topic", "")), None)
+    if q:
+        out["qmax_ad"] = q["ko"]
+        out["qmax_note"] = "광고에는 qmax_ad만 사용 (qmax의 원단·원사 수치는 광고 금지 표현)"
     bt = profile.get("body_temp") or {}
     out["body_temp_rule"] = bt.get("rule", "")   # 광고 표현 규칙 한 줄 (자세한 연구는 경쟁사 DB '체감 vs 실제 체온')
     return out
@@ -194,13 +200,13 @@ def report_save_store(data, summary, worst, utm_rows, utm_worst):
         "key_problems": data["key_problems"],          # 가설: 핵심 문제 Top 3 + 가설 질문(question)
         "opportunities": [{"title": f["title"], "level": f["level"], "detail": f["detail"]}
                           for f in data["external"] if f["kind"] == "기회"],
-        "seori_profile": report_store_profile(data["seori_profile"]),   # 광고 소재: 서리 제품·가격·인증·시험
+        "seori_profile": report_store_profile(data["seori_profile"], data["ad_claims"]),   # 광고 소재: 서리 제품·가격·인증·시험
         "ad_claims": data["ad_claims"],                # 광고 소재: 광고 문구(독일어·한국어·필수 표기)·금지 표현
         "marketing_rules": data["marketing_rules"],    # 광고 소재: 독일 광고 표현 규칙
         "competitor_profiles": data["competitor_profiles"],   # 가설·광고 소재: 경쟁사 강점·약점·Keepa 값·상세페이지 문구
         "competitor_signals": data["competitor_signals"],     # 광고 타이밍: 품절·현재가·가격 변화·쿠폰·구매 배지
         "competitor_ranking": report_store_ranking(data["cooling_sales"]),   # 냉감패드 실적 순위 (냉감 전용 + 1년 판매 신호)
-        "review_analysis": {k: ra[k] for k in ("seori", "leader", "five_star_needed", "findings", "metric", "target", "rule")
+        "review_analysis": {k: ra[k] for k in ("seori", "leader", "five_star_needed", "findings", "metric", "target", "rule", "shop")
                             if k in ra} or None,      # 가설: 리뷰 문제 근거·목표
         "data_rules": data["data_rules"],              # 공통: 지표별 비교 기준·출처·기준일·구분(실제/가정/가상)
         "ab_upload": data["ab_upload"],                # ① 탭 자체 보관용: 올린 A/B 결과 파일 (새로고침 후에도 유지, 다른 탭은 ab_test 사용)
@@ -220,6 +226,24 @@ def report_save_store(data, summary, worst, utm_rows, utm_worst):
     else:
         previous = saved.get("previous")
     payload.update({"analyzed_on": today, "previous": previous})
+    # ② 가설 탭이 리포트 맨 아래에 붙인 선택 가설은 ①이 다시 저장해도 지우지 않음 (③은 ①+② 리포트 하나만 읽음)
+    hyp = saved.get("hypothesis")
+    if isinstance(hyp, dict):
+        hyp = dict(hyp)
+        # 같은 문제인지는 제목이 아니라 '분류 + 지표'로 판단 (제목에 숫자가 있어 값이 바뀌면 제목도 바뀜: 리뷰 31건 → 93건)
+        def ident(p):
+            return (p.get("sqp_type") or p.get("group"), (p.get("plan") or {}).get("kpi") or p.get("title"))
+        prob = hyp.get("problem") or {}
+        hyp["stale"] = bool(prob) and ident(prob) not in [ident(p) for p in payload["problems"]]
+        hyp["stale_reason"] = "① 분석이 바뀌어 이 가설의 문제가 지금 문제 목록에 없음 → ②에서 다시 선택 필요" if hyp["stale"] else ""
+        # 같은 문제지만 지금 값·목표 값이 바뀜 (예: 리뷰 31건 → 93건) → 가설 숫자가 옛 값이라 ②에서 다시 선택하면 새 값
+        cur = next((p for p in payload["problems"] if ident(p) == ident(prob)), None) if not hyp["stale"] else None
+        old_plan, new_plan = prob.get("plan") or {}, (cur or {}).get("plan") or {}
+        hyp["values_changed"] = bool(cur) and any(old_plan.get(k) != new_plan.get(k) for k in ("now", "goal"))
+        hyp["values_changed_reason"] = (f"같은 문제지만 값이 바뀜 ({old_plan.get('kpi')} 지금 {old_plan.get('now')} → {new_plan.get('now')}, "
+                                        f"목표 {old_plan.get('goal')} → {new_plan.get('goal')}) → ②에서 다시 선택하면 새 값으로 가설"
+                                        if hyp["values_changed"] else "")
+        payload["hypothesis"] = hyp
     data["compare"] = report_compare_text(previous, payload)
     if st.session_state.get("report-stored-payload") != payload:
         store_set("report", payload)
@@ -627,6 +651,17 @@ def report_show_review(ra):
                      hide_index=True, width="stretch", key="report-table-review")
         st.markdown(f'<div class="report-desc">지표: {ra["metric"]} · 목표: {ra["target"]}<br>규칙: {ra["rule"]}<br>한계: {ra["limits"]}</div>',
                     unsafe_allow_html=True)
+        shop = report_shop_reviews()
+        if shop:   # 자사몰 리뷰 (가정: SleepCOOL 공식몰) - Amazon 리뷰 수에는 더하지 않고 근거로만
+            sh = shop["shop"]
+            st.markdown(f"**자사몰 리뷰** (가정: {REPORT_SEORI_PROXY} 공식몰 · [Trusted Shops]({shop['url']}) · {shop['fetched_at']} 조회) · "
+                        f"평점 {sh['rating']}/{sh['scale']} · {sh['reviews']:,}건 (별 5개 {sh['distribution_pct']['5']}%)")
+            st.dataframe([{"주제": t["theme"], "건수": t["count"], "긍정·중립·부정": " · ".join(f"{k} {v}" for k, v in t["tones"].items()),
+                           "예시": t["example"]} for t in shop["themes"]], hide_index=True, width="stretch", key="report-table-shop-themes")
+            with st.expander("자사몰 리뷰 원문 (발췌)", expanded=False):
+                st.dataframe([{"날짜": i["date"], "제품": i["product"], "분류": i["tone"], "원문": i["quote"], "한국어": i["ko"]}
+                              for i in shop["items"]], hide_index=True, width="stretch", key="report-table-shop-items")
+            st.markdown(f'<div class="report-desc">{shop["note"]}<br>한계: {shop["limits"]}</div>', unsafe_allow_html=True)
 
 
 def report_factor_html(item, group=""):

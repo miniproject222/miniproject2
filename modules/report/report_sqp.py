@@ -15,7 +15,6 @@ REPORT_SQP_DIR = Path(__file__).resolve().parent / "data"
 REPORT_SQP_FILE = REPORT_SQP_DIR / "report_sqp_weekly_dummy_202608.json"
 REPORT_SQP_ADS_FILE = REPORT_SQP_DIR / "report_ads_keywords_dummy_202608.csv"
 REPORT_SQP_LISTING_FILE = REPORT_SQP_DIR / "report_listing_dummy_202608.json"
-REPORT_SQP_KPI_GOAL = 0.8   # 클릭 ÷ 노출 배수 목표 (③ 탭 KPI 목표와 같은 값)
 REPORT_SQP_EVENTS_FILE = REPORT_SQP_DIR / "report_sqp_events_202608.json"
 REPORT_SQP_TEMP_FILE = REPORT_SQP_DIR / "report_temp_dwd_202608.csv"
 
@@ -318,6 +317,8 @@ def report_sqp_handoff(sqp, rivals):
     weak = [f"{r['brand'].split()[0]} {r['weakness'].split(',')[0].strip()}" for r in eur[:3] if r["weakness"]]
     review = " / ".join(weak) + " (경쟁사 DB 약점, 실제 리뷰 원문 아님)" if weak else ""
 
+    from modules.report.report_plan import report_plan_sqp_goal   # 목표 배수 = 문제 없는 검색어의 우리 배수 중앙값 (고정값 아님)
+    kpi_goal, _ = report_plan_sqp_goal(sqp)
     problems, key_problems = [], []
     for rank, x in enumerate(sqp["problems"], 1):
         t = x["total"]
@@ -338,7 +339,7 @@ def report_sqp_handoff(sqp, rivals):
             question = "이 검색어를 광고 제외 키워드로 돌리면 광고비가 얼마나 줄까?"
         level = "높음" if rank == 1 else "중간"
         # 심각도 점수용 차이 크기 (0~1): 소재 개선 = 목표 배수 대비 부족분, 노출 확대 = 목표 노출 점유율 대비 부족분
-        gap = (max(0.0, 1 - t["ratio"] / REPORT_SQP_KPI_GOAL) if x["type"] == "소재 개선"
+        gap = (max(0.0, 1 - t["ratio"] / kpi_goal) if x["type"] == "소재 개선" and kpi_goal
                else max(0.0, 1 - t["imp_share"] / x["extra"]["goal"]) if x["type"] == "노출 확대" else None)
         key_problems.append({"rank": rank, "type": "내부", "level": level, "group": x["type"], "title": title,
                              "detail": detail, "question": question, "gap": gap})
@@ -355,7 +356,8 @@ def report_sqp_handoff(sqp, rivals):
     lo, hi = report_sqp_month_range(main, "ratio")
     sub = next((x for x in sqp["problems"] if x["type"] == "노출 확대"), None)
     store = {
-        "source": "노출·클릭·장바구니·구매·광고·우리 상품 = 가상 / 경쟁 제품 = Keepa 실제 / 기온 = DWD 실제 / "
+        "source": "노출·클릭·장바구니·구매·광고 = 가상 / 우리 상품 가격 = 서리 가정, 평점·리뷰 = SleepCOOL 실적 / "
+                  "경쟁 제품 = Keepa 실제 / 기온 = DWD 실제 / "
                   f"경쟁사 할인·품절 주 = {sqp['event_source']}",
         "period": sqp["period"],
         "query": main["query"],
@@ -367,7 +369,7 @@ def report_sqp_handoff(sqp, rivals):
         "our_price": listing["price"], "median_click_price": main["median_price"], "price_gap": round(main["price_gap"], 2),
         "listing": {k: listing[k] for k in ("title", "price", "rating", "reviews", "main_image", "main_image_issue", "certs")},
         "competitors": [c for c in sqp["competitors"] if c["source"] == "Keepa 실제"],
-        "kpi_goal": REPORT_SQP_KPI_GOAL,
+        "kpi_goal": kpi_goal,
         "problem2": ({"query": sub["query"], "imp_share": round(sub["total"]["imp_share"] * 100, 1),
                       "ratio": round(sub["total"]["ratio"], 2), "goal_imp_share": round(sub["extra"]["goal"] * 100, 1),
                       "extra_clicks": round(sub["extra"]["clicks"]), "month": sub["extra"]["month"],

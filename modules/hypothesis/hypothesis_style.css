@@ -339,6 +339,14 @@
 [data-testid="stMainBlockContainer"]:has(.st-key-hypothesis-candidate-tabs) {
   padding-bottom: 24px !important;
 }
+/* ② 탭을 연 동안만 페이지 폭·여백: 가로 폭은 ④ 광고 타이밍 탭(최대 1720px, 양옆 3.5rem),
+   위·아래 여백은 ③ 광고 소재 탭(위 1rem, 아래 3rem) 기준. 최상위 탭 3번째 기준 (탭 순서가 바뀌면 숫자 수정) */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(3)[aria-selected="true"]) {
+    max-width: 1720px !important;
+    padding: 1rem 3.5rem 3rem !important;
+  }
+}
 
 /* 페이지 제목("2. 가설 수립") 바로 밑에 두 칸이 붙어 보여서 조금 내림 */
 .hypothesis-top-gap {

@@ -1,12 +1,31 @@
 # 1. 분석 리포트 - 리뷰 분석 (내부 요인 '리뷰 20건'을 숫자로 풀어 봅니다)
 # - 대상: 경쟁사 2곳 + 서리(가정: SleepCOOL 실적) + 냉감패드 10개사 중 Keepa 마지막 조회값이 있는 상품
 # - 값: Keepa 마지막 조회값(리뷰 수, 평점, 판매 순위) + 상세 조회(리뷰 1년 변화, 여름 순위) · 리뷰 원문은 조회하지 않음
+# - 자사몰 리뷰: 가정 서리 자사몰 = SleepCOOL 공식몰(sleepcool.de) Trusted Shops 실제 리뷰 (report_shop_reviews_202610.json, 근거로만)
+import json
 import math
+from collections import Counter
 
-from modules.report.report_competitor import REPORT_SEORI_PROXY, report_market10
+from modules.report.report_competitor import REPORT_MODULE_DATA, REPORT_SEORI_PROXY, report_market10
 from modules.report.report_keepa import report_keepa_detail
 
 REPORT_REVIEW_RATING_GOALS = (4.0, 4.1)   # 서리 평점 목표: 경쟁사 2곳 수준 (Mara Vital 4.0, Traumnacht 4.1)
+REPORT_SHOP_REVIEW_FILE = REPORT_MODULE_DATA / "report_shop_reviews_202610.json"   # 자사몰 리뷰 (가정: SleepCOOL 공식몰)
+
+
+def report_shop_reviews():
+    """자사몰 리뷰 요약: 상점 평점·리뷰 수와 냉감·매트리스 패드 리뷰의 주제별 개수·예시. 파일이 없으면 None.
+    Amazon 리뷰가 아니라서 리뷰 수 비교(지표)에는 쓰지 않고 근거로만 씁니다."""
+    if not REPORT_SHOP_REVIEW_FILE.exists():
+        return None
+    d = json.loads(REPORT_SHOP_REVIEW_FILE.read_text(encoding="utf-8"))
+    items = d.get("items") or []
+    count = Counter(i["theme"] for i in items)
+    themes = [{"theme": t, "count": n, "tones": dict(Counter(i["tone"] for i in items if i["theme"] == t)),
+               "example": next(i["ko"] for i in items if i["theme"] == t)} for t, n in count.most_common()]
+    return {"source": d["source"], "url": d["url"], "fetched_at": d["fetched_at"], "shop": d["shop"],
+            "pad_reviews": sum(1 for i in items if i.get("pad")), "items": items, "themes": themes,
+            "note": d["note"], "limits": d["limits"]}
 
 
 def report_review_need(reviews, rating, goal):
@@ -81,6 +100,12 @@ def report_review_analysis(rivals, snapshot_items, keepa_time):
         *([f"평점 4.0까지 별 5개 리뷰 약 {needs['4.0']}건, 4.1까지 약 {needs['4.1']}건 추가 필요 (단순 평균 기준 근사)"]
           if needs["4.0"] is not None else ["서리 평점 기록이 없어 필요한 리뷰 수는 계산하지 않음"]),
     ]
+    shop = report_shop_reviews()
+    if shop:   # 자사몰 리뷰: Amazon과 평점 차이 + 냉감 관련 주제 (근거로만)
+        sh = shop["shop"]
+        findings.append(f"자사몰 리뷰(가정: {REPORT_SEORI_PROXY} 공식몰, Trusted Shops) 평점 {sh['rating']}/{sh['scale']} · {sh['reviews']:,}건 "
+                        f"→ Amazon 평점 {seori['rating']}과 비교 (자사몰은 상점 전체 상품·구매 고객 리뷰)")
+        findings.append("자사몰 냉감 리뷰 주제: " + " / ".join(f"{t['theme']} {t['count']}건" for t in shop["themes"]))
     return {
         "rows": rows,
         "seori": {"reviews": seori["reviews"], "rating": seori["rating"], "rank": seori["rank"]},
@@ -90,6 +115,7 @@ def report_review_analysis(rivals, snapshot_items, keepa_time):
         "five_star_needed": needs,                      # {"4.0": 건수, "4.1": 건수}
         "rank_corr": round(rho, 2) if rho is not None else None,
         "findings": findings,
+        "shop": ({k: shop[k] for k in ("source", "url", "fetched_at", "shop", "pad_reviews", "themes", "note")} if shop else None),   # 자사몰 리뷰 요약 (③ 광고 문구 기대 관리에 씀)
         # 가설 탭에서 그대로 쓰는 지표·목표
         "metric": "Amazon 리뷰 수",   # 가설 문장에 그대로 들어가는 지표 이름 (출처는 limits·data_rules에)
         "target": f"평점 {REPORT_REVIEW_RATING_GOALS[0]} 이상 + 리뷰 {leader['reviews']}건 이상 (냉감패드 실적 1위 수준)",

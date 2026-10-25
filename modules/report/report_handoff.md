@@ -31,10 +31,14 @@ Keepa API(마지막 조회값) · Open-Meteo   ┘                              
 
 | 키 | 쓸 탭 | 내용 |
 |---|---|---|
+| `problems[].plan`, `plan_none` | ② 가설 | 문제마다 가설 재료 (행동·데이터 이유·kpi·now·goal·unit·better·visual·material·fixed·test·period·goal_basis). 데이터로 정할 수 없으면 plan=None + plan_none(이유) — `report_plan.py` |
+| `hypothesis` (맨 아래) | ③ 광고 소재 | ②가 선택한 가설 (`problem`, `if`, `because`, `then`, `sentence`, `plan`, `execution`, `saved_at`, `stale`, `stale_reason`, `values_changed`, `values_changed_reason`). ①이 다시 저장해도 유지. 같은 문제 판단은 분류+지표(제목 아님): 문제가 사라지면 stale, 같은 문제인데 지금·목표 값이 바뀌면 values_changed |
+| `seori_profile.qmax_ad`, `qmax_note` | ③ 광고 소재 | 광고에 써도 되는 Q-max 문구 (qmax의 원단·원사 수치는 광고 금지) |
+| `sqp.kpi_goal`, `kpi_goal_basis` | ②·③ | 목표 배수 = 문제 없는 검색어에서 우리 배수 중앙값 (지금 0.98, 고정 0.8 아님) |
 | `analyzed_on`, `previous` | ① (내부용) | 분석한 날, 이전 분석의 날짜·데이터 기준·1·2순위 제목 (이전 분석 대비 문구용) |
 | `key_problems` | ② 가설 | 핵심 문제 Top 3 (검색어·내부·외부를 섞어 위험도 → 심각도 점수 순, `severity`: score·data·urgency·gap·basis) + 가설 질문 `question` · `problems` 앞 3개와 같은 순서 |
 | `opportunities` | ② 가설 | 외부 기회 |
-| `review_analysis` | ② 가설 | 리뷰 문제 근거·목표 (`seori`, `leader`, `five_star_needed`, `findings`, `metric`, `target`, `rule`) |
+| `review_analysis` | ② 가설 | 리뷰 문제 근거·목표 (`seori`, `leader`, `five_star_needed`, `findings`, `metric`, `target`, `rule`, `shop`). `shop` = 자사몰 리뷰 요약(가정: SleepCOOL 공식몰 Trusted Shops 실제 리뷰): 상점 평점·리뷰 수, 냉감 리뷰 주제별 건수·예시 — ③ 광고 문구 기대 관리용, Amazon 리뷰 수에는 안 더함 |
 | `seori_profile` | ③ 광고 소재 | 서리 제품·가격(SleepCOOL 실적)·판매 채널·Q-max·인증(`certs`)·시험(`tests`)·강점·약점·Amazon 수수료 추정(`amazon_fees`)·체온 광고 규칙(`body_temp_rule`) |
 | `ad_claims` | ③ 광고 소재 | **광고에 넣을 서리 문구**(독일어·한국어·필수 표기), 금지 표현(`forbidden`), AI 광고 장면(`allowed_scenes`) |
 | `marketing_rules` | ③ 광고 소재 | 독일 광고 표현 규칙 8개 |

@@ -37,7 +37,7 @@ def hypothesis_scenario_ibt(sqp: dict) -> dict:
     넣으면 "한눈에 읽기 좋게"가 안 돼서 Because에는 아예 안 넣고, 원문은 전부
     hypothesis_evidence_section()의 "📚 근거·출처 보기" 토글로만 보여줍니다."""
     listing = sqp.get("listing") or {}
-    goal = sqp.get("kpi_goal", 0.8)
+    goal = sqp.get("kpi_goal") or 0   # 목표는 ① 리포트 값만 (고정 기본값 없음)
 
     because = (f"클릭 이후 전환은 시장과 비슷해서(클릭 대비 장바구니 우리 {sqp.get('cart_rate_ours')}% vs "
                f"시장 {sqp.get('cart_rate_market')}%) 문제는 첫인상이며 저가 제품과 비슷해 보이는 사진으로는 "
@@ -48,7 +48,7 @@ def hypothesis_scenario_ibt(sqp: dict) -> dict:
               "두께와 냉감 원단 질감이 보이는 각도(B)로 바꾼다면",
         "because": because,
         "then": f"'{sqp.get('query', '')}' 검색에서 클릭 점유율 ÷ 노출 점유율이 "
-                f"{sqp.get('ratio', 0):.2f}배에서 {goal:.1f}배 이상으로 오를 것이다",
+                f"{sqp.get('ratio', 0):.2f}배에서 {goal:.2f}배 이상으로 오를 것이다",
     })
 
 
@@ -118,10 +118,10 @@ def hypothesis_scenario_detail_section(sqp: dict) -> None:
 def hypothesis_scenario_execution_rows(sqp: dict) -> list[tuple[str, str]]:
     """'소재 개선' 가설의 실행 방법 표 행. 화면 표와 "선택하기" 저장값이 같은 행을 쓰도록 분리."""
     listing = sqp.get("listing") or {}
-    goal = sqp.get("kpi_goal", 0.8)
+    goal = sqp.get("kpi_goal") or 0   # 목표는 ① 리포트 값만 (고정 기본값 없음)
     return [
         ("타깃", f"amazon.de '{sqp.get('query', '')}' 검색 결과"),
-        ("목표 KPI", f"클릭 점유율 ÷ 노출 점유율 {sqp.get('ratio', 0):.2f}배 → {goal:.1f}배 이상"),
+        ("목표 KPI", f"클릭 점유율 ÷ 노출 점유율 {sqp.get('ratio', 0):.2f}배 → {goal:.2f}배 이상"),
         ("준비할 소재", "메인 이미지 A안(현재)·B안(두께·원단 질감이 보이는 각도) 사진 각 1장"),
         ("고정 요소", f"흰 배경 실제 사진, 제목, 가격 €{listing.get('price', 0):.2f}, 쿠폰 없음"),
         ("테스트 방법", "Amazon Manage Your Experiments로 50:50 분할 노출"),
@@ -134,7 +134,7 @@ def hypothesis_scenario_judgement(sqp: dict) -> None:
     토글이었는데, ① 탭처럼 화면 오른쪽 끝 아이콘을 누르면 창(dialog)으로 열리도록 옮겼습니다
     (창은 hypothesis_page.py의 hypothesis_dialog_judgement가 엶). 경쟁사 약점 데이터에 대한
     주의 문구도 원래 실행 방법 표 아래 3줄로 있었는데, 화면 높이를 줄이려고 이 창으로 옮겼습니다."""
-    goal = sqp.get("kpi_goal", 0.8)
+    goal = sqp.get("kpi_goal") or 0   # 목표는 ① 리포트 값만 (고정 기본값 없음)
     st.caption("근거의 경쟁 제품 약점은 경쟁사 DB 값이고 실제 리뷰 원문이 아닙니다. 경쟁 제품 리뷰 30~50개를 모아 "
                "가장 많이 나오는 불만으로 바꿔 넣어야 하고, 불만이 다르게 나오면 액션도 바뀝니다 "
                "(예: '미끄러진다'가 많으면 바닥 미끄럼 방지면이 보이는 각도).")
@@ -143,7 +143,8 @@ def hypothesis_scenario_judgement(sqp: dict) -> None:
                 + "\n".join(f"| {a} | {b} | {c} |" for a, b, c in HYPOTHESIS_SCENARIO_KPIS))
     st.markdown(
         "**승자는 CTR로, 사업 효과는 CAC로**\n"
-        f"1. **승자 결정**: 클릭 점유율 ÷ 노출 점유율이 높은 쪽 ({goal:.1f}배 이상 목표). 단, CVR이 떨어지지 않아야 한다.\n"
+        "1. **승자 결정**: 클릭 점유율 ÷ 노출 점유율이 높은 쪽" + (f" ({goal:.2f}배 이상 목표)" if goal else "")
+        + ". 단, CVR이 떨어지지 않아야 한다.\n"
         "2. **사업 효과 확인**: 이긴 이미지를 적용하기 전 4주와 후 4주의 CAC를 비교한다. "
         "계산이 어려우면 주문당 광고비나 ACoS로 대신한다.\n"
         "3. **발표 논리**: CTR이 오르면 같은 노출에서 클릭이 늘고, 클릭률이 높으면 클릭당 비용도 내려가는 경향이 있다. "

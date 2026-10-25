@@ -282,10 +282,13 @@
   overflow: hidden;
 }
 
-/* ① 탭을 연 동안만 페이지 '아래' 여백을 줄여 스크롤 없이 한 화면에 (위·왼쪽 여백은 다른 탭과 그대로)
-   media_style.css의 '3번 탭 여백' 규칙과 같은 방식, 최상위 탭 2번째 기준 (탭 순서가 바뀌면 숫자 수정) */
-[data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2)[aria-selected="true"]) {
-  padding-bottom: 1rem !important;
+/* ① 탭을 연 동안만 페이지 폭·여백: 가로 폭은 ④ 광고 타이밍 탭(weather_style.css: 최대 1720px, 양옆 3.5rem),
+   위·아래 여백은 ③ 광고 소재 탭(media_style.css: 위 1rem, 아래 3rem) 기준. 최상위 탭 2번째 기준 (탭 순서가 바뀌면 숫자 수정) */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2)[aria-selected="true"]) {
+    max-width: 1720px !important;
+    padding: 1rem 3.5rem 3rem !important;
+  }
 }
 
 /* KPI 줄이 있는 report 창: 제목(h2)과 닫기 버튼도 위에 고정, KPI 줄은 제목 바로 아래(72px)에 고정 */
