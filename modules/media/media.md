@@ -1,6 +1,6 @@
 # 3. 매체 제작 (`media`)
 
-- 매체 제작: 하위 탭 5개 가설에서 변수 도출 → A/B 소재 준비 → 프롬프트 만들기(AI 다듬기) → 사진·영상 초안 → 외주 정리 (둥근 알약형 탭) (각 단계 아래 이전/다음 버튼으로 이동)
+- 매체 제작: 하위 탭 5개 가설에서 변수 도출 → A/B 소재 준비 → 프롬프트 만들기(AI 다듬기) → 사진·영상 초안 제작 → 외주 정리 (둥근 알약형 탭) (각 단계 아래 이전/다음 버튼으로 이동)
 - 끝은 외주업체에 넘길 레퍼런스 파일(프롬프트, 사진·영상 초안, 고정 요소) 준비까지입니다. A/B 결과 판정, UTM, 매체 외 솔루션 제안은 지금 흐름에서 빠졌습니다 (판정 코드는 `media_stage2/media_stage2_judge.py`에 보관)
 
 ## 3단계 나눠 개발 (동시 개발 후 1단계 기준으로 합침)
@@ -9,23 +9,24 @@
 |---|---|---|---|---|
 | 1단계 | 단일 변수 추출 ~ A/B 소재 선정 (가설에서 변수 도출, A/B 소재 준비) | `min` | `modules/media/` 바로 아래 파일 전부 (공용 파일 포함) | `media_` / `media-` |
 | 2단계 | ③ 프롬프트 만들기: 기본 프롬프트 → 빈칸 → A, B 채우기 → 리포트 값으로 AI 다듬기 + 확인 | `JY` | `media_stage2/`만 | `media_s2_` / `media-s2-` |
-| 3단계 | ④ 사진·영상 초안(사진 레퍼런스, 영상 스토리보드, 영상 초안) → ⑤ 외주 정리(브리프 + zip) | `DH` | `media_stage3/`만 | `media_s3_` / `media-s3-` |
+| 3단계 | ④ 사진·영상 초안 제작(프롬프트로 사진 초안, 스토리보드 → 영상 초안) → ⑤ 외주 정리(브리프 + zip) | `DH` | `media_stage3/`만 | `media_s3_` / `media-s3-` |
 
 - 공용 파일(`media_page.py`, `media_handoff.py`, `media_style.css`, `media.md`, `media_prompt.md`, `CLAUDE.md`)은 1단계 담당자만 고칩니다.
 - 연결 지점: `media_page.py`가 하위 탭에서 `media_stage2_render()`(③), `media_stage3_render()`(④), `media_stage3_export_render()`(⑤)만 부릅니다.
 - 2·3단계 하위 탭 이름은 각 단계 파일의 `MEDIA_S2_TAB_LABEL`, `MEDIA_S3_TAB_LABEL`, `MEDIA_S3_EXPORT_TAB_LABEL`에서 정하고 `media_page.py`가 가져다 씁니다. 단계 담당자가 직접 바꿉니다.
-- 단계 사이 데이터: `media_handoff.py` (1→2 `media_handoff_set_plan()` / `media_handoff_plan()`, 2→3 `media_handoff_set_prompt()` / `media_handoff_prompt()`).
-  - 값은 각 단계 폴더의 JSON 파일로 저장됩니다. **그 파일을 커밋·푸시하면, 다른 컴퓨터에서 풀 받은 사람에게 자동으로 이어집니다.**
-    - 1단계: `modules/media/data/media_handoff_plan.json` (min이 올림)
-      - 하위 탭 ① 선정 표 아래 '이 변수로 확정' 버튼을 눌러야 저장됩니다 (`media_variable_confirm_step()`). 확정 전에는 2단계가 예시 값을 받고,
-        확정한 뒤 리포트 값 등이 바뀌면 '다시 확정 필요'와 '다시 확정' 버튼이 보입니다.
-        하위 탭 ② A/B 소재 준비부터는 모두 이 확정 값을 씁니다. ①에서 고르기만 하고 확정하지 않았으면 ②는 이전 확정 값을 보여 주며
-        '확정 안 됨' 안내와 '① 으로 가서 확정하기' 버튼을 띄우고, 한 번도 확정하지 않았으면 A/B 대신 빈 카드와 같은 버튼만 보여 줍니다.
-        `MEDIA_HANDOFF_PLAN` 기본값에 1번 리포트 값(`sqp.query`, `sqp.listing.main_image` → `a`, `sqp.ratio` → `kpi_now`, `sqp.kpi_goal`)을 덮어쓴 값이고,
-        2번 탭 가설이 기준 가설과 다르면 확정 버튼이 꺼집니다.
-    - 2단계: `modules/media/media_stage2/data/media_stage2_prompt.json` (JY가 올림)
-  - 단계마다 자기 폴더의 파일만 쓰므로 합칠 때 충돌이 나지 않습니다. 읽을 때마다 파일을 새로 읽어서, 풀 받은 뒤 새로고침하면 바로 반영됩니다. 앞 단계 값이 없으면 예시 값이 와서 각자 먼저 개발할 수 있습니다.
-  - 2→3 모양(`MEDIA_HANDOFF_PROMPT_SAMPLE`): `variable` 단일 변수, `base` 기본 프롬프트(빈칸 `{slot}`), `slot_a`, `slot_b` 빈칸 문구, `fixed` 고정 요소 목록
+- 단계 사이 데이터: `media_handoff.py` (1→2 `media_handoff_set_plan()` / `media_handoff_plan()`, 2→3 `media_handoff_set_prompt()` / `media_handoff_prompt()`, ④→⑤ `media_handoff_set_assets()` / `media_handoff_assets()`).
+  - 값은 **Supabase 공용 저장소**(`store("media")`의 `handoff` 칸: `plan`, `prompt`, `assets`)에 저장됩니다. 프로젝트 파일은 바뀌지 않아 커밋·충돌이 생기지 않고, 다른 컴퓨터에서도 바로 이어집니다. (읽을 때 3초마다 Supabase에서 새로 읽음)
+  - **각 단계의 넘기기 버튼을 눌렀을 때만** 저장됩니다. 화면을 열기만 해서는 저장되지 않습니다. 앞 단계가 아직 안 넘겼으면 예시 값(`sample: True`)이 와서 각자 먼저 개발할 수 있습니다.
+    - ①: 선정 표 아래 '이 변수로 확정' 버튼 (`media_variable_confirm_step()`). 확정한 뒤 리포트 값 등이 바뀌면 '다시 확정 필요'와 '다시 확정' 버튼이 보입니다.
+      확정할 때 고른 B안의 영어 레퍼런스 프롬프트(후보 파일의 `ref_prompt`)도 `b_ref`로 같이 넘기고, 2단계는 여기서 빈칸 B를 잘라 씁니다.
+      하위 탭 ② A/B 소재 준비부터는 모두 이 확정 값을 씁니다. ①에서 고르기만 하고 확정하지 않았으면 ②는 이전 확정 값을 보여 주며
+      '확정 안 됨' 안내와 '① 으로 가서 확정하기' 버튼을 띄우고, 한 번도 확정하지 않았으면 A/B 대신 빈 카드와 같은 버튼만 보여 줍니다.
+      `MEDIA_HANDOFF_PLAN` 기본값에 1번 리포트 값(`sqp.query`, `sqp.listing.main_image` → `a`, `sqp.ratio` → `kpi_now`, `sqp.kpi_goal`)을 덮어쓴 값이고, 2번 탭 가설이 기준 가설과 다르면 확정 버튼이 꺼집니다.
+    - ③: '④로 넘기기' 버튼 (`media_s2_handoff_step()`, 확인을 통과해야 눌림)
+    - ④: '⑤로 넘기기' 버튼 (`media_s3_handoff_step()`, 스토리보드를 확정해야 눌림). 사진·영상 파일 자체는 크기 때문에 Supabase에 넣지 않고 같은 브라우저 접속 안에만 둡니다.
+  - Supabase는 팀 전체가 같은 값을 보므로, 누군가 다시 넘기면 모두의 다음 단계 화면이 그 값으로 바뀝니다.
+  - Supabase에 연결할 수 없으면(`.streamlit/secrets.toml` 없음) 같은 브라우저 접속 안에서만 이어집니다.
+  - 2→3 모양(`MEDIA_HANDOFF_PROMPT_SAMPLE`): `variable` 단일 변수, `base` 기본 프롬프트(빈칸 `{slot}`), `slot_a`, `slot_b` 빈칸 문구, `fixed` 고정 요소, `prompt_a`, `prompt_b`, `changes`, `avoid`, `include`
 - 단계 폴더의 CSS(`media_stage2_style.css`, `media_stage3_style.css`)는 공통 로더가 읽지 않아 `media_page.py`의 `media_load_stage_css()`가 넣습니다.
 - 각 단계의 기능 명세·AI 안내·프롬프트 기록은 단계 폴더의 `media_stageN.md`, `CLAUDE.md`, `media_stageN_prompt.md`에 있습니다.
 

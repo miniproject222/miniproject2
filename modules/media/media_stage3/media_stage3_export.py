@@ -9,9 +9,8 @@ import zipfile
 
 import streamlit as st
 
-from modules.media.media_handoff import media_handoff_check, media_handoff_prompt
-from modules.media.media_stage3.media_stage3 import (MEDIA_S3_MEDIA_NOTE, MEDIA_S3_PHOTOS, MEDIA_S3_STORYBOARD,
-                                                     MEDIA_S3_STORYBOARD_SAMPLE, MEDIA_S3_VIDEOS)
+from modules.media.media_handoff import media_handoff_assets, media_handoff_check, media_handoff_prompt
+from modules.media.media_stage3.media_stage3 import MEDIA_S3_MEDIA_NOTE, MEDIA_S3_PHOTOS, MEDIA_S3_VIDEOS
 
 MEDIA_S3_EXPORT_TAB_LABEL = "외주 정리"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
 
@@ -65,18 +64,24 @@ def media_s3_package(src: dict, storyboard: list, photos: list, videos: list) ->
 def media_stage3_export_render():
     """3단계 ⑤ 하위 탭(이름은 MEDIA_S3_EXPORT_TAB_LABEL, 탭 이름이 제목 역할). 반드시 media_render() 안에서 부릅니다."""
     src = media_handoff_prompt()
-    storyboard = st.session_state.get(MEDIA_S3_STORYBOARD, MEDIA_S3_STORYBOARD_SAMPLE)
-    photos = st.session_state.get(MEDIA_S3_PHOTOS, [])
-    videos = st.session_state.get(MEDIA_S3_VIDEOS, [])
+    assets = media_handoff_assets()   # ④에서 '⑤로 넘기기'로 넘긴 스토리보드·파일 이름
+    storyboard = assets["storyboard"]
+    # 파일 자체는 크기 때문에 Supabase에 넣지 않고, 같은 브라우저 접속에서 ④에 올린 것 중 넘긴 이름만 씀
+    photos = [f for f in st.session_state.get(MEDIA_S3_PHOTOS, []) if f[0] in assets["photos"]]
+    videos = [f for f in st.session_state.get(MEDIA_S3_VIDEOS, []) if f[0] in assets["videos"]]
     st.caption("외주 촬영 업체 또는 사내 촬영팀에 보낼 자료를 zip 하나로 묶어요.")
+    if assets["sample"]:
+        st.info("④ 사진·영상 초안 제작에서 '⑤로 넘기기'를 눌러야 스토리보드와 파일이 들어와요.")
+    elif len(photos) < len(assets["photos"]) or len(videos) < len(assets["videos"]):
+        st.caption("넘긴 파일 중 일부는 다른 접속에서 올린 것이라 여기서는 zip에 넣을 수 없어요. ④에서 다시 올려 주세요.")
 
     with st.container(border=True):
         st.markdown("**촬영 브리프 (미리 보기)**")
         st.code(media_s3_brief(src), language=None, wrap_lines=True)
     st.markdown(f"- 사진 레퍼런스 {len(photos)}장 · 영상 스토리보드 {len(storyboard)}장면 · 영상 초안 {len(videos)}개")
 
-    ready = media_handoff_check(src, src["prompt_a"], src["prompt_b"])["ok"]
+    ready = not assets["sample"] and media_handoff_check(src, src["prompt_a"], src["prompt_b"])["ok"]
     st.download_button("외주 전달 파일 다운로드 (.zip)", media_s3_package(src, storyboard, photos, videos),
                        file_name="media_outsourcing_reference.zip", mime="application/zip",
                        key="media-s3-btn-export", disabled=not ready,
-                       help=None if ready else "2단계에서 프롬프트 확인을 통과해야 내려받을 수 있어요.")
+                       help=None if ready else "④에서 '⑤로 넘기기'를 누르고, 프롬프트 확인을 통과해야 내려받을 수 있어요.")

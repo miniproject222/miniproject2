@@ -2,24 +2,26 @@
 # 1단계(단일 변수 추출 ~ A/B 소재 선정) → 2단계(프롬프트 만들기·AI 다듬기) → 3단계(사진·영상 초안 → 외주 정리)로 넘기는 값의 모양을 여기서 정합니다.
 # 모양(키 이름)을 바꿀 때는 세 담당자가 같이 정하고 이 파일만 고칩니다.
 #
-# 넘긴 값은 각 단계 폴더의 JSON 파일로 저장됩니다. 그 파일을 커밋·푸시하면, 다른 컴퓨터에서 풀 받은 사람에게 자동으로 이어집니다.
-#   1단계 → modules/media/data/media_handoff_plan.json              (min이 올림)
-#   2단계 → modules/media/media_stage2/data/media_stage2_prompt.json (JY가 올림)
-# 단계마다 자기 폴더의 파일 하나만 쓰므로 합칠 때 충돌이 나지 않습니다.
-# 앞 단계 파일이 아직 없으면 아래 예시 값이 와서 각자 먼저 개발할 수 있습니다.
-import json
-from pathlib import Path
+# 넘긴 값은 Supabase의 공용 저장소(store "media"의 "handoff" 칸)에 저장됩니다. 프로젝트 파일은 바뀌지 않습니다.
+#   store("media") = {"results": [...], "handoff": {"plan": {...}, "prompt": {...}, "assets": {...}}}
+#   plan   : 1단계 '이 변수로 확정' 버튼   → 2단계가 읽음
+#   prompt : 2단계 '④로 넘기기' 버튼        → 3단계 ④가 읽음
+#   assets : 3단계 ④ '⑤로 넘기기' 버튼     → 3단계 ⑤가 읽음
+# 저장은 각 단계의 넘기기 버튼을 눌렀을 때만 합니다. (화면을 열기만 해서는 저장되지 않음)
+# 앞 단계가 아직 넘기지 않았으면 아래 예시 값에 "sample": True가 붙어 와서 각자 먼저 개발할 수 있습니다.
+# Supabase에 연결할 수 없으면 같은 브라우저 접속 안에서만 이어집니다.
+import time
 
-MEDIA_HANDOFF_DIR = Path(__file__).resolve().parent
-MEDIA_HANDOFF_FILES = {
-    "plan": MEDIA_HANDOFF_DIR / "data" / "media_handoff_plan.json",
-    "prompt": MEDIA_HANDOFF_DIR / "media_stage2" / "data" / "media_stage2_prompt.json",
-    "result": MEDIA_HANDOFF_DIR / "media_stage2" / "data" / "media_stage2_result.json",   # (새 흐름에서는 안 씀)
-}
+import streamlit as st
+
+from common.common_store import store_get, store_set
+
+MEDIA_HANDOFF_STORE = "media"      # store 키 (media 모듈 키 하나에 같이 저장)
+MEDIA_HANDOFF_FRESH_SEC = 3        # 이 시간(초)이 지나면 Supabase에서 다시 읽음 (다른 사람이 넘긴 값 받기)
 MEDIA_HANDOFF_SLOT = "{slot}"   # 기본 프롬프트 안의 빈칸 표시
 
-# 1단계 → 2단계: A/B 테스트 설계 기본값. 1단계(media_variable.py)가 1번 리포트 값으로 덮어쓴 뒤
-# '가설 불러오기'를 마친 화면에서 media_handoff_set_plan()으로 자동 저장하면 그 값이 대신 쓰입니다.
+# 1단계 → 2단계: A/B 테스트 설계 기본값. 1단계(media_variable.py)가 '이 변수로 확정' 버튼으로
+# media_handoff_set_plan()을 부르면 그 값이 대신 쓰입니다.
 MEDIA_HANDOFF_PLAN = {
     "query": "kühlende matratzenauflage",          # 검색어
     "variable": "메인 이미지 촬영 구도",              # 독립 변수 (바꾸는 것 1개)
@@ -29,6 +31,7 @@ MEDIA_HANDOFF_PLAN = {
     "kpi_now": 0.63,                               # 지금 값 (배)
     "kpi_goal": 0.8,                               # 목표 값 (배 이상)
     "cvr_tolerance": 0.5,                          # 안전장치: B의 CVR이 A보다 이만큼(%p) 넘게 떨어지면 B 실패
+    "b_ref": "",                                   # 고른 B안의 영어 레퍼런스 프롬프트 (후보 파일의 ref_prompt, 2단계가 빈칸 B로 잘라 씀)
 }
 
 # 2단계 → 3단계: 프롬프트 재료 예시. 2단계가 아직 넣지 않았을 때 3단계가 이 값으로 먼저 개발합니다.
@@ -63,23 +66,35 @@ MEDIA_HANDOFF_RESULT_SAMPLE = {
 }
 
 
+def _media_handoff_all(fresh: bool) -> dict:
+    """store("media")의 handoff 칸 전체. fresh면 (MEDIA_HANDOFF_FRESH_SEC마다 한 번) Supabase에서 다시 읽습니다."""
+    last = st.session_state.get("media-handoff-read-at", 0.0)
+    if fresh and time.time() - last < MEDIA_HANDOFF_FRESH_SEC:
+        fresh = False   # 한 번 화면을 그리는 동안 여러 번 불러도 Supabase는 한 번만 읽음
+    if fresh:
+        st.session_state["media-handoff-read-at"] = time.time()
+    saved = store_get(MEDIA_HANDOFF_STORE, fresh=fresh)
+    handoff = saved.get("handoff") if isinstance(saved, dict) else None
+    return handoff if isinstance(handoff, dict) else {}
+
+
 def _media_handoff_get(name: str):
-    """name 단계 파일을 읽습니다. 풀 받은 최신 파일을 쓰도록 매번 새로 읽고, 없거나 깨져 있으면 None."""
-    path = MEDIA_HANDOFF_FILES[name]
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
+    """name 단계 값. 다른 사람이 방금 넘긴 값도 받도록 Supabase에서 새로 읽고, 없으면 None."""
+    value = _media_handoff_all(fresh=True).get(name)
     return value if isinstance(value, dict) else None
 
 
 def _media_handoff_put(name: str, value: dict) -> None:
-    """name 단계 파일에 저장합니다. 값이 그대로면 쓰지 않습니다 (화면이 다시 그려질 때마다 파일이 바뀌지 않게)."""
-    if _media_handoff_get(name) == value:
+    """name 단계 값을 저장합니다. media 키의 다른 칸(results 등)과 다른 단계 값은 그대로 둡니다.
+    반드시 넘기기 버튼의 콜백에서만 부릅니다."""
+    saved = store_get(MEDIA_HANDOFF_STORE, fresh=True)
+    data = dict(saved) if isinstance(saved, dict) else {}
+    handoff = dict(data.get("handoff") or {})
+    if handoff.get(name) == value:
         return
-    path = MEDIA_HANDOFF_FILES[name]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    handoff[name] = dict(value)
+    data["handoff"] = handoff
+    store_set(MEDIA_HANDOFF_STORE, data)
 
 
 def media_handoff_set_plan(plan: dict) -> None:
@@ -129,6 +144,25 @@ def media_handoff_check(src: dict, prompt_a: str, prompt_b: str) -> dict:
     missing = [f for f in src["fixed"] if f not in prompt_a or f not in prompt_b]
     return {"slot_ok": slot_ok, "same_rest": same_rest, "missing": missing,
             "ok": slot_ok and same_rest and not missing}
+
+
+# 3단계 ④ → ⑤: 넘긴 영상 스토리보드와 파일 이름 (사진·영상 파일 자체는 크기 때문에 같은 브라우저 접속 안에만 둠)
+MEDIA_HANDOFF_ASSETS_SAMPLE = {
+    "storyboard": [],   # 확정한 스토리보드 장면 목록
+    "photos": [],       # 넘긴 사진 파일 이름
+    "videos": [],       # 넘긴 영상 파일 이름
+}
+
+
+def media_handoff_set_assets(assets: dict) -> None:
+    """3단계 ④가 '⑤로 넘기기' 버튼을 누르면 부릅니다. 모양은 MEDIA_HANDOFF_ASSETS_SAMPLE과 같게 넣습니다."""
+    _media_handoff_put("assets", assets)
+
+
+def media_handoff_assets() -> dict:
+    """3단계 ④ → ⑤: 넘긴 스토리보드·파일 이름. 아직 안 넘겼으면 빈 예시 값에 "sample": True."""
+    saved = _media_handoff_get("assets")
+    return {**MEDIA_HANDOFF_ASSETS_SAMPLE, **saved, "sample": False} if saved else         {**MEDIA_HANDOFF_ASSETS_SAMPLE, "sample": True}
 
 
 def media_handoff_set_result(result: dict) -> None:
