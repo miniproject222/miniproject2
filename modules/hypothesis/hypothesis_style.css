@@ -317,6 +317,7 @@
 
 [class*="st-key-hypothesis-btn-side-judge-"]:hover::after { content: "KPI 표 · 판단 기준"; }
 [class*="st-key-hypothesis-btn-side-evidence-"]:hover::after { content: "근거 · 출처"; }
+[class*="st-key-hypothesis-btn-side-pdf-"]:hover::after { content: "가설 보고서 다운로드 (PDF)"; }
 
 /* 오른쪽 "지금 선택된 가설" 카드를 왼쪽 "가설 1/2/3" 탭 줄 높이만큼 내려서,
    왼쪽 후보 카드와 윗선을 맞춤 */

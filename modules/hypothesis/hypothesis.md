@@ -43,6 +43,8 @@
    }
    ```
    화면 표와 저장값이 어긋나지 않도록 "실행 방법" 표 행은 `hypothesis_execution_rows(problem, sqp)`(유형별로 `hypothesis_scenario_execution_rows` / `hypothesis_scenario_problem2_execution_rows` / `hypothesis_generic_execution_rows`) 하나로 만들어 화면과 저장에 같이 씁니다.
+
+   **가설 보고서 PDF** — ① 탭 PDF(`modules/report/report_pdf.py`)는 ① 화면 내용만 담아 가설 섹션이 없습니다. 그 파일은 수정 범위 밖이고 다른 모듈 import도 금지라서, `hypothesis_pdf.py`가 같은 공통 폰트(`common/fonts/SUIT`)·색(`ui_theme`)으로 따로 만듭니다. 가설을 선택한 뒤에만 오른쪽 끝 다운로드 아이콘(`:material/download:`)이 생기고, 창(`hypothesis_dialog_pdf`)에서 내려받습니다. 내용: ① 핵심 요약(`report.summary`) → ① 문제 도출(`key_problems` 상위 3개, 선택한 문제에 "(가설로 선택)") → ② 선택한 가설(If·Because·Then 표 + 가설 문장) → ② 실행 방법 표. 위 저장값(`report`·`selected`)만 읽으므로 Keepa 등 외부 조회를 하지 않습니다. 경쟁사 비교·요인 분석 전체는 ① 탭 PDF를 함께 보도록 안내합니다. (① PDF 자체에 가설을 넣으려면 report 담당자가 `report_pdf.py`에서 `store_get("hypothesis")["selected"]`를 읽어 섹션을 추가해야 합니다.)
 4. **긴 텍스트를 줄여서 자르지 않습니다.** 예전에는 현지 특성/경쟁사 부정 리뷰/액션 인용을 글자 수로 잘라 "…"로 끝냈는데, 중간에 끊겨 어색해 보인다는 피드백을 받고 전부 원문 그대로 쓰도록 바꿨습니다. 대신 글자 크기를 조금 줄이고(`hypothesis_style.css`), 긴 글은 카드/표 안에서 자연스럽게 줄바꿈되게 했습니다.
 
 ### If·Because·Then은 항상 짧게, 데이터 원문·출처는 "📚 근거·출처 보기" 토글 하나로 모음

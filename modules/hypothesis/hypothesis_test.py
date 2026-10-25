@@ -750,6 +750,29 @@ def test_save_report_plus_hypothesis() -> None:
         check(at.session_state["store-report"] == before, "[①+② 저장] ① 칸(report)은 바뀌지 않음")
 
 
+def test_hypothesis_pdf() -> None:
+    # ① 탭 PDF에는 가설이 없어서, 가설을 선택하면 오른쪽 아이콘으로 "① 요약 + ② 가설" PDF를 내려받음
+    import copy as _copy
+    from modules.hypothesis.hypothesis_pdf import hypothesis_build_pdf
+    sqp_store = SQP_SAMPLE | {"query": "kühlende matratzenauflage"}
+    for report in (_copy.deepcopy(SAMPLE_REPORT),
+                   {"summary": "검색 클릭 문제", "problems": [SQP_MAIN_PROBLEM, SQP_EXPANSION_PROBLEM], "sqp": sqp_store}):
+        at = _new_apptest()
+        at.session_state["store-report"] = report
+        at.run()
+        keys = {b.key for b in at.button}
+        check("hypothesis-btn-side-pdf-0" not in keys, "[PDF] 가설 선택 전에는 다운로드 아이콘 없음")
+        at.button(key="hypothesis-btn-save-0").click().run()
+        check("hypothesis-btn-side-pdf-0" in {b.key for b in at.button}, "[PDF] 가설 선택 후 다운로드 아이콘 표시")
+        at.button(key="hypothesis-btn-side-pdf-0").click().run()
+        check(not at.exception, "[PDF] 다운로드 창 열 때 예외 없음")
+        saved = at.session_state["store-hypothesis"]
+        pdf = hypothesis_build_pdf(saved, "2026-10-25")
+        check(pdf[:5] == b"%PDF-" and len(pdf) > 5000, f"[PDF] PDF 생성 ({len(pdf):,} bytes)")
+    check(hypothesis_build_pdf({"text": "만약 A, B C."}, "2026-10-25")[:5] == b"%PDF-",
+          "[PDF] ① 값이 없는 예전 저장값도 깨지지 않음")
+
+
 def test_badge_group() -> None:
     # 외부 요인 배지는 report가 준 실제 분류를 붙여야 함 (예전엔 외부면 무조건 "· 경쟁사")
     at = _new_apptest()
@@ -780,6 +803,7 @@ if __name__ == "__main__":
     test_badge_group()
     test_candidate_action_diversity()
     test_save_report_plus_hypothesis()
+    test_hypothesis_pdf()
 
     print(f"\n총 {_ok + _fail}개 중 통과 {_ok}개, 실패 {_fail}개")
     if _fail:
