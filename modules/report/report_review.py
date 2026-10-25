@@ -1,9 +1,9 @@
 # 1. 분석 리포트 - 리뷰 분석 (내부 요인 '리뷰 20건'을 숫자로 풀어 봅니다)
-# - 대상: 경쟁사 2곳 + 서리(가정: Herlag 실적) + 냉감패드 10개사 중 Keepa 마지막 조회값이 있는 상품
+# - 대상: 경쟁사 2곳 + 서리(가정: SleepCOOL 실적) + 냉감패드 10개사 중 Keepa 마지막 조회값이 있는 상품
 # - 값: Keepa 마지막 조회값(리뷰 수, 평점, 판매 순위) + 상세 조회(리뷰 1년 변화, 여름 순위) · 리뷰 원문은 조회하지 않음
 import math
 
-from modules.report.report_competitor import report_market10
+from modules.report.report_competitor import REPORT_SEORI_PROXY, report_market10
 from modules.report.report_keepa import report_keepa_detail
 
 REPORT_REVIEW_RATING_GOALS = (4.0, 4.1)   # 서리 평점 목표: 경쟁사 2곳 수준 (Mara Vital 4.0, Traumnacht 4.1)
@@ -48,6 +48,7 @@ def report_review_analysis(rivals, snapshot_items, keepa_time):
         d = detail.get(r.get("asin") or "", {})
         r["reviews_1y"] = (r["reviews"] - d["reviews_1y_ago"]) if d.get("reviews_1y_ago") is not None else None
         r["summer_rank"] = d.get("rank_root_summer_median")
+        r["sales_signal"] = (d.get("rank_drops") or {}).get("365")
         r["note"] = d.get("note", "")
     seori = next((r for r in rows if r["kind"] == "자사"), None)
     others = [r for r in rows if r["kind"] != "자사"]
@@ -55,7 +56,8 @@ def report_review_analysis(rivals, snapshot_items, keepa_time):
         return None
 
     rivals_only = [r for r in others if r["kind"] != "냉감패드 10개사"]   # 냉감패드 실적 1·2위 경쟁사
-    leader = min((r for r in rivals_only or others if r["rank"]), key=lambda r: r.get("summer_rank") or r["rank"])
+    # 냉감패드 실적 1위 = 1년 판매 신호가 가장 많은 경쟁사 (없으면 현재 순위)
+    leader = max(rivals_only or others, key=lambda r: (r.get("sales_signal") or 0, -(r["rank"] or 10**9)))
     counts = sorted(r["reviews"] for r in others)
     median = counts[len(counts) // 2] if len(counts) % 2 else (counts[len(counts) // 2 - 1] + counts[len(counts) // 2]) / 2
     ranked = [r for r in rows if r["rank"]]
@@ -100,15 +102,20 @@ def report_cooling_sales():
     rows = []
     for i in items:
         badges = [m["badge"] for m in i["monthly_sold"] if m["from"] >= "2026-01-01"]
-        rows.append({**i, "badge": f"{max(badges)}+ (2026)" if badges else "-"})
-    rows.sort(key=lambda r: r["rank_root_summer_median"] or 10**9)
-    pure = [r for r in rows if not r.get("note")]
+        brand = i["brand"]
+        if brand.lower() == REPORT_SEORI_PROXY.lower():   # 서리 실적으로 쓰는 브랜드는 서리로 표시 (다른 표와 같게)
+            brand = f"SEORI (서리) · {REPORT_SEORI_PROXY} 실적"
+        rows.append({**i, "brand": brand, "badge": f"{max(badges)}+ (2026)" if badges else "-"})
+    rows.sort(key=lambda r: -((r.get("rank_drops") or {}).get("365") or 0))
+    pure = [r for r in rows if r.get("type") == "냉감 전용"]
     findings = [
         "판매 순위는 한 상품 페이지(사이즈·색상 변형 포함) 단위라, 비냉감 변형이 섞이면 냉감패드만의 실적이 아님",
         *[f"{r['brand']}: {r['note']}" for r in rows if r.get("note")],
-        "여름(2026년 6~8월) 전체 순위 중앙값 기준 냉감 변형만 있는 상품 순서: "
-        + " > ".join(f"{r['brand']} {r['rank_root_summer_median']:,}위" for r in pure if r["rank_root_summer_median"]),
-        "1년 판매 신호(순위가 좋아진 횟수): " + ", ".join(f"{r['brand']} {r['rank_drops']['365']}회" for r in rows),
+        "냉감 전용 상품 순위 (1년 판매 신호): "
+        + " > ".join(f"{r['brand']} {r['rank_drops']['365']}회" for r in pure if r["rank_drops"].get("365") is not None),
+        "순위 제외: " + ", ".join(f"{r['brand']} ({r['type']})" for r in rows if r.get("type") != "냉감 전용"),
+        "여름(2026년 6~8월) 순위 중앙값 (보조): " + ", ".join(f"{r['brand']} {r['rank_root_summer_median']:,}위"
+                                                     for r in pure if r["rank_root_summer_median"]),
         "하위 카테고리가 서로 달라(매트리스 패드 / 매트리스 보호 / 토퍼) 하위 순위는 같은 카테고리끼리만 비교 가능",
     ]
     return {"rows": rows, "findings": findings, "note": detail.get("note", "") + f" · 조회 {detail.get('fetched_at', '')}"}

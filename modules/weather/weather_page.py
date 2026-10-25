@@ -119,12 +119,11 @@ def _weather_budget_card(competitors):
 
         # ② 채널 비율
         share_head = st.empty()
-        auto = st.toggle("추천 비율 사용", value=True, key="weather-share-auto",
-                         help=f"켜 두면 경쟁사 재고에 맞춘 추천 비율(메타 {rec_meta}%)을 씁니다. 끄면 직접 정할 수 있어요.")
-        if auto or "weather-meta-share" not in st.session_state:
+        # 처음에는 경쟁사 재고에 맞춘 추천 비율로 시작하고, 이후로는 사용자가 슬라이더로 바로 조정
+        if "weather-meta-share" not in st.session_state:
             st.session_state["weather-meta-share"] = rec_meta
         meta_pct = st.slider("메타 비율", min_value=0, max_value=100, step=5, format="메타 %d%%",
-                             key="weather-meta-share", disabled=auto, label_visibility="collapsed")
+                             key="weather-meta-share", label_visibility="collapsed")
         share_head.markdown(
             f'<div class="weather-field weather-field-gap"><span>채널 비율</span>'
             f'<b>메타 {meta_pct}% · 아마존 {100 - meta_pct}%</b></div>',

@@ -8,6 +8,7 @@ import ui_theme as ui
 
 from common.common_store import store_set
 from modules.report.report_ab import REPORT_AB_TEMPLATE, report_ab_analyze, report_ab_p, report_ab_parse_csv, report_ab_verdict
+from modules.report.report_competitor import REPORT_SEORI_PROXY
 from modules.report.report_data import report_load_data, report_utm_rows
 from modules.report.report_download import report_download_pdf
 from modules.report.report_keepa import (
@@ -164,7 +165,7 @@ def report_save_store(data, summary, worst, utm_rows, utm_worst):
         # 리뷰 분석 (내부 요인 '리뷰' 문제의 근거·목표) / 해결안 A/B 아침 분석 (③ 탭 결과)
         "review_analysis": data["review_analysis"],
         "cooling_sales": data["cooling_sales"],     # 냉감패드 실적만 (하위 카테고리·여름 순위·판매 신호)
-        "ab_daily": data["ab_daily"],
+        "ab_daily": data["ab_daily"],               # [보류] ③ 탭 결과 아침 분석 (지금은 None)
         "ab_upload": data["ab_upload"],             # 직접 올린 A/B 결과 파일 분석
         # ③ 광고 소재: 나중에 광고에 넣을 서리 문구 (독일어·한국어, 필수 표기, 금지 표현)
         "ad_claims": data["ad_claims"],
@@ -319,14 +320,15 @@ def report_show_competitors(data):
     rows = data["competitors_full"]
     with st.container(border=True):
         st.markdown(f":material/leaderboard: **냉감패드 경쟁사 비교** · 판매 순위 상위 2개사 + 서리(가정 3위)  \n"
-                    f'<span class="report-desc">{data["keepa_status"]} · 화면을 열 때는 Keepa를 호출하지 않음</span>',
+                    f'<span class="report-desc">{data["keepa_status"]} · {data["keepa_auto"]}</span>',
                     unsafe_allow_html=True)
         report_show_keepa_fetch()
         if not rows:
             st.info("공통 경쟁사 DB(data/common_competitor_seori_202610.csv)가 없습니다.")
             return
         detail = report_keepa_detail().get("items", {})
-        summer = {a: d.get("rank_root_summer_median") for a, d in detail.items()}   # 순위 기준: 2026년 6~8월 중앙값
+        summer = {a: d.get("rank_root_summer_median") for a, d in detail.items()}   # 보조: 2026년 6~8월 순위 중앙값
+        sig = {a: (d.get("rank_drops") or {}).get("365") for a, d in detail.items()}   # 순위 기준: 1년 판매 신호
         yago = {a: (d.get("price") or {}).get("year_ago") for a, d in detail.items()}   # 작년 같은 날 가격
         table = []
         for r in rows:
@@ -335,6 +337,7 @@ def report_show_competitors(data):
             table.append({
                 "순위": "3위 (가정)" if seori else (f"{r['rank']}위" if r.get("rank") else r["label"]),
                 "브랜드": r["brand"], "냉감패드 제품": r["product"],
+                "1년 판매 신호": f"{sig[r.get('asin')]}회" if sig.get(r.get("asin")) is not None else "-",
                 "여름 순위 (6~8월)": f"{summer[r.get('asin')]:,}" if summer.get(r.get("asin")) else "-",
                 "10월 순위": f"{k['rank']:,}" if k.get("rank") else ("가정 3위 (판매 전)" if seori else "-"),
                 "현재가": f"€{k['price']:.2f}" if k.get("price") else (f"€{r['db_price']:.2f} (권장가)" if seori and r["db_price"] else "-"),
@@ -348,9 +351,9 @@ def report_show_competitors(data):
             })
         st.dataframe(table, hide_index=True, width="stretch", key="report-table-competitors",
                      column_config={"냉감패드 제품": st.column_config.TextColumn(width="medium")})
-        st.markdown('<div class="report-desc">순위 기준: 냉감 변형만 있는 상품의 2026년 6~8월 Amazon.de 판매 순위 중앙값 (Keepa 상세) · '
+        st.markdown('<div class="report-desc">순위 기준: 냉감 전용 상품의 1년 판매 신호(Keepa 순위가 좋아진 횟수 = 판매 횟수 추정), 양면(2-in-1)·비냉감 혼재 상품 제외 · '
                     '현재 순위는 비수기(10월) 값이라 순서가 다를 수 있음 · '
-                    '서리 = 독일 3위 Herlag라고 가정해 판매 순위·가격·평점·리뷰·㎡당 가격은 Herlag의 Keepa 실적을 표시 '
+                    f'서리 = 독일 냉감패드 실적 3위 {REPORT_SEORI_PROXY}라고 가정해 판매 순위·가격·평점·리뷰·㎡당 가격은 {REPORT_SEORI_PROXY}의 Keepa 실적을 표시 '
                     '(제품명·냉감 방식·Q-max·강점·약점은 서리 기획) · ㎡당 가격: Keepa 현재가 기준</div>',
                     unsafe_allow_html=True)
         with st.expander("냉감패드 항목별 비교 (서리 목표 vs 상위 2개사 최고)", expanded=False):
@@ -447,11 +450,18 @@ def report_show_keepa_fetch():
 def report_show_ab(ab_tests, daily, upload=None):
     """해결안 A/B: ③ 광고 소재 탭 결과를 매일 아침 분석한 값 + data/report_ab_tests.json의 실제 결과."""
     with st.container(border=True):
-        st.markdown(":material/science: **③ 탭 실행 결과 분석** · 매일 아침(한국 08:00 이후 첫 접속)  \n"
-                    f'<span class="report-desc">분석 기준일 {daily["day"]} · 분석 {daily["analyzed_at"]}'
-                    + (f' · ③ 탭 저장 {daily["media_updated_at"]}' if daily.get("media_updated_at") else "")
-                    + "</span>", unsafe_allow_html=True)
+        if daily:
+            st.markdown(":material/science: **③ 탭 실행 결과 분석** · 매일 아침(한국 08:00 이후 첫 접속)  \n"
+                        f'<span class="report-desc">분석 기준일 {daily["day"]} · 분석 {daily["analyzed_at"]}'
+                        + (f' · ③ 탭 저장 {daily["media_updated_at"]}' if daily.get("media_updated_at") else "")
+                        + "</span>", unsafe_allow_html=True)
+        else:
+            # [보류] ③ 탭 결과 아침 자동 분석은 꺼져 있음 (report_data.py의 [보류] 주석 참고)
+            st.markdown(":material/science: **해결안 A/B 분석** · 결과 파일(CSV)을 올려 바로 분석  \n"
+                        '<span class="report-desc">③ 탭 실행 결과(UTM·GA4·A/B)의 매일 아침 자동 분석은 ③ 탭 연동 후 사용 예정 (지금은 꺼짐)</span>',
+                        unsafe_allow_html=True)
         report_show_ab_upload(upload)
+        daily = daily or {}
         r = daily.get("result")
         if r:
             st.markdown(f'<div class="report-desc">검색어 {r["query"]} · 기간 {r["period"]} · 출처 {r["source"]}</div>',
@@ -473,7 +483,7 @@ def report_show_ab(ab_tests, daily, upload=None):
                 with st.expander(f"지난 분석 ({len(daily['history'])}일)", expanded=False):
                     st.dataframe([{"기준일": h["day"], "판정": h["winner"], "B 클릭률(%)": h["ctr_b"], "유의확률": h["p_ctr"]}
                                   for h in daily["history"]], hide_index=True, width="stretch", key="report-table-ab-history")
-        else:
+        elif daily:
             st.caption("아직 ③ 광고 소재 탭이 저장한 A/B 결과가 없습니다. ③ 탭에서 store_set(\"media\", {\"ab_result\": ..., "
                        "\"utm\": ..., \"updated_at\": ...})로 저장하면 다음 날 아침부터 여기서 분석합니다 (형식: report.md).")
         if daily.get("utm"):

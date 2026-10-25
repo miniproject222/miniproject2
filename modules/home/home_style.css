@@ -176,6 +176,7 @@
 }
 .home-globe-wrap {
   position: relative;
+  top: calc(-12 * var(--u));   /* 아래 안내 글씨를 가리지 않게 지구본만 살짝 위로 */
   width: calc(520 * var(--u));
   max-width: 118%;
   animation: home-bob 7s ease-in-out infinite;
