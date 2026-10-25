@@ -1,11 +1,16 @@
-# 3. 매체 제작 > 2단계 AI 다듬기: 재료 모으기 → 지시문 만들기 → AI 부르기 → 받은 답 확인 (화면 코드 없음)
+# 3. 매체 제작 > 2단계 AI: ① A·B 프롬프트 만들기 → ② AI 다듬기 (재료 모으기 · 지시문 · AI 부르기 · 받은 답 확인, 화면 코드 없음)
 # 화면(버튼·결과 표)은 media_stage2.py에서 그립니다.
-# - 재료는 전부 리포트(store_get("report"))와 아마존 메인 이미지 규칙(MEDIA_S2_AMAZON_RULES)에서 가져오고 새로 지어내지 않습니다.
-# - AI 답은 믿지 않고 코드로 다시 확인합니다 ({slot} 1개, 고정 요소, A/B 확인, 금지 단어, 근거 ID).
+# - 프롬프트는 수업 형식 6칸(Subject · Composition · Lighting · Background · Style · Negative, MEDIA_S2_FIELDS)으로 씁니다.
+#   A를 먼저 만들고, 독립 변수가 들어간 칸 하나만 바꿔 B를 만듭니다 (그 칸 = {slot}, 나머지 칸은 A·B가 글자까지 같음).
+# - 재료는 리포트(store_get("report")), 아마존 메인 이미지 규칙(MEDIA_S2_AMAZON_RULES), 독일 디자인 DB(루트 data/ CSV, 읽기만)에서
+#   가져오고 새로 지어내지 않습니다.
+# - AI 답은 믿지 않고 코드로 다시 확인합니다 (6칸, {slot} 1개, 고정 요소, A/B 확인, 금지 단어, 근거 ID).
 # - AI는 OpenAI만 씁니다 (PM 결정 2026-10-25). 키는 secrets.toml의 OPENAI_API_KEY를 함수 안에서만 읽고,
 #   새 라이브러리 없이 requests로 부릅니다.
+import csv
 import json
 import re
+from pathlib import Path
 
 import requests
 import streamlit as st
@@ -28,6 +33,37 @@ MEDIA_S2_AI_KEY = "OPENAI_API_KEY"            # secrets.toml 키 이름
 MEDIA_S2_AI_TIMEOUT = 60                      # 응답 기다리는 시간 (초)
 MEDIA_S2_PHOTO_RULE_IDS = ("LNG-002", "LNG-004", "LNG-006")   # 사진에 해당하는 독일 광고 규칙 (나머지는 광고 문구용)
 
+# 프롬프트 형식 (수업 형식): 칸 이름은 영어 그대로 줄 앞에 씀 ("Subject: ...")
+MEDIA_S2_FIELDS = [("subject", "Subject"), ("composition", "Composition"), ("lighting", "Lighting"),
+                   ("background", "Background"), ("style", "Style"), ("negative", "Negative")]
+# 독일 시장 DB 중 사진·디자인에 쓰는 줄 (루트 data/ 공용 CSV, 읽기만)
+MEDIA_S2_GERMANY_DB = Path(__file__).resolve().parents[3] / "data" / "common_germany_knowledge_seori_202610.csv"
+MEDIA_S2_DESIGN_IDS = ("DSN-103", "DSN-104", "DSN-109", "DSN-110", "REG-105")
+
+MEDIA_S2_GEN_SYSTEM = """너는 amazon.de(독일)에서 파는 냉감패드의 "사진 프롬프트 작가"야.
+아마존 메인 이미지 A/B 테스트용 레퍼런스 사진 프롬프트 A와 B를 만들어. 촬영팀에게 주는 견본이야.
+
+순서
+1. 먼저 A 프롬프트를 6칸으로 써: subject(피사체), composition(구도·각도·상태), lighting(조명), background(배경),
+   style(사진 스타일), negative(제외할 것).
+   - [A 만드는 방식]이 "지금 메인 이미지 그대로"면 [A안] 설명을 그대로 사진으로 옮겨. 새로 꾸미지 마.
+   - "새로 설계"면 [A안] 설명을 기준으로 깔끔한 기본 사진을 설계해.
+2. [독립 변수]가 들어가는 칸을 딱 하나 고르고(variable_field), 그 칸의 A 값(a_value)과 B 값(b_value)을 써.
+   B 값은 [B안] 설명대로 바꾼 것이고, 독립 변수 말고는 A 값과 같은 말을 써.
+3. 나머지 다섯 칸은 A와 B가 글자까지 똑같아. 독립 변수 말고는 아무것도 다르면 안 돼.
+
+반드시 지킬 것
+- 아마존 메인 이미지 규칙: 흰 배경(RGB 255, 255, 255), 글자·로고·워터마크·소품·사람 손 없음, 실제 제품만.
+- [피할 것]에 걸리는 표현은 쓰지 마. 수치·인증·효과를 지어내지 마.
+- [독일 디자인·사진 DB]는 색·톤 같은 스타일 칸에 참고해.
+- 프롬프트 내용은 영어로, notes는 한국어 한 줄로.
+- fixed에는 A·B 어디서도 바뀌면 안 되는 핵심 문구를 프롬프트에 쓴 글자 그대로 3~6개 넣어 (예: 흰 배경, 글자 없음).
+- JSON만 답해. 형식:
+  {"fields": {"subject": "...", "composition": "...", "lighting": "...", "background": "...", "style": "...",
+   "negative": "..."}, "variable_field": "composition", "a_value": "...", "b_value": "...",
+   "fixed": ["..."], "notes": "..."}
+  (fields 안의 variable_field 칸 값은 a_value와 같게 써)"""
+
 MEDIA_S2_AI_SYSTEM = """너는 amazon.de(독일)에서 파는 냉감패드의 "사진 프롬프트 편집자"야.
 아마존 메인 이미지 A/B 테스트용 레퍼런스 사진을 만들 기본 프롬프트 하나를 다듬어.
 이 사진은 촬영팀에게 주는 견본이고, 광고에 바로 쓰는 사진이 아니야.
@@ -44,7 +80,10 @@ MEDIA_S2_AI_SYSTEM = """너는 amazon.de(독일)에서 파는 냉감패드의 "�
 8. 다듬은 프롬프트는 영어로, 이유는 한국어로 써.
 9. JSON만 답해. 형식:
    {"base": "...", "changes": [{"where": "...", "kind": "뺌 또는 더함", "reason": "...", "basis": "ID"}],
-    "avoid": ["..."], "include": ["..."], "slot_warnings": ["..."]}"""
+    "avoid": ["..."], "include": ["..."], "slot_warnings": ["..."]}
+10. 기본 프롬프트는 수업 형식 6줄(Subject: / Composition: / Lighting: / Background: / Style: / Negative:)이야.
+    줄 이름·순서·줄 수는 그대로 두고, 각 줄 내용만 AI 이미지 모델이 더 잘 알아듣게 구체적으로 다듬어.
+11. [독일 디자인·사진 DB]의 내용은 "사실"처럼 근거로 써도 돼 (Style·Background 줄의 색·톤 등)."""
 
 MEDIA_S2_AI_RETRY_NOTE = "\n\n[다시 요청] 앞 답이 JSON 형식이 아니었어. 설명 없이 위 형식의 JSON만 다시 답해."
 
@@ -89,13 +128,107 @@ def media_s2_ai_material(draft: dict) -> dict:
     listing = sqp.get("listing") if isinstance(sqp.get("listing"), dict) else {}
     if listing.get("main_image_issue"):
         facts.append({"id": "LISTING-1", "text": f"지금 메인 이미지 문제: {listing['main_image_issue']}"})
+    design = media_s2_design_rules()
 
     return {
         "draft": {k: draft[k] for k in ("base", "variable", "slot_a", "slot_b", "fixed")},
-        "forbidden": forbidden, "rules": rules, "amazon": amazon, "facts": facts,
+        "forbidden": forbidden, "rules": rules, "amazon": amazon, "facts": facts, "design": design,
         "has_report": bool(forbidden or rules or facts),
-        "ids": [x["id"] for x in forbidden + rules + amazon + facts],
+        "ids": [x["id"] for x in forbidden + rules + amazon + facts + design],
     }
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def media_s2_design_rules() -> list[dict]:
+    """독일 시장 DB(루트 data/ 공용 CSV) 중 사진·디자인에 쓰는 줄 (MEDIA_S2_DESIGN_IDS). 파일이 없으면 빈 목록."""
+    try:
+        with MEDIA_S2_GERMANY_DB.open(encoding="utf-8-sig", newline="") as f:
+            rows = {r.get("ID"): r for r in csv.DictReader(f) if r.get("원본시트") == "지식DB"}
+    except (OSError, csv.Error):
+        return []
+    out = []
+    for i in MEDIA_S2_DESIGN_IDS:
+        r = rows.get(i)
+        if r:
+            text = (r.get("내용 (한국어)") or "").strip()
+            tip = (r.get("SEORI 시사점") or "").strip()
+            out.append({"id": i, "text": text + (f" → {tip}" if tip and not tip.startswith("근거 수준") else "")})
+    return out
+
+
+def media_s2_listing() -> dict:
+    """리포트 검색어 분석의 우리 상품 정보 (지금 메인 이미지·문제점). 없으면 빈 dict."""
+    report = store_get("report") or {}
+    sqp = report.get("sqp") if isinstance(report.get("sqp"), dict) else {}
+    return sqp.get("listing") if isinstance(sqp.get("listing"), dict) else {}
+
+
+# ─────────────────────────────────────────────
+# ① A·B 프롬프트 만들기 (수업 형식 6칸, 독립 변수 칸 하나만 다르게)
+# ─────────────────────────────────────────────
+def media_s2_mode(plan: dict) -> str:
+    """A를 어떻게 만들지 자동 판단: ①에서 확정한 A가 리포트의 '지금 메인 이미지'와 같으면 "keep"(그대로), 아니면 "new"(새로 설계)."""
+    now = str(media_s2_listing().get("main_image") or "").strip()
+    return "keep" if now and now == str(plan.get("a") or "").strip() else "new"
+
+
+def media_s2_render_base(fields: dict, slot_field: str) -> str:
+    """6칸 → 기본 프롬프트 (줄마다 'Subject: ...', 독립 변수 칸만 {slot})."""
+    return "\n".join(f"{label}: {MEDIA_HANDOFF_SLOT if key == slot_field else fields[key]}"
+                     for key, label in MEDIA_S2_FIELDS)
+
+
+def media_s2_gen_message(plan: dict, mode: str) -> str:
+    """A·B 만들기 AI에게 보내는 글."""
+    listing = media_s2_listing()
+    report = store_get("report") or {}
+    claims = report.get("ad_claims") if isinstance(report.get("ad_claims"), dict) else {}
+
+    def block(title, lines):
+        lines = [str(x) for x in lines if x]
+        return f"[{title}]\n" + ("\n".join(lines) if lines else "(없음)")
+
+    return "\n\n".join([
+        block("A 만드는 방식", ["지금 메인 이미지 그대로" if mode == "keep" else "새로 설계"]),
+        block("독립 변수", [plan.get("variable")]),
+        block("A안", [plan.get("a"), f"(지금 메인 이미지 문제: {listing['main_image_issue']})"
+                      if listing.get("main_image_issue") else ""]),
+        block("B안", [plan.get("b"), f"(참고 영어 문장: {plan['b_ref']})" if plan.get("b_ref") else ""]),
+        block("제품", ["cooling mattress pad 90x200 cm (냉감패드)", listing.get("title")]),
+        block("아마존 메인 이미지 규칙", [f"- {r}" for r in MEDIA_S2_AMAZON_RULES]),
+        block("피할 것", [f"- {f}" for f in claims.get("forbidden") or []]),
+        block("독일 디자인·사진 DB", [f"- {r['id']}: {r['text']}" for r in media_s2_design_rules()]),
+    ])
+
+
+def media_s2_gen_validate(raw: str, plan: dict, mode: str) -> dict | None:
+    """A·B 만들기 답 확인 → draft (base, slot_a, slot_b, fixed, variable, fields, slot_field, mode, notes). 틀리면 None."""
+    data = media_s2_ai_parse(raw)
+    if not data or not isinstance(data.get("fields"), dict):
+        return None
+    fields = {k: str(data["fields"].get(k) or "").strip() for k, _ in MEDIA_S2_FIELDS}
+    slot_field = str(data.get("variable_field") or "").strip()
+    a, b = str(data.get("a_value") or "").strip(), str(data.get("b_value") or "").strip()
+    if (not all(fields.values()) or slot_field not in fields or not a or not b or a == b
+            or any(MEDIA_HANDOFF_SLOT in v for v in [*fields.values(), a, b])):
+        return None
+    fields[slot_field] = a
+    base = media_s2_render_base(fields, slot_field)
+    fixed = [f for f in _media_s2_str_list(data.get("fixed")) if f in base and f not in a and f not in b]
+    return {"base": base, "slot_a": a, "slot_b": b, "fixed": fixed, "variable": plan.get("variable") or "",
+            "fields": fields, "slot_field": slot_field, "mode": mode, "notes": str(data.get("notes") or "").strip()}
+
+
+def media_s2_generate(plan: dict, mode: str) -> dict:
+    """OpenAI로 A·B 프롬프트 만들기. JSON이 틀리면 한 번만 다시 요청하고, 또 틀리면 ValueError.
+    호출 자체가 실패하면 RuntimeError (화면에서 경고로 보여 줌)."""
+    message = media_s2_gen_message(plan, mode)
+    draft = media_s2_gen_validate(media_s2_ai_call(MEDIA_S2_GEN_SYSTEM, message), plan, mode)
+    if draft is None:
+        draft = media_s2_gen_validate(media_s2_ai_call(MEDIA_S2_GEN_SYSTEM, message + MEDIA_S2_AI_RETRY_NOTE), plan, mode)
+    if draft is None:
+        raise ValueError("AI가 A·B 프롬프트를 형식에 맞게 만들지 못했어요")
+    return draft
 
 
 def media_s2_ai_message(material: dict) -> str:
@@ -118,6 +251,7 @@ def media_s2_ai_message(material: dict) -> str:
         block("피할 것 - 독일 광고 규칙", ided(material["rules"])),
         block("아마존 메인 이미지 규칙", ided(material["amazon"])),
         block("넣을 것 - 사실", ided(material["facts"])),
+        block("독일 디자인·사진 DB", ided(material.get("design", []))),
     ])
 
 
@@ -218,6 +352,12 @@ def media_s2_ai_validate(raw: str, draft: dict, material: dict) -> dict:
         errors.append("다듬은 기본 프롬프트(base)가 비어 있어요")
     elif n_slot != 1:
         errors.append(f"빈칸 {MEDIA_HANDOFF_SLOT}이 {n_slot}개예요 (정확히 1개여야 해요)")
+    # 수업 형식 6줄을 지켰나 (원래 기본 프롬프트가 6줄 형식일 때만 확인)
+    labels = [f"{label}:" for _, label in MEDIA_S2_FIELDS]
+    if base and all(lb in draft["base"] for lb in labels):
+        lines = [ln.strip() for ln in base.strip().splitlines() if ln.strip()]
+        if len(lines) != len(labels) or any(not ln.startswith(lb) for ln, lb in zip(lines, labels)):
+            errors.append("6줄 형식(Subject·Composition·Lighting·Background·Style·Negative)이 바뀌었어요")
     missing = [f for f in draft["fixed"] if f not in base]
     if base and missing:
         errors.append("고정 요소가 빠지거나 바뀌었어요: " + ", ".join(missing))
