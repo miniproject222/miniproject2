@@ -88,7 +88,9 @@ def media_variable_load() -> None:
     if not hypo:
         st.session_state.pop(MEDIA_VARIABLE_GEN_KEY, None)
         return
-    if (st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}).get("text") == hypo["text"]:
+    gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
+    # 같은 가설이라도 AI 후보에 짧은 If·Because(short)가 없으면(이 칸이 생기기 전에 만든 후보) 다시 만듦
+    if gen.get("text") == hypo["text"] and ((gen.get("set") or {}).get("short") or gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE):
         return
     listing = media_variable_report_sqp().get("listing")
     cset, source, error = media_variable_generate(hypo, listing if isinstance(listing, dict) else {})
@@ -156,10 +158,25 @@ def media_variable_short_then(text: str) -> str:
     return f"{m['metric']} {m['a']} → {goal} " + (f"({m['pct']}{arrow})" if m["pct"] else arrow)
 
 
+def media_variable_drop_parens(text: str) -> str:
+    """괄호 '( … )' 안 설명을 걷어 냅니다 (괄호 안 괄호까지). 괄호 짝이 안 맞으면 그대로 둡니다."""
+    out, depth = [], 0
+    for ch in text:
+        if ch == "(":
+            depth += 1
+        elif ch == ")" and depth:
+            depth -= 1
+        elif not depth:
+            out.append(ch)
+    return re.sub(r"\s{2,}", " ", "".join(out)).strip() if depth == 0 else text
+
+
 def media_variable_callout(hypo: dict) -> None:
-    """가설 콜아웃(st.info). If / Because / Then을 배지 붙은 줄로 나누고, 문장 틀만 걷어 낸 짧은 모양으로 보여 줍니다
-    (대상은 맨 위 칩, Then은 숫자를 화살표로). 줄인 것은 화면뿐이고, 원문 문장 그대로는 오른쪽 위 '원문' ⓘ에 둡니다.
+    """가설 콜아웃(st.info). If / Because / Then을 배지 붙은 줄로 나누고, 짧은 모양으로 보여 줍니다
+    (대상은 맨 위 칩, Then은 숫자를 화살표로). If·Because는 AI가 후보 묶음과 함께 줄인 핵심(short, 원문 숫자만)을 쓰고,
+    없으면(규칙 후보) 문장 틀과 괄호 설명만 걷어 냅니다. 줄인 것은 화면뿐이고, 원문 문장 그대로는 오른쪽 위 '원문' ⓘ에 둡니다.
     2번 탭이 나눠 저장한 If/Because/Then이 있으면 그대로 쓰고, 없으면 문장을 나눕니다. 나눌 수 없는 문장은 한 덩어리로 보여 줍니다."""
+    short = {k: media_variable_kpi_name(v) for k, v in (media_variable_candidate_set().get("short") or {}).items()}
     text = media_variable_kpi_name(hypo["text"])
     if hypo.get("if") and hypo.get("because") and hypo.get("then"):
         parts = [media_variable_kpi_name(p) for p in (hypo["if"], hypo["because"], hypo["then"])]
@@ -167,11 +184,13 @@ def media_variable_callout(hypo: dict) -> None:
         parts = media_variable_split(text)
     if parts:
         target, parts[0] = media_variable_short_if(parts[0], str((hypo.get("problem") or {}).get("target") or ""))
-        parts[1] = parts[1].strip().rstrip(",")
+        parts[0] = short.get("if") or media_variable_drop_parens(parts[0])
+        parts[1] = short.get("because") or media_variable_drop_parens(parts[1].strip().rstrip(","))
         parts[2] = f"**{media_variable_short_then(parts[2])}**"
-        body = "  \n".join(f"{badge} {part}" for badge, part in zip(MEDIA_VARIABLE_BADGES, parts))
+        # 줄마다 문단을 따로 둠 → 넓은 화면에서 media_style.css가 각 줄을 한 줄로 고정 (넘치면 …)
+        body = "\n\n".join(f"{badge} {part}" for badge, part in zip(MEDIA_VARIABLE_BADGES, parts))
         if target:
-            body = f":gray-badge[대상: {target}]  \n{body}"
+            body = f":gray-badge[대상: {target}]\n\n{body}"
     else:
         body = text
     st.info(body, icon="📥")

@@ -111,11 +111,20 @@
     오른쪽 콜아웃과 겹치지 않음. 음수 여백은 실제 화면에서 잰 값. 제목이 바뀌면 맞춰야 함) */
 @media (min-width: 768px) {
   .st-key-media-root {
-    --media-tabbar-w: 660px;   /* 하위 탭 5개 시절 실측(약 645px)으로 정한 폭. 2026-10-25 4개로 줄어 여유 있음 (줄이려면 화면에서 다시 잼) */
+    --media-tabbar-w: 490px;   /* 하위 탭 4개 실측(약 487px)으로 정한 폭. 탭 이름이 길어지면 화면에서 다시 잼 */
   }
 
   .st-key-media-step [role="tablist"] {
     max-width: var(--media-tabbar-w);
+  }
+
+  /* 3번 탭의 하위 탭 바만(단계 화면 안의 탭 제외) 이 폭에 딱 맞춰, 아래 요약 카드와 오른쪽 끝을 맞춤 (탭이 남는 폭을 나눠 가짐) */
+  .st-key-media-step > div > [role="tablist"] {
+    width: var(--media-tabbar-w);
+  }
+
+  .st-key-media-step > div > [role="tablist"] > [role="tab"] {
+    flex: 1 1 auto;
   }
 
   .st-key-media-hypo-load-row {
@@ -193,6 +202,36 @@
 
   .st-key-media-hypo-summary {
     margin-top: 58px;
+  }
+}
+
+/* 가설 콜아웃의 줄(대상·If·Because·Then)은 문단이 따로라(media_variable.py) 문단 사이 여백을 없앰 */
+.st-key-media-hypo-callout [data-testid="stAlertContentInfo"] p:not(:only-child) {
+  margin: 0;
+}
+
+/* 콜아웃 안쪽 칸(flex 자식)은 기본 최소 폭이 글자 폭이라 긴 줄이 콜아웃 밖으로 나감 → 콜아웃 폭 안에 묶음 */
+.st-key-media-hypo-callout [data-testid="stAlertContentInfo"],
+.st-key-media-hypo-callout [data-testid="stAlertContentInfo"] * {
+  min-width: 0;
+}
+
+/* 콜아웃 폭이 넉넉한 화면(약 590px 이상)에서만: 줄마다 한 줄로 고정하고 넘치면 끝을 …로 (원문 전체는 '원문 ⓘ').
+   그보다 좁으면 너무 많이 잘려서 줄바꿈 그대로. 문장을 나누지 못한 한 덩어리(p 하나)도 줄바꿈 그대로
+   (1280px은 실제 화면에서 잰 값. --media-tabbar-w가 바뀌면 맞춰야 함) */
+@media (min-width: 1280px) {
+  .st-key-media-hypo-callout [data-testid="stAlertContentInfo"] p:not(:only-child) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* 그보다 좁은 화면: 줄 안의 배지(긴 '대상' 칩 등)도 줄바꿈해 콜아웃 밖으로 나가지 않게 */
+@media (max-width: 1279.98px) {
+  .st-key-media-hypo-callout [data-testid="stAlertContentInfo"] p span {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 
