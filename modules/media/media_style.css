@@ -454,6 +454,31 @@
   cursor: pointer;
 }
 
+/* B안 고르기 블럭 (media_variable.py media_variable_b_box) - 변수 블럭과 같은 카드, 안에 '체크박스 + 옵션 N'을 가로로.
+   옵션 사이에는 세로 구분선 (두 번째 옵션부터 왼쪽 선) */
+.st-key-media-variable-b-box {
+  gap: 0 !important;
+  width: fit-content !important;
+  max-width: 100%;
+  padding: 6px 4px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.st-key-media-variable-b-box [data-testid="stElementContainer"] {
+  padding: 2px 14px;
+}
+
+.st-key-media-variable-b-box [data-testid="stElementContainer"] + [data-testid="stElementContainer"] {
+  border-left: 1px solid var(--color-border);
+}
+
+.st-key-media-variable-b-box [data-testid="stCheckbox"] p {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
 /* 선정한 단일 변수 표 (media_variable.py key="media-variable-picked") - 구분 칸('A · 대조군')은 한 줄 */
 .st-key-media-variable-picked td:nth-child(1) {
   white-space: nowrap;

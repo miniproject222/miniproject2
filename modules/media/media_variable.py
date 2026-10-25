@@ -6,7 +6,6 @@
 # 고른 A/B 설계(plan)는 1번 리포트 값으로 채워 화면에 보여 주고, 사용자가 확정하면 2단계로 넘깁니다 (media_handoff.py).
 # 바깥 값을 읽는 곳은 두 함수뿐입니다: 가설 media_variable_saved(), 리포트 media_variable_report_sqp()
 import re
-from functools import partial
 
 import streamlit as st
 
@@ -40,7 +39,7 @@ MEDIA_VARIABLE_SQP_LABEL = "가상 데이터"
 # 판정(이미지로 진행 / 진행 불가)은 묶음에 쓰지 않고 media_variable_judge()가 규칙으로 계산합니다.
 # 변수 칸: name(블럭 이름 = 독립 변수), kind(main_image·title·price 등), if_match(가설의 If와 맞는지),
 #          fallback(제외되면 대신 쓸 곳), reason(If와 안 맞는 이유), b_options(이 변수로 만들 B안 목록)
-# B안 칸: label(고르기 버튼 이름), b, ref_prompt / 메인 이미지 규칙을 어긴 안만: rule_break, fallback
+# B안 칸: label(B안 체크박스 이름), b, ref_prompt / 메인 이미지 규칙을 어긴 안만: rule_break, fallback
 # 목록 순서 = 화면에 보일 우선순위
 MEDIA_VARIABLE_STAGE_KIND = "main_image"   # 2·3단계(프롬프트 → 매체 제작)가 이어받을 수 있는 변수 종류
 # 판정 값: 2·3단계로 진행 / 메인 이미지 변수가 아님 / 메인 이미지 변수지만 B안이 없음 (뒤 둘은 골라도 확정만 막음)
@@ -58,8 +57,8 @@ MEDIA_VARIABLE_BLOCK_MSG = {
 MEDIA_VARIABLE_VERDICT_BADGE = {MEDIA_VARIABLE_PASS: "green", MEDIA_VARIABLE_NOT_IMAGE: "orange", MEDIA_VARIABLE_NO_B: "orange"}
 MEDIA_VARIABLE_SHOW = 3   # 변수 블럭을 보여 줄 수 (가설·후보 목록이 바뀌어도 이 수만큼만)
 MEDIA_VARIABLE_VAR_KEY = "media-variable-var"       # 사용자가 블럭에서 고른 변수 이름 (session_state)
-MEDIA_VARIABLE_PICK_KEY = "media-variable-pick"     # B안 고르기 버튼 (st.segmented_control) key 앞부분 (뒤에 변수 번호)
-# 사용자가 고른 B안 {변수 이름: 버튼 이름} (session_state). 버튼 값은 다른 하위 탭에 가면 Streamlit이 지우므로 따로 둠
+MEDIA_VARIABLE_PICK_KEY = "media-variable-pick"     # B안 체크박스 (st.checkbox) key 앞부분 (뒤에 변수 번호-B안 번호)
+# 사용자가 고른 B안 {변수 이름: B안 이름} (session_state). 체크박스 값은 다른 하위 탭에 가면 Streamlit이 지우므로 따로 둠
 MEDIA_VARIABLE_B_KEY = "media-variable-b"
 
 
@@ -238,7 +237,7 @@ def media_variable_judge(v: dict) -> tuple[bool, str, str]:
 
 
 def media_variable_label(c: dict) -> str:
-    """B안 고르기 버튼에 보일 이름 (label이 없으면 이름)."""
+    """B안 체크박스에 보일 이름 (label이 없으면 이름)."""
     return c.get("label") or c.get("name", "")
 
 
@@ -440,7 +439,7 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
     """후보 변수 걸러내기(블럭에서 변수 하나 고르기) → 고른 변수를 A/B로 나누기 (media_variable_step()의 아랫부분).
     선정 표의 값은 plan에서 가져옵니다."""
     rows, variable, options, picked = cands["rows"], cands["variable"], cands["options"], cands["picked"]
-    # 왼쪽(변수 블럭)을 조금 넓혀 이유가 한 줄에 들어가게 함 → 오른쪽(B안 고르기 버튼 + A·B 표)과 높이를 맞춤
+    # 왼쪽(변수 블럭)을 조금 넓혀 이유가 한 줄에 들어가게 함 → 오른쪽(B안 고르기 블럭 + A·B 표)과 높이를 맞춤
     c1, c2 = st.columns([1.2, 1], gap="medium")
     with c1:
         # 판정 기준은 제목 옆 ⓘ에 마우스를 올리면 보임 (설명 줄이 빠져 오른쪽 선정 표와 위쪽 끝이 맞음)
@@ -470,7 +469,7 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             "왼쪽 블럭에서 고른 변수를 A(지금 그대로)와 B(바꾼 안)로 나눠요.\n\n"
             "**A는 고정**: 지금 아마존에 올라가 있는 메인 이미지(1번 리포트 값)라 바꾸지 않아요. "
             "지금보다 나아지는지 비교해야 가설(KPI가 지금 값에서 목표로 오르는지)을 확인할 수 있어서, "
-            "A는 그대로 두고 B만 위 버튼으로 골라요.\n\n"
+            "A는 그대로 두고 B만 위 체크박스로 골라요.\n\n"
             f"**통제 변수 (고정)**: 같은 제품·색상, 흰 배경, 같은 조명과 보정, 제품 85% 이상 · 제목, 가격 {price}, 쿠폰 없음, "
             "불릿, A+ 콘텐츠, 서브 이미지, 광고 입찰\n\n"
             + (f"**종속 변수 (메인 KPI)**: {plan['kpi']} = {MEDIA_VARIABLE_KPI_RAW} (시장 대비 CTR)\n\n"
@@ -483,12 +482,8 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
         if not variable["ok"]:   # 진행할 수 없는 변수: 고른 것은 그대로 두고 경고만 (확정 줄에서 확정을 막음)
             st.warning(f"**{variable['name']}** · {MEDIA_VARIABLE_BLOCK_MSG[variable['verdict']][0]}", icon="⚠️")
             return
-        if options:   # 고른 변수의 B안 중 하나 (required=True: 고른 것을 다시 눌러도 빈 선택이 되지 않음)
-            pick_key = f"{MEDIA_VARIABLE_PICK_KEY}-{rows.index(variable)}"
-            st.segmented_control("B안 고르기", [media_variable_label(o) for o in options],
-                                 default=media_variable_label(picked), required=True, key=pick_key,
-                                 on_change=partial(_media_variable_pick_b, pick_key, variable["name"]),
-                                 label_visibility="collapsed")
+        if options:
+            media_variable_b_box(options, picked, variable["name"], rows.index(variable))
         # key="media-variable-picked": media_style.css가 구분 칸('A · 대조군')을 한 줄로 유지
         with st.container(key="media-variable-picked"):
             st.markdown("| 구분 | 내용 |\n| --- | --- |\n"
@@ -498,9 +493,23 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             st.caption(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
 
 
-def _media_variable_pick_b(key: str, name: str) -> None:
-    """B안 버튼 콜백. 고른 B안을 버튼과 따로 저장해, 다른 하위 탭에 갔다 와도 확정 전 선택이 남게 합니다."""
-    st.session_state.setdefault(MEDIA_VARIABLE_B_KEY, {})[name] = st.session_state.get(key)
+def media_variable_b_box(options: list[dict], picked: dict, name: str, index: int) -> None:
+    """B안 고르기 블럭: 한 블럭 안에 '체크박스 + 옵션 N'을 가로로 나란히 (하나만 고름).
+    화면 글자는 B안 이름과 상관없이 항상 '옵션 1', '옵션 2' …이고, 고른 B안 내용은 아래 A·B 표의 B 줄에서 보입니다.
+    체크 상태는 매번 그리기 전에 고른 B안(picked)으로 맞춥니다 → 고른 것을 다시 눌러 체크가 풀려도 다음 화면에서 다시 체크됨."""
+    chosen = media_variable_label(picked)
+    # key="media-variable-b-box": media_style.css가 변수 블럭과 같은 카드 모양 + 옵션 사이 구분선을 그림
+    with st.container(horizontal=True, vertical_alignment="center", key="media-variable-b-box"):
+        for i, o in enumerate(options):
+            label = media_variable_label(o)   # 어떤 B안인지 구분하는 값 (저장·비교용, 화면에는 안 보임)
+            key = f"{MEDIA_VARIABLE_PICK_KEY}-{index}-{i}"
+            st.session_state[key] = label == chosen   # 위젯을 그리기 전이라 값을 바꿀 수 있음 (value 인자는 쓰지 않음)
+            st.checkbox(f"옵션 {i + 1}", key=key, on_change=_media_variable_pick_b, args=(name, label), width="content")
+
+
+def _media_variable_pick_b(name: str, label: str) -> None:
+    """B안 체크박스 콜백. 누른 B안을 체크박스와 따로 저장해, 다른 하위 탭에 갔다 와도 확정 전 선택이 남게 합니다."""
+    st.session_state.setdefault(MEDIA_VARIABLE_B_KEY, {})[name] = label
 
 
 def _media_variable_confirm(plan: dict) -> None:
