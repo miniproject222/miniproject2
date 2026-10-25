@@ -1,4 +1,7 @@
 # 2. 가설 수립
+import copy
+import html
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
@@ -6,10 +9,14 @@ import streamlit as st
 import ui_theme as ui
 from common.common_store import store_get, store_set
 from modules.hypothesis.hypothesis_scenario import (
+    hypothesis_ibt_clean,
     hypothesis_if_then_card,
     hypothesis_scenario_detail_section,
+    hypothesis_scenario_execution_rows,
     hypothesis_scenario_ibt,
+    hypothesis_scenario_judgement,
     hypothesis_scenario_problem2_detail_section,
+    hypothesis_scenario_problem2_execution_rows,
     hypothesis_scenario_problem2_ibt,
     hypothesis_scenario_table,
 )
@@ -84,6 +91,26 @@ def hypothesis_particle(word: str, with_batchim: str, without_batchim: str) -> s
     return with_batchim if hypothesis_has_batchim(word) else without_batchim
 
 
+# 숫자로 끝날 때 읽는 소리의 받침: 0(영)·3(삼)·6(육)은 ㄹ 아닌 받침, 1(일)·7(칠)은 ㄹ 받침, 나머지는 받침 없음
+_HYPOTHESIS_DIGIT_FINAL = {"0": "other", "3": "other", "6": "other", "1": "rieul", "7": "rieul"}
+
+
+def hypothesis_particle_ro(word: str) -> str:
+    """조사 로/으로: 받침 없음·ㄹ 받침 뒤는 "로", 그 외 받침 뒤는 "으로". 끝의 괄호·문장부호는
+    건너뛰고 읽히는 마지막 글자로 판단합니다 (예: "…10% 수준" → "으로", "…(신규 브랜드)" → "로").
+    예전에는 "로"로 고정해 "수준로", "위험로" 같은 비문이 나왔습니다."""
+    text = str(word or "").rstrip()
+    while text and not (text[-1].isalnum() or "가" <= text[-1] <= "힣"):
+        text = text[:-1]
+    if not text:
+        return "로"
+    last = text[-1]
+    if "가" <= last <= "힣":
+        final = (ord(last) - 0xAC00) % 28
+        return "로" if final in (0, 8) else "으로"   # 8 = ㄹ 받침
+    return "으로" if _HYPOTHESIS_DIGIT_FINAL.get(last) == "other" else "로"
+
+
 def hypothesis_pick_action(
     desc: str,
     is_external: bool,
@@ -150,7 +177,9 @@ def hypothesis_pick_action(
     # "이탈/장바구니"를 "배송"보다 먼저 확인합니다. "장바구니 이탈" 문제의 설명 안에도
     # "배송비" 같은 단어가 곁다리로 섞여 있을 수 있는데, 그런 경우까지 "배송 지연" 액션으로
     # 잘못 분류되지 않도록 더 구체적인 키워드(이탈/장바구니)를 우선합니다.
-    elif "이탈" in search or "장바구니" in search:
+    # 단, "결제 수단 선택 단계 이탈"처럼 결제수단이 원인이면 아래 결제 분기로 보냅니다
+    # (예전엔 '이탈'이 먼저 걸려 배송비 배너로 잘못 분류됐음)
+    elif ("이탈" in search or "장바구니" in search) and not ("결제 수단" in search or "결제수단" in search):
         action = "장바구니 단계에서 배송비를 미리 안내하는 배너 이미지 노출"
         amount = "9%"
         is_visual = True
@@ -182,7 +211,9 @@ def hypothesis_pick_action(
         test_method = "날씨 특보 발효일 광고 빈도 상향 전/후 비교 (특보 발효 기간 vs 평소 동일 요일대)"
     # "신뢰"(리뷰가 아예 없는 신규 브랜드 등)는 "신규 고객 유입"과는 다른 문제라
     # (유입은 이미 되는데 신뢰가 없어서 전환이 안 되는 경우) 따로 둡니다.
-    elif "신뢰" in search or "리뷰 0" in search:
+    # report가 "리뷰 31건 (… 실적 가정), 경쟁사의 10% 수준"처럼 제목을 바꿔도 분류(group="신뢰")는
+    # 그대로라서 group도 같이 봅니다 (제목 키워드만 보면 기본값 액션으로 빠졌음).
+    elif "신뢰" in search or "리뷰 0" in search or group == "신뢰":
         action = "체험단 착용·세탁 비교 사진·영상 콘텐츠로 초기 신뢰 구축"
         amount = "10%"
         is_visual = True
@@ -312,7 +343,8 @@ def hypothesis_build_components(problem: dict) -> dict:
     # title만 쓰고 desc/local_context/competitor_review 원문은 전부
     # hypothesis_evidence_section()의 "📚 근거·출처 보기" 토글로만 보여줍니다.
     title_for_reason = (title or "분석 결과").rstrip(". !?。")
-    reason_fragment = f"{title_for_reason}로 미루어 볼 때 고객이 {sensitivity}에 민감하게 반응할 가능성이 크기"
+    reason_fragment = (f"{title_for_reason}{hypothesis_particle_ro(title_for_reason)} 미루어 볼 때 "
+                       f"고객이 {sensitivity}에 민감하게 반응할 가능성이 크기")
 
     # "준비할 소재"/"고정 요소"는 sqp 기반 가설(hypothesis_scenario.py)과 같은 구성으로 맞춰서
     # "가설 2,3도 가설 1처럼 자세하게 나오게 해달라"는 요구를 반영합니다. 사진·영상이 필요한
@@ -340,11 +372,12 @@ def hypothesis_build_ibt(problem: dict) -> dict:
     c = hypothesis_build_components(problem)
     action_particle = hypothesis_particle(c["action"], "을", "를")
     kpi_particle = hypothesis_particle(c["kpi"], "이", "가")
-    return {
+    # 조각 안 쉼표를 없애서 ③ 탭이 저장 문장을 If/Because/Then으로 정확히 나누게 함
+    return hypothesis_ibt_clean({
         "if": f"{c['target']}에 {c['action']}{action_particle} 적용한다면",
         "because": f"{c['reason_fragment']} 때문에",
         "then": f"{c['kpi']}{kpi_particle} {c['amount']} 개선될 것이다",
-    }
+    })
 
 
 def hypothesis_build_sentence(problem: dict) -> str:
@@ -369,26 +402,42 @@ def hypothesis_generic_detail_section(problem: dict) -> None:
     1처럼 자세하게" 요구 반영. 목표 KPI도 실행 방법과 같이 보는 게 비교에 더 편하다고 판단해
     같은 표에 포함). 문제 설명·현지 특성·경쟁사 근거 원문·출처는 여기 말고
     hypothesis_evidence_section()이 별도 토글("📚 근거·출처 보기")로 모아 보여줍니다."""
+    st.markdown("**:material/science: 실행 방법**")
+    st.markdown(hypothesis_scenario_table(hypothesis_generic_execution_rows(problem)))
+    st.caption("규칙 기반으로 자동 구성된 근거예요. 실제 실행 전에 내용을 검토해 주세요.")
+
+
+def hypothesis_generic_execution_rows(problem: dict) -> list[tuple[str, str]]:
+    """규칙 기반 가설의 실행 방법 표 행. 화면 표와 "선택하기" 저장값이 같은 행을 쓰도록 분리."""
     c = hypothesis_build_components(problem)
     kpi_particle = hypothesis_particle(c["kpi"], "이", "가")
-    st.markdown("**🧪 실행 방법**")
-    st.markdown(hypothesis_scenario_table([
+    return [
         ("타깃", c["target"]),
         ("목표 KPI", f"{c['kpi']}{kpi_particle} {c['amount']} 개선"),
         ("준비할 소재", c["prep_material"]),
         ("고정 요소", c["fixed_factor"]),
         ("테스트 방법", c["test_method"]),
-    ]))
-    st.caption("규칙 기반으로 자동 구성된 근거예요. 실제 실행 전에 내용을 검토해 주세요.")
+    ]
 
 
-def hypothesis_evidence_section(problem: dict) -> None:
-    """가설 후보 탭에서 "🔧 실행 세부사항" 바로 아래, 문제 설명(detail)·현지 특성
-    (local_context)·경쟁사 부정 리뷰(competitor_review) 원문(출처 포함)을 한데 모아 보여주는
-    토글입니다. If·Because·Then 문장에는 이 원문을 안 넣고 짧게 요약만 남겨서 "한눈에 읽기
-    좋게" 만들었고, 원문·출처가 궁금하면 이 토글에서 모아 볼 수 있게 했습니다("출처들을 모아서
-    토글에 담아 실행 세부사항 위나 아래에 넣어달라"는 피드백 반영 — 세 유형(소재 개선/노출
-    확대/규칙 기반) 가설 후보 전부에서 공통으로 씁니다). 행이 하나도 없으면 아예 안 그립니다."""
+def hypothesis_execution_rows(problem: dict, sqp: dict | None) -> list[tuple[str, str]]:
+    """가설 후보 탭에 보이는 "실행 방법" 표 행을 유형(소재 개선/노출 확대/규칙 기반)에 맞게 돌려줌.
+    화면과 같은 조건(hypothesis_resolve_ibt와 동일)으로 고르므로 저장값이 화면 표와 항상 같음."""
+    if isinstance(sqp, dict):
+        if (problem.get("sqp_type") == "소재 개선" and sqp.get("query")
+                and sqp.get("query") == problem.get("query")):
+            return hypothesis_scenario_execution_rows(sqp)
+        p2 = sqp.get("problem2")
+        if (problem.get("sqp_type") == "노출 확대" and isinstance(p2, dict)
+                and p2.get("query") and p2.get("query") == problem.get("query")):
+            return hypothesis_scenario_problem2_execution_rows(p2)
+    return hypothesis_generic_execution_rows(problem)
+
+
+def hypothesis_evidence_rows(problem: dict) -> list[tuple[str, str]]:
+    """문제 설명(detail)·현지 특성(local_context)·경쟁사 부정 리뷰(competitor_review) 원문(출처
+    포함)을 표 행으로 모읍니다. 실행 방법 표에는 이 원문을 안 넣고, 오른쪽 끝 "근거·출처"
+    아이콘을 누르면 열리는 창(hypothesis_dialog_evidence)에서만 보여줍니다."""
     rows = []
     if problem.get("detail"):
         rows.append(("문제 설명", str(problem["detail"])))
@@ -396,11 +445,20 @@ def hypothesis_evidence_section(problem: dict) -> None:
         rows.append(("현지 특성 근거", str(problem["local_context"])))
     if problem.get("competitor_review"):
         rows.append(("경쟁사 부정 리뷰 근거", str(problem["competitor_review"])))
-    if not rows:
-        return
-    with st.expander("📚 근거 · 출처 보기", expanded=False):
-        st.markdown(hypothesis_scenario_table(rows))
-        st.caption("원문은 report(1번) 리포트가 준 값 그대로예요. 끝 괄호가 데이터 출처입니다.")
+    return rows
+
+
+# 상세 내용은 ① 탭처럼 화면 오른쪽 끝 아이콘을 누르면 지금 화면 위에 창(dialog)으로 엽니다
+# (예전에는 실행 방법 아래 토글 2개였음 — "상세보기는 1번 탭처럼 오른쪽으로" 요청 반영).
+@st.dialog("근거 · 출처", width="large", icon=":material/menu_book:")
+def hypothesis_dialog_evidence(problem: dict) -> None:
+    st.markdown(hypothesis_scenario_table(hypothesis_evidence_rows(problem)))
+    st.caption("원문은 report(1번) 리포트가 준 값 그대로예요. 끝 괄호가 데이터 출처입니다.")
+
+
+@st.dialog("KPI 표 · 판단 기준", width="large", icon=":material/fact_check:")
+def hypothesis_dialog_judgement(sqp: dict) -> None:
+    hypothesis_scenario_judgement(sqp)
 
 
 def hypothesis_resolve_ibt(problem: dict, sqp: dict | None) -> dict:
@@ -488,7 +546,35 @@ def hypothesis_pick_candidates(report: dict | None, limit: int = HYPOTHESIS_MAX_
 
     visual = [p for p in valid if hypothesis_is_visual_candidate(p, sqp)]
     non_visual = [p for p in valid if p not in visual]
-    return (visual + non_visual)[:limit]
+    ordered = visual + non_visual
+
+    # 실행 방법(액션)이 이미 고른 후보와 같은 문제는 뒤로 미룹니다 — 예: "장바구니 이탈률 71%"와
+    # "장바구니 이탈 증가"가 둘 다 "장바구니 배송비 안내 배너"라 후보 3개 중 2개가 같은 실행 방법이
+    # 되던 문제(① 형식 분석 30개 중 8개에서 발생). 서로 다른 액션이 limit개보다 적을 때만 겹치는
+    # 문제로 채웁니다. 순서 규칙(사진·영상 우선, 그 안에서 report 순서)은 그대로입니다.
+    picked, used_actions, held = [], set(), []
+    for p in ordered:
+        key = hypothesis_action_key(p, sqp)
+        if key in used_actions:
+            held.append(p)
+            continue
+        used_actions.add(key)
+        picked.append(p)
+    return (picked + held)[:limit]
+
+
+def hypothesis_action_key(problem: dict, sqp: dict | None) -> str:
+    """후보끼리 실행 방법이 겹치는지 비교할 때 쓰는 액션 이름. sqp 가설(소재 개선·노출 확대)은
+    hypothesis_resolve_ibt()와 같은 조건으로 고유 이름을, 나머지는 규칙 기반 액션을 씁니다."""
+    if isinstance(sqp, dict):
+        if (problem.get("sqp_type") == "소재 개선" and sqp.get("query")
+                and sqp.get("query") == problem.get("query")):
+            return "sqp:소재 개선"
+        p2 = sqp.get("problem2")
+        if (problem.get("sqp_type") == "노출 확대" and isinstance(p2, dict)
+                and p2.get("query") and p2.get("query") == problem.get("query")):
+            return "sqp:노출 확대"
+    return hypothesis_build_components(problem)["action"]
 
 
 def hypothesis_pick_problem(report: dict | None) -> dict | None:
@@ -505,9 +591,26 @@ def _hypothesis_handle_save(problem: dict, text: str, ibt: dict) -> None:
     text = str(text or "").strip()
     if not text:   # 버튼이 비활성화돼 있어야 하지만, 혹시 모를 상태 꼬임에 대비한 이중 방어
         return
+    # ① 리포트 값 전체를 맨 앞에 그대로 담고, 그 아래에 ② 내용(선택한 가설·실행 방법)을 붙여 저장
+    # ("선택하기를 누르면 1번 리포트 값에 2번 내용이 하단에 추가돼 저장" 요청). ① 칸("report")은
+    # 공용 규칙상 읽기만 하고 건드리지 않으므로, 합친 값은 ② 칸에 둡니다. 그 아래 기존 키들
+    # (hypothesis/text/if_text…)은 ③·홈 탭이 이미 읽고 있어서 그대로 유지합니다.
+    report = store_get("report")
+    report = copy.deepcopy(report) if isinstance(report, dict) else None
+    sqp = report.get("sqp") if report and isinstance(report.get("sqp"), dict) else None
     store_set(
         "hypothesis",
         {
+            "report": report,
+            "selected": {
+                "problem": copy.deepcopy(problem),
+                "if": ibt.get("if", ""),
+                "because": ibt.get("because", ""),
+                "then": ibt.get("then", ""),
+                "sentence": text,
+                "execution": dict(hypothesis_execution_rows(problem, sqp)),
+                "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            },
             "hypothesis": text,   # home_data.py가 기대하는 키 이름 (완료 표시 등에 사용)
             "text": text,         # media 등에서 더 명확한 이름으로 읽고 싶을 때
             "if_text": ibt.get("if", ""),
@@ -554,13 +657,16 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
         # 가로로 꽉 찬 "이 가설 선택하기" 버튼 + "✅ 선택됨" 안내 박스가 따로 있었는데,
         # "선택됨 박스는 지우고 이 위치 오른쪽 끝에 조그맣게 선택 버튼만 넣어 달라"는
         # 요청으로 제목 줄에 통합했습니다.
-        badge_label = "⚠️ 외부 요인 · 경쟁사" if is_external else "🏷️ 내부 요인"
+        # 외부 요인 뒤에는 report가 준 실제 분류(경쟁사·규제·날씨 등)를 붙임 — 예전엔 외부면 무조건
+        # "경쟁사"라고 붙여서 규제(UWG) 문제도 "외부 요인 · 경쟁사"로 잘못 보였음
+        group = html.escape(str(problem.get("group") or "").strip(), quote=False)
+        badge_label = (f"⚠️ 외부 요인 · {group}" if group else "⚠️ 외부 요인") if is_external else "🏷️ 내부 요인"
         badge_class = "hypothesis-badge-external" if is_external else "hypothesis-badge-internal"
         title_col, button_col = st.columns([5, 1])
         with title_col:
             st.markdown(
                 f'<p class="hypothesis-factor-line"><span class="hypothesis-badge {badge_class}">{badge_label}</span>'
-                f' <b>{problem.get("title", "")}</b></p>',
+                f' <b>{html.escape(str(problem.get("title", "")), quote=False)}</b></p>',
                 unsafe_allow_html=True,
             )
         with button_col:
@@ -585,7 +691,15 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
         else:
             hypothesis_generic_detail_section(problem)
 
-        hypothesis_evidence_section(problem)
+    # 오른쪽 끝 아이콘(① 탭과 같은 방식, hypothesis_style.css의 [class*="st-key-hypothesis-side-"]가
+    # 화면에 고정). 가설 1/2/3 하부 탭마다 따로 그려지지만, 열린 탭 것만 보입니다.
+    with st.container(key=f"hypothesis-side-{index}"):
+        if is_sqp_main and st.button("", icon=":material/fact_check:",
+                                     key=f"hypothesis-btn-side-judge-{index}", type="tertiary"):
+            hypothesis_dialog_judgement(sqp)
+        if hypothesis_evidence_rows(problem) and st.button("", icon=":material/menu_book:",
+                                                           key=f"hypothesis-btn-side-evidence-{index}", type="tertiary"):
+            hypothesis_dialog_evidence(problem)
 
 
 def hypothesis_render():
@@ -619,34 +733,48 @@ def hypothesis_render():
     saved = store_get("hypothesis")
     saved = saved if isinstance(saved, dict) else None
 
-    # "📋 분석 리포트 문제 요약" 칸은 뺐습니다 — 가설 후보 탭마다 그 문제의 내부/외부 요인을
-    # 이미 보여주고 있어서, 별도 요약 칸은 중복 정보로 화면만 더 차지했습니다 (사용자 피드백).
-    # 맨 위에는 "✅ 지금 선택된 가설"만 전체 너비로 남겨서, 지금 뭐가 선택돼 있는지 한눈에 보이게 합니다.
-    with st.container(border=True, key="hypothesis-selected-card"):
-        st.markdown("**✅ 지금 선택된 가설**")
-        if saved and str(saved.get("text") or "").strip():
-            # 선택된 가설도 가설 후보 탭과 똑같은 If·Because·Then 카드로 보여줍니다
-            # (요청 반영). if_text/because_text/then_text가 없는 예전 저장값(하위 호환)은
-            # 밋밋한 박스로라도 문장을 그대로 보여줍니다.
-            if saved.get("if_text") and saved.get("because_text") and saved.get("then_text"):
-                hypothesis_if_then_card([
-                    ("If", "if", saved["if_text"]),
-                    ("Because", "because", saved["because_text"]),
-                    ("Then", "then", saved["then_text"]),
-                ])
+    # 왼쪽에 "가설 후보"(표가 있어 내용이 많으니 넓게 3), 오른쪽에 "지금 선택된 가설"(카드
+    # 하나라 좁게 2)을 나란히 둡니다 — 위아래로 쌓으면 스크롤이 많이 생겨서 옆으로 배치.
+    # 페이지 제목 바로 밑에 붙어 보여서 두 칸 전체를 조금 내림 (.hypothesis-top-gap)
+    st.markdown('<div class="hypothesis-top-gap"></div>', unsafe_allow_html=True)
+    candidates_col, selected_col = st.columns([3, 2], gap="medium")
+
+    # 두 칸 제목을 같은 크기(####, 페이지 제목보다 작게)로 맞추고, 오른쪽엔 왼쪽 "가설 1/2/3"
+    # 탭 줄 높이만큼 빈칸(hypothesis-tab-spacer)을 둬서 왼쪽 후보 카드와 오른쪽 선택된 가설
+    # 카드의 윗선이 같은 높이에서 시작하게 합니다.
+    with selected_col:
+        with st.container(key="hypothesis-heading-selected"):
+            st.markdown("#### :material/check_circle: 지금 선택된 가설")
+        st.markdown('<div class="hypothesis-heading-gap"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="hypothesis-tab-spacer"></div>', unsafe_allow_html=True)
+        with st.container(border=True, key="hypothesis-selected-card"):
+            if saved and str(saved.get("text") or "").strip():
+                # 선택된 가설도 가설 후보 탭과 똑같은 If·Because·Then 카드로 보여줍니다
+                # (요청 반영). if_text/because_text/then_text가 없는 예전 저장값(하위 호환)은
+                # 밋밋한 박스로라도 문장을 그대로 보여줍니다.
+                if saved.get("if_text") and saved.get("because_text") and saved.get("then_text"):
+                    hypothesis_if_then_card([
+                        ("If", "if", saved["if_text"]),
+                        ("Because", "because", saved["because_text"]),
+                        ("Then", "then", saved["then_text"]),
+                    ])
+                else:
+                    st.markdown(f'<p class="hypothesis-callout-box">{html.escape(str(saved["text"]), quote=False)}</p>',
+                                unsafe_allow_html=True)
             else:
-                st.markdown(f'<p class="hypothesis-callout-box">{saved["text"]}</p>', unsafe_allow_html=True)
-        else:
-            st.markdown(
-                '<p class="hypothesis-callout-box hypothesis-callout-empty">'
-                "아직 선택한 가설이 없어요. 아래 가설 1·2·3 중 하나를 고르고 "
-                "'이 가설 선택하기'를 눌러 주세요.</p>",
-                unsafe_allow_html=True,
-            )
+                st.markdown(
+                    '<p class="hypothesis-callout-box hypothesis-callout-empty">'
+                    "아직 선택한 가설이 없어요. 왼쪽 가설 1·2·3 중 하나를 고르고 "
+                    "'선택하기'를 눌러 주세요.</p>",
+                    unsafe_allow_html=True,
+                )
 
-    st.markdown("### 🧪 가설 후보")
-
-    tabs = st.tabs([f"가설 {i + 1}" for i in range(len(candidates))], key="hypothesis-candidate-tabs")
-    for i, (tab, problem) in enumerate(zip(tabs, candidates)):
-        with tab:
-            _hypothesis_render_candidate(i, problem, sqp, saved)
+    with candidates_col:
+        with st.container(key="hypothesis-heading-candidates"):
+            st.markdown("#### :material/science: 가설 후보")
+        # 제목 줄은 그대로 두고 그 아래 탭·박스만 내림 (오른쪽에도 같은 간격을 둬 윗선 정렬 유지)
+        st.markdown('<div class="hypothesis-heading-gap"></div>', unsafe_allow_html=True)
+        tabs = st.tabs([f"가설 {i + 1}" for i in range(len(candidates))], key="hypothesis-candidate-tabs")
+        for i, (tab, problem) in enumerate(zip(tabs, candidates)):
+            with tab:
+                _hypothesis_render_candidate(i, problem, sqp, saved)
