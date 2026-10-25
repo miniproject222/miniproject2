@@ -169,15 +169,10 @@
     flex-direction: column;
   }
 
-  /* 짧은 쪽이 남은 높이를 채움: 요약 카드는 내용 세로 가운데, 콜아웃은 파란 상자 자체가 늘어남 */
-  .st-key-media-hypo-summary,
+  /* 콜아웃은 줄 높이를 채우고(파란 상자 자체가 늘어남), 요약 카드는 내용 높이 그대로 */
   .st-key-media-hypo-callout,
   .st-key-media-hypo-callout > [data-testid="stElementContainer"] {
     flex: 1 1 auto;
-  }
-
-  .st-key-media-hypo-summary {
-    justify-content: center;
   }
 
   .st-key-media-hypo-callout [data-testid="stAlert"],
@@ -195,19 +190,36 @@
     flex: 0 0 var(--media-tabbar-w) !important;
   }
 
+  /* 콜아웃은 남는 폭을 모두 씀 → 오른쪽 끝이 '다시 불러오기' 버튼·아래 구분선과 맞음 */
   .st-key-media-hypo-top > [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-callout) {
     flex: 1 1 0 !important;
     min-width: 0;
   }
 
+  /* 요약 카드는 탭 바 아래(58px)부터, 내용 높이 그대로 (1280px 이상에서는 아래 끝을 콜아웃에 맞춤, 아래 참고) */
+  .st-key-media-hypo-top > [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-summary) {
+    padding-top: 58px;
+  }
+
   .st-key-media-hypo-summary {
-    margin-top: 58px;
+    flex: 0 0 auto;
   }
 }
 
 /* 가설 콜아웃의 줄(대상·If·Because·Then)은 문단이 따로라(media_variable.py) 문단 사이 여백을 없앰 */
 .st-key-media-hypo-callout [data-testid="stAlertContentInfo"] p:not(:only-child) {
   margin: 0;
+}
+
+/* 콜아웃 안 글자 칸: Streamlit 기본 아래 여백(-16px) 때문에 글자가 아래 끝에 붙어 보임 → 0으로 (위·아래 여백이 같아짐).
+   글자 칸이 내용 폭만큼만 줄어들지 않고 콜아웃 폭을 모두 쓰게 함 (Then 칸이 오른쪽 끝에 붙어 좌우 여백이 같아짐) */
+.st-key-media-hypo-callout [data-testid="stMarkdownContainer"] {
+  margin-bottom: 0 !important;
+}
+
+.st-key-media-hypo-callout [data-testid="stAlertContentInfo"],
+.st-key-media-hypo-callout [data-testid="stAlertContentInfo"] > div > [data-testid="stMarkdownContainer"] {
+  flex: 1 1 auto;
 }
 
 /* 콜아웃 안쪽 칸(flex 자식)은 기본 최소 폭이 글자 폭이라 긴 줄이 콜아웃 밖으로 나감 → 콜아웃 폭 안에 묶음 */
@@ -224,6 +236,84 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+}
+
+/* 콜아웃이 넉넉한 화면(약 700px 이상)에서만 두 칸 배치. 더 좁으면 Then 칸 때문에 If·Because가 많이 잘려 한 칸 그대로
+   (1400px은 실제 화면에서 잰 값. --media-tabbar-w가 바뀌면 맞춰야 함) */
+@media (min-width: 1400px) {
+  /* 두 칸이라 콜아웃이 낮아지므로: 요약 카드 아래 끝을 콜아웃 아래 끝에 붙임
+     (더 좁으면 콜아웃이 길어져 카드가 아래로 밀리므로 탭 바 바로 아래 그대로) */
+  .st-key-media-hypo-summary {
+    margin-top: auto;
+  }
+
+  /* 콜아웃 안을 두 칸으로: 왼쪽 If·Because, 오른쪽 Then(목표, 크게). 대상 줄은 맨 위에 두 칸을 가로질러.
+     줄 순서는 media_variable.py가 [대상], If, Because, Then으로 만듦 (Then = 마지막 문단) */
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"]:has(> p:nth-child(3)) {
+    display: grid;
+    /* 왼쪽(If·Because)은 글자 길이만큼 먼저 차지, Then 칸이 나머지 폭을 모두 씀 → 글자가 짧아도 칸 안 가운데가 비지 않음.
+       Then 칸은 글자가 다 보이는 폭 아래로는 안 줄어듦 (좁은 화면에서는 아래 1600px 규칙이 Then을 두 줄로 좁힘) */
+    grid-template-columns: minmax(0, max-content) minmax(min-content, 1fr);
+    column-gap: 24px;
+    align-items: center;
+  }
+
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:first-child:nth-last-child(4) {
+    grid-column: 1 / -1;
+  }
+
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:nth-child(4) {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+  }
+
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:nth-child(3) {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  /* Then 칸: 1줄 배지, 2줄 '지표 이름 + 숫자'(media_variable.py가 따로 굵게 둠), 남는 폭의 가운데에.
+     한 칸 화면에서는 배지와 목표가 한 줄 그대로 */
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:not(:only-child) {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: center;
+    align-items: center;
+    gap: 2px 6px;
+    padding-left: 20px;
+    /* 파란 콜아웃 배경에서도 보이게 메인 색을 섞은 구분선 (안 보이면 왼쪽 글자와 Then 사이가 빈칸처럼 보임) */
+    border-left: 2px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
+    font-size: 17px;
+    line-height: 1.5;
+  }
+
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:not(:only-child) > :first-child {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+
+  /* 숫자 모양이 아니라 굵은 글이 하나뿐이면 두 칸을 가로질러 가운데 */
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:not(:only-child) > strong:only-of-type {
+    grid-column: 1 / -1;
+  }
+}
+
+/* 두 칸인데 콜아웃이 아직 좁은 화면: Then 칸이 '배지 + 지표 이름' / '숫자' 두 줄로 좁아져 If·Because 자리를 내줌
+   (Then 칸 줄 수 = 왼쪽 If·Because 줄 수라 콜아웃 높이는 그대로. 1600px은 실제 화면에서 잰 값) */
+@media (min-width: 1400px) and (max-width: 1599.98px) {
+  /* 두 줄 Then의 최소 폭을 브라우저가 한 줄 폭으로 잡아 If·Because를 자르므로, 실제 두 줄 폭(약 190px)으로 정해 둠 */
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"]:has(> p:nth-child(3)) {
+    grid-template-columns: minmax(0, max-content) minmax(200px, 1fr);
+  }
+
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:not(:only-child) > :first-child {
+    grid-column: auto;
+  }
+
+  .st-key-media-hypo-callout [data-testid="stMarkdownContainer"] > p:last-child:not(:only-child) > strong:last-of-type:not(:only-of-type) {
+    grid-column: 1 / -1;
+    justify-self: center;
   }
 }
 
@@ -246,7 +336,7 @@
   }
 }
 
-/* 가설 핵심 요약 (독립 변수·KPI) 작은 카드 */
+/* 가설 핵심 요약 (독립 변수) 작은 카드 - 한 줄 높이 */
 .st-key-media-hypo-summary {
   padding: 10px 14px;
   background: var(--color-card);
@@ -260,12 +350,14 @@
 }
 
 /* 가설 콜아웃 오른쪽 위 구석의 '원문 ⓘ' (media_variable.py key="media-hypo-origin") - 콜아웃 높이를 늘리지 않게 띄움 */
+/* gap 0: '원문 ⓘ'은 띄워 두지만 Streamlit 기본 간격(16px)이 남아 콜아웃 아래에 빈 줄이 생김 → 요약 카드와 아래 끝이 어긋남 */
 .st-key-media-hypo-callout {
   position: relative;
+  gap: 0 !important;
 }
 
-/* 첫 줄 글자가 '원문 ⓘ' 밑으로 들어가지 않게 오른쪽 여백 */
-.st-key-media-hypo-callout [data-testid="stAlertContentInfo"] {
+/* 첫 줄 글자가 '원문 ⓘ' 밑으로 들어가지 않게 첫 줄에만 오른쪽 여백 (다른 줄은 콜아웃 기본 여백만 → 좌우 간격이 같음) */
+.st-key-media-hypo-callout [data-testid="stAlertContentInfo"] p:first-child {
   padding-right: 44px;
 }
 

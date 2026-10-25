@@ -147,15 +147,16 @@ def media_variable_short_if(text: str, target: str) -> tuple[str, str]:
 
 
 def media_variable_short_then(text: str) -> str:
-    """Then을 짧게: '전환율이 2.4%에서 2.9%로 21% 오를 것이다' → '전환율 2.4% → 2.9% (21%↑)'.
+    """Then을 짧게, 굵은 글씨(markdown)로: '전환율이 2.4%에서 2.9%로 21% 오를 것이다' → '**전환율** **2.4% → 2.9% (21%↑)**'.
+    지표 이름과 숫자를 따로 굵게 둠 → 좁은 두 칸 화면에서 media_style.css가 그 사이에서만 줄을 나눔.
     이 모양이 아니면 끝의 마침표만 빼고 그대로 둡니다 (뜻을 바꾸지 않도록 정해진 모양만 줄임)."""
     text = text.strip().rstrip(".")
     m = re.fullmatch(MEDIA_VARIABLE_THEN_PATTERN, text)
     if not m:
-        return text
+        return f"**{text}**"
     arrow = "↑" if m["verb"] in MEDIA_VARIABLE_THEN_UP else "↓"
     goal = m["b"] + (" 이상" if m["more"] else "")
-    return f"{m['metric']} {m['a']} → {goal} " + (f"({m['pct']}{arrow})" if m["pct"] else arrow)
+    return f"**{m['metric']}** **{m['a']} → {goal} " + (f"({m['pct']}{arrow})" if m["pct"] else arrow) + "**"
 
 
 def media_variable_drop_parens(text: str) -> str:
@@ -186,7 +187,8 @@ def media_variable_callout(hypo: dict) -> None:
         target, parts[0] = media_variable_short_if(parts[0], str((hypo.get("problem") or {}).get("target") or ""))
         parts[0] = short.get("if") or media_variable_drop_parens(parts[0])
         parts[1] = short.get("because") or media_variable_drop_parens(parts[1].strip().rstrip(","))
-        parts[2] = f"**{media_variable_short_then(parts[2])}**"
+        # Then은 목표를 굵게 (넓은 화면에서 media_style.css가 콜아웃 오른쪽 칸에 배지 아래로 크게 둠)
+        parts[2] = media_variable_short_then(parts[2])
         # 줄마다 문단을 따로 둠 → 넓은 화면에서 media_style.css가 각 줄을 한 줄로 고정 (넘치면 …)
         body = "\n\n".join(f"{badge} {part}" for badge, part in zip(MEDIA_VARIABLE_BADGES, parts))
         if target:
@@ -381,8 +383,8 @@ def media_variable_hypothesis_step(plan: dict, picked: dict, hypo: dict):
     variable = f"{plan['variable']} ({media_variable_label(picked)})" if picked else (plan["variable"] or "없음")
     with st.container(horizontal=True, key="media-hypo-top"):
         with st.container(key="media-hypo-summary"):
-            st.markdown(f":violet-badge[독립 변수] {variable}  \n"
-                        f":green-badge[KPI] {media_variable_kpi_text(plan)}")
+            # KPI 목표는 콜아웃 Then 줄과 겹쳐서 빼고 독립 변수만 (하위 탭 ②~④는 목표 KPI 칩에 보임)
+            st.markdown(f":violet-badge[독립 변수] {variable}")
         with st.container(key="media-hypo-callout"):
             media_variable_callout(hypo)
     gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
