@@ -180,6 +180,7 @@ def media_variable_plan() -> tuple[dict, str, list[str]]:
     if picked:
         plan["variable"] = picked.get("variable") or plan["variable"]
         plan["b"] = picked["b"]
+        plan["b_ref"] = picked.get("ref_prompt", "")   # B안의 영어 레퍼런스 프롬프트 (2단계가 프롬프트 B로 씀)
     # (plan 키, 리포트 값, 맞는 자료형, 화면에 보일 이름)
     for key, value, kind, label in [
         ("query", sqp.get("query"), str, "검색어"),

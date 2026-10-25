@@ -64,7 +64,7 @@ def media_render():
     media_load_stage_css()
     # key="media-root": media_style.css가 이 탭 안의 간격만 줄이도록 범위를 정하는 class (.st-key-media-root)
     with st.container(key="media-root"):
-        ui.page_header("3. 매체 제작", "가설에서 변수 도출 → A/B 소재 → 프롬프트 → 사진·영상 초안 → 외주 정리, 단계별로 넘어가요")
+        ui.page_header("3. 매체 제작", "가설에서 변수 도출 → A/B 소재 → 프롬프트 → 사진·영상 초안 제작 → 외주 정리, 단계별로 넘어가요")
         tabs = st.tabs([label for label, _ in MEDIA_STEPS], key="media-step", on_change="rerun")
         for i, (tab, (_, render)) in enumerate(zip(tabs, MEDIA_STEPS)):
             if tab.open:   # 선택된 단계만 그립니다
