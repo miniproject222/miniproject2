@@ -10,7 +10,7 @@ from pathlib import Path
 import streamlit as st
 
 import ui_theme as ui
-from modules.media.media_stage2.media_stage2 import MEDIA_S2_TAB_LABEL, media_stage2_render
+from modules.media.media_stage2.media_stage2 import MEDIA_S2_TAB_LABEL, media_s2_handoff_now, media_stage2_render
 from modules.media.media_stage3.media_stage3_export import MEDIA_S3_EXPORT_TAB_LABEL, media_stage3_export_render
 from modules.media.media_stage3.media_stage3 import MEDIA_S3_TAB_LABEL, media_stage3_render
 from modules.media.media_variable import MEDIA_VARIABLE_TAB_LABEL, media_variable_kpi_chip, media_variable_step
@@ -30,8 +30,16 @@ MEDIA_STEPS = [
 ]
 
 
-def _media_go_step(label: str) -> None:
-    """'이전/다음 단계' 버튼 콜백. 하위 탭(key="media-step")의 선택을 바꿉니다 (위젯이 그려지기 전에 실행됨)."""
+# '다음' 버튼을 누를 때 탭을 옮기기 전에 먼저 할 일 (탭 이름 → 함수)
+# 2026-10-25 PM 결정: ② A/B 소재 준비의 '다음' 버튼이 프롬프트 A·B를 3단계로 넘김 (따로 있던 넘기기 버튼 대신)
+MEDIA_STEP_ON_NEXT = {MEDIA_S2_TAB_LABEL: media_s2_handoff_now}
+
+
+def _media_go_step(label: str, before=None) -> None:
+    """'이전/다음 단계' 버튼 콜백. before가 있으면 먼저 부르고(False를 돌려주면 옮기지 않음),
+    하위 탭(key="media-step")의 선택을 바꿉니다 (위젯이 그려지기 전에 실행됨)."""
+    if before and before() is False:   # 먼저 할 일이 '옮기지 마'(False)를 돌려주면 그대로 머묾 (예: AI 다듬기 전 경고창)
+        return
     st.session_state["media-step"] = label
 
 
@@ -55,7 +63,7 @@ def media_step_nav(i: int) -> None:
         if i < len(MEDIA_STEPS) - 1:
             nxt = MEDIA_STEPS[i + 1][0]
             st.button(f"다음: {nxt} →", key=f"media-btn-step-next-{i}", type="primary",
-                      on_click=_media_go_step, args=(nxt,))
+                      on_click=_media_go_step, args=(nxt, MEDIA_STEP_ON_NEXT.get(MEDIA_STEPS[i][0])))
 
 
 def media_render():

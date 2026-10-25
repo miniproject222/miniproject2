@@ -8,3 +8,241 @@
   background: var(--color-bg);
   text-align: center;
 }
+
+/* A·B 소재 카드 (media_stage2.py media_s2_ab_section): HTML 격자 두 칸 - 두 칸 폭·높이가 항상 같고 글이 길어도 잘리지 않음.
+   세로를 줄여 아래 'A안·B안 프롬프트 만들기'가 첫 화면에 더 보이게 함 */
+.media-s2-ab-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.media-s2-ab-card {
+  padding: 10px 16px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.media-s2-ab-card b {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.media-s2-ab-card p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.media-s2-ab-card .media-desc {
+  font-size: 13px;
+}
+
+/* 독립 변수 한 줄 (카드 아래, 구분선 위) - 박스 없이 '🎯 독립 변수 : 변수 이름' */
+.media-s2-ab-var {
+  margin-top: 10px;
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.media-s2-ab-var span {
+  font-weight: 600;
+}
+
+.media-s2-ab-var b {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* 'A안·B안 프롬프트 만들기' 제목(조금 크게) + 옆 설명(작게) */
+.media-s2-head {
+  line-height: 1.6;
+  margin: -12px 0 6px;   /* 구분선 아래 기본 여백이 커서 위로 당기고, 프롬프트 박스와는 조금 띄워 가운데 맞춤 */
+}
+
+.media-s2-head b {
+  font-size: 17px;
+  color: var(--color-text);
+  margin-right: 6px;
+}
+
+.media-s2-head span {
+  font-size: 12.5px;
+  color: var(--color-sub);
+}
+
+/* '① 으로 가서 확정하기' - 글 옆 작은 버튼 */
+.st-key-media-s2-btn-go-confirm button {
+  min-height: 30px;
+  padding: 2px 12px;
+}
+
+.st-key-media-s2-btn-go-confirm button p {
+  font-size: 13px;
+}
+
+.st-key-media-s2-ab-pending {
+  gap: 12px !important;
+}
+
+.st-key-media-s2-btn-go-confirm {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+
+/* 'AI로 다듬기'·'되돌리기' - 꽉 찬 버튼이 많아 보여서 테두리만 있는 작은 알약 버튼으로
+   (media_style.css가 이 탭 버튼 글자를 흰색으로 고정해서, 더 구체적인 선택자로 덮어씀) */
+.st-key-media-root .st-key-media-s2-btn-refine button,
+.st-key-media-root .st-key-media-s2-btn-regen button,
+.st-key-media-root .st-key-media-s2-btn-reset-A button,
+.st-key-media-root .st-key-media-s2-btn-reset-B button {
+  min-height: 30px;
+  padding: 2px 14px;
+  border-radius: 999px;
+  background: transparent !important;
+  border: 1px solid var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button:hover,
+.st-key-media-root .st-key-media-s2-btn-regen button:hover,
+.st-key-media-root .st-key-media-s2-btn-reset-A button:hover,
+.st-key-media-root .st-key-media-s2-btn-reset-B button:hover {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button p,
+.st-key-media-root .st-key-media-s2-btn-regen button p,
+.st-key-media-root .st-key-media-s2-btn-regen button span,
+.st-key-media-root .st-key-media-s2-btn-reset-A button p,
+.st-key-media-root .st-key-media-s2-btn-reset-B button p,
+.st-key-media-root .st-key-media-s2-btn-refine button span,
+.st-key-media-root .st-key-media-s2-btn-reset-A button span,
+.st-key-media-root .st-key-media-s2-btn-reset-B button span {
+  font-size: 13px;
+  color: var(--color-primary) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button:disabled,
+.st-key-media-root .st-key-media-s2-btn-regen button:disabled {
+  opacity: 0.45;
+}
+
+/* '리포트에서 받은 규칙' - 빨간 알약 + 흰 원 안 ✕ 아이콘, 빨강은 반투명 */
+.st-key-media-root .st-key-media-s2-btn-rules button {
+  min-height: 30px;
+  padding: 2px 14px 2px 8px;
+  border-radius: 999px;
+  background: rgba(240, 82, 52, 0.16) !important;
+  border: 1px solid rgba(240, 82, 52, 0.35) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-rules button:hover {
+  background: rgba(240, 82, 52, 0.24) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-rules button p {
+  font-size: 13px;
+  color: #C8432A !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-rules button [data-testid="stIconMaterial"],
+.st-key-media-root .st-key-media-s2-btn-rules button span[data-testid] {
+  color: rgba(240, 82, 52, 0.85) !important;
+  font-size: 18px;
+}
+
+/* 리포트 규칙 팝업 표 (_media_s2_rules_dialog) - 열 폭을 고정해 비율을 맞춤 */
+.media-s2-rules h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.media-s2-rules h4 em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--color-sub);
+  font-size: 12px;
+}
+
+.media-s2-rules table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.media-s2-rules th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-sub);
+  background: var(--color-bg);
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.media-s2-rules td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+  word-break: keep-all;
+}
+
+.media-s2-rules-ban col:nth-child(1) { width: 6%; }
+.media-s2-rules-ban col:nth-child(2) { width: 47%; }
+.media-s2-rules-ban col:nth-child(3) { width: 47%; }
+.media-s2-rules-law col:nth-child(1) { width: 11%; }
+.media-s2-rules-law col:nth-child(2) { width: 22%; }
+.media-s2-rules-law col:nth-child(3) { width: 67%; }
+
+/* 프롬프트 A·B 칸: 두 칸 높이를 같게 (제목은 한 줄이라 흰 입력 상자 위치도 같음) */
+.st-key-media-s2-prompt-box-A,
+.st-key-media-s2-prompt-box-B {
+  height: 100%;
+}
+
+/* 좁은 화면: A·B 카드 위아래로 쌓기 */
+@media (max-width: 640px) {
+  .media-s2-ab-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 팝업 창 안 여백·요소 간격 줄이기 (st.dialog 안에서만) */
+[role="dialog"] .media-s2-rules {
+  margin-top: -4px;
+}
+
+[role="dialog"] .stMarkdown:has(.media-s2-rules) + .stMarkdown,
+[role="dialog"] [data-testid="stElementContainer"]:has(.media-s2-rules) {
+  margin-bottom: -8px;
+}
+
+/* 프롬프트를 어떻게 만들었는지 한 줄 (제목 아래) */
+.media-s2-how {
+  margin: -4px 0 4px;
+  font-size: 12.5px;
+  color: var(--color-sub);
+}
+
+/* 'A·B 다시 만들기' + 'AI로 다듬기' 묶음 */
+.st-key-media-s2-ai-btns {
+  gap: 8px !important;
+}
+
+/* 'AI 다듬기가 필요해요' 경고창의 '확인' 버튼: 팝업은 탭 영역(.st-key-media-root) 밖에 떠서
+   media_style.css의 흰 글자 규칙이 안 먹음 → 진한 보라 버튼 위 글자를 흰색으로 직접 지정 */
+.st-key-media-s2-btn-need-refine-ok button {
+  min-height: 34px;
+  padding: 4px 22px;
+}
+
+.st-key-media-s2-btn-need-refine-ok button p {
+  color: #fff !important;
+  font-size: 14px;
+  font-weight: 600;
+}
