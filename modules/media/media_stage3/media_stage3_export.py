@@ -10,8 +10,8 @@ import zipfile
 import streamlit as st
 
 from modules.media.media_handoff import media_handoff_assets, media_handoff_check, media_handoff_prompt
-from modules.media.media_stage3.media_stage3 import MEDIA_S3_MEDIA_NOTE, MEDIA_S3_PHOTOS, MEDIA_S3_VIDEOS
-from modules.media.media_stage3.media_stage3_store import media_s3_store_load
+from modules.media.media_stage3.media_stage3 import MEDIA_S3_MEDIA_NOTE
+from modules.media.media_stage3.media_stage3_store import media_s3_store_history_find, media_s3_store_load
 
 MEDIA_S3_EXPORT_TAB_LABEL = "외주 정리"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
 
@@ -66,21 +66,27 @@ def media_stage3_export_render():
     """3단계 ⑤ 하위 탭(이름은 MEDIA_S3_EXPORT_TAB_LABEL, 탭 이름이 제목 역할). 반드시 media_render() 안에서 부릅니다."""
     media_s3_store_load()   # ④를 거치지 않고 바로 열어도 보관된 작업물을 씀
     src = media_handoff_prompt()
-    assets = media_handoff_assets()   # ④에서 '⑤로 넘기기'로 넘긴 스토리보드·파일 이름
+    assets = media_handoff_assets()   # ④에서 '⑤로 넘기기'로 넘긴 스토리보드·고른 기록 이름
     storyboard = assets["storyboard"]
-    # 파일 자체는 크기 때문에 Supabase에 넣지 않고, 같은 브라우저 접속에서 ④에 올린 것 중 넘긴 이름만 씀
-    photos = [f for f in st.session_state.get(MEDIA_S3_PHOTOS, []) if f[0] in assets["photos"]]
-    videos = [f for f in st.session_state.get(MEDIA_S3_VIDEOS, []) if f[0] in assets["videos"]]
+    # 파일 자체는 크기 때문에 Supabase에 넣지 않고, 이 컴퓨터의 '만든 결과' 기록 폴더에서 이름으로 찾음
+    # zip 안 이름은 기록 이름(만든 시각_파일 이름)이라 다른 가설의 같은 이름 파일도 겹치지 않음
+    photos = [(e["file"], c) for e, c in media_s3_store_history_find(assets["photos"])]
+    videos = [(e["file"], c) for e, c in media_s3_store_history_find(assets["videos"])]
     st.caption("외주 촬영 업체 또는 사내 촬영팀에 보낼 자료를 zip 하나로 묶어요.")
     if assets["sample"]:
         st.info("④ 사진·영상 초안 제작에서 '⑤로 넘기기'를 눌러야 스토리보드와 파일이 들어와요.")
     elif len(photos) < len(assets["photos"]) or len(videos) < len(assets["videos"]):
-        st.caption("넘긴 파일 중 일부는 다른 접속에서 올린 것이라 여기서는 zip에 넣을 수 없어요. ④에서 다시 올려 주세요.")
+        st.caption("넘긴 파일 중 일부를 이 컴퓨터에서 찾을 수 없어요 (다른 컴퓨터에서 만들었거나, 최근 가설 5개를 넘어 지워짐). "
+                   "④ '만든 결과 보기'에서 다시 골라 넘겨 주세요.")
 
     with st.container(border=True):
         st.markdown("**촬영 브리프 (미리 보기)**")
         st.code(media_s3_brief(src), language=None, wrap_lines=True)
     st.markdown(f"- 사진 레퍼런스 {len(photos)}장 · 영상 스토리보드 {len(storyboard)}장면 · 영상 초안 {len(videos)}개")
+    if photos or videos:
+        with st.expander("넣을 파일 보기"):
+            for name, _ in photos + videos:
+                st.caption(name)
 
     ready = not assets["sample"] and media_handoff_check(src, src["prompt_a"], src["prompt_b"])["ok"]
     st.download_button("외주 전달 파일 다운로드 (.zip)", media_s3_package(src, storyboard, photos, videos),
