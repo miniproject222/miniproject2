@@ -23,6 +23,7 @@ from modules.hypothesis.hypothesis_page import (  # noqa: E402
     hypothesis_build_ibt,
     hypothesis_build_sentence,
     hypothesis_has_batchim,
+    hypothesis_particle_ro,
     hypothesis_pick_action,
     hypothesis_pick_candidates,
     hypothesis_pick_problem,
@@ -31,8 +32,6 @@ from modules.hypothesis.hypothesis_page import (  # noqa: E402
     hypothesis_resolve_sentence,
 )
 from modules.hypothesis.hypothesis_scenario import (  # noqa: E402
-    hypothesis_scenario_ibt,
-    hypothesis_scenario_problem2_ibt,
     hypothesis_scenario_problem2_sentence,
     hypothesis_scenario_sentence,
 )
@@ -86,17 +85,26 @@ def test_core_flow() -> None:
         any("아직 선택한 가설이 없어요" in m.value for m in at.markdown),
         "[핵심] 처음에는 '지금 선택된 가설' 칸이 비어있다고 안내함",
     )
-    # 현지 특성/경쟁사 부정 리뷰 원문은 더 이상 캡션(📍/💬)으로 상시 노출되지 않고,
-    # "📚 근거 · 출처 보기" 토글 안에 모여 있습니다(가설 문장을 짧고 읽기 좋게 하기 위함).
-    evidence_labels = [e.label for e in at.get("expander") if "근거 · 출처" in e.label]
-    check(len(evidence_labels) == 3, f"[핵심] 가설 후보마다 '근거·출처' 토글이 1개씩 뜸 (실제: {len(evidence_labels)}개)")
+    # 현지 특성/경쟁사 부정 리뷰 원문은 화면에 상시 노출되지 않고, ① 탭처럼 오른쪽 끝
+    # "근거·출처" 아이콘을 누르면 열리는 창(dialog)에만 있습니다.
+    evidence_keys = [b.key for b in at.button if b.key and b.key.startswith("hypothesis-btn-side-evidence-")]
+    check(len(evidence_keys) == 3, f"[핵심] 가설 후보마다 오른쪽 끝 '근거·출처' 아이콘이 1개씩 있음 (실제: {len(evidence_keys)}개)")
     check(
-        any("가격 비교 사이트(idealo)" in m.value for m in at.markdown),
-        "[핵심] 현지 특성 원문이 근거·출처 토글 안에 표시됨",
+        not any("가격 비교 사이트(idealo)" in m.value for m in at.markdown),
+        "[핵심] 근거 원문은 아이콘을 누르기 전엔 화면에 안 보임",
+    )
+    at_ev = _new_apptest()
+    at_ev.session_state["store-report"] = SAMPLE_REPORT
+    at_ev.run()
+    at_ev.button(key="hypothesis-btn-side-evidence-0").click().run()
+    check(not at_ev.exception, "[핵심] '근거·출처' 아이콘을 눌러도 예외 없음")
+    check(
+        any("가격 비교 사이트(idealo)" in m.value for m in at_ev.markdown),
+        "[핵심] '근거·출처' 창에 현지 특성 원문이 표시됨",
     )
     check(
-        any("냉감 부족" in m.value for m in at.markdown),
-        "[핵심] 경쟁사 부정 리뷰 원문이 근거·출처 토글 안에 표시됨",
+        any("냉감 부족" in m.value for m in at_ev.markdown),
+        "[핵심] '근거·출처' 창에 경쟁사 부정 리뷰 원문이 표시됨",
     )
     # 가설 후보 탭 안에서는 If·Because·Then 카드를 안 그립니다 — 선택하면 맨 위 "지금 선택된
     # 가설" 칸에서 보이므로 탭 안에서 또 보여주면 중복이라는 지적 반영. 아직 아무것도 선택
@@ -437,6 +445,33 @@ def test_new_categories() -> None:
         s = hypothesis_build_sentence(p)
         check_sentence_quality(p["title"], s)
 
+    # 실제 report가 제목을 "리뷰 31건 (SleepCOOL 실적 가정), 경쟁사의 10% 수준"으로 바꿔
+    # "신뢰"/"리뷰 0" 키워드가 사라져도, 분류(group="신뢰")로 체험단 액션을 골라야 함
+    # (예전에는 의미 없는 기본값 "타깃 맞춤 프로모션 배너"로 빠졌음)
+    action, _, is_visual, _ = hypothesis_pick_action(
+        "Keepa 기준 경쟁사 평균 리뷰 수의 10% 수준입니다.", False, "",
+        "리뷰 31건 (SleepCOOL 실적 가정), 경쟁사의 10% 수준", "신뢰",
+    )
+    check("체험단" in action and is_visual, f"[회귀] group='신뢰'면 제목 키워드가 없어도 체험단 사진·영상 액션 (실제: {action})")
+
+    # 조사 로/으로: 실제 report 제목에서 "수준로"·"위험로" 같은 비문이 나왔던 회귀
+    for word, expected in [
+        ("리뷰 31건 (SleepCOOL 실적 가정), 경쟁사의 10% 수준", "으로"),   # 준(ㄴ 받침)
+        ("독일 경쟁법(UWG) 경고장 위험", "으로"),                         # 험(ㅁ 받침)
+        ("경쟁사 가격 인하", "로"),                                       # 하(받침 없음)
+        ("독일 소비심리 위축", "으로"),                                   # 축(ㄱ 받침)
+        ("10월 비시즌 (여름 전용 제품)", "으로"),                          # 괄호 건너뛰고 품(ㅁ 받침)
+        ("판매 채널", "로"),                                              # 널(ㄹ 받침)
+        ("클릭 ÷ 노출 0.63배)", "로"),                                    # 배(받침 없음)
+        ("리뷰 30", "으로"),                                              # 0(영)
+        ("리뷰 31", "로"),                                                # 1(일, ㄹ 받침)
+        ("신규 브랜드)", "로"),                                           # 드(받침 없음)
+    ]:
+        got = hypothesis_particle_ro(word)
+        check(got == expected, f"[문법] '{word}' 뒤 조사는 '{expected}' (실제: {got})")
+    s = hypothesis_build_sentence({"title": "경쟁사의 10% 수준", "type": "내부", "detail": "리뷰가 적습니다."})
+    check("수준으로 미루어" in s and "수준로" not in s, f"[문법] 가설 문장에 '수준로' 비문이 없음 (실제: {s[:60]})")
+
 
 # ─────────────────────────────────────────────
 # 7-2. 검색어 클릭 문제(시나리오) 섹션: 팀원이 추가한 hypothesis_scenario.py가
@@ -600,10 +635,16 @@ def test_sqp_single_hypothesis() -> None:
     saved2 = at.session_state["store-hypothesis"]
     check(saved2.get("text") == resolved2, "[시나리오 통합] 가설 2를 선택하면 hypothesis_scenario_problem2_sentence()와 정확히 같은 문장이 저장됨")
 
-    expander_labels = [e.label for e in at.get("expander")]
+    judge_keys = [b.key for b in at.button if b.key and b.key.startswith("hypothesis-btn-side-judge-")]
     check(
-        sum("판단 기준 자세히" in lb for lb in expander_labels) == 1,
-        f"[시나리오 통합] sqp 전용 '목표 KPI · 판단 기준' expander는 소재 개선(가설 1) 탭에만 1개 뜸 (실제: {sum('판단 기준 자세히' in lb for lb in expander_labels)}개)",
+        judge_keys == ["hypothesis-btn-side-judge-0"],
+        f"[시나리오 통합] sqp 전용 'KPI 표 · 판단 기준' 아이콘은 소재 개선(가설 1) 탭에만 1개 있음 (실제: {judge_keys})",
+    )
+    at.button(key="hypothesis-btn-side-judge-0").click().run()
+    check(not at.exception, "[시나리오 통합] '판단 기준' 아이콘을 눌러도 예외 없음")
+    check(
+        any("승자는 CTR로" in m.value for m in at.markdown),
+        "[시나리오 통합] '판단 기준' 창에 CTR/CAC 판단 기준이 표시됨",
     )
     # 가설 후보 탭 안에는 If·Because·Then 카드를 안 그리므로(중복 지적 반영), 맨 위
     # "지금 선택된 가설" 칸(가설 2 내용)에서만 1개 뜸
@@ -631,6 +672,100 @@ def test_realistic_sweep() -> None:
             check("독일 경쟁사" not in s, f"[실전:{p['title']}] 내부 문제는 '독일 경쟁사' 대응 문구가 안 들어감")
 
 
+# ─────────────────────────────────────────────
+# 8. ③ 탭 연결: ③ 탭(media_variable_split)은 저장된 가설 문장을 ", "로 잘라 If/Because/Then을
+#    나누고, 쉼표가 하나뿐이면 마지막 " 때문에 "에서 Because/Then을 가릅니다. 그래서 각 조각 안에
+#    ", "가 없고, Because가 "때문에"로 끝나며, Then 안에 " 때문에 "가 없어야 정확히 나뉩니다.
+#    (report 타깃 "Amazon.de, 자사몰에서…" 같은 쉼표 때문에 6개 중 4개가 잘못 잘리던 회귀)
+# ─────────────────────────────────────────────
+def test_media_split_ready() -> None:
+    sqp_main = SQP_SAMPLE | {"query": "kühlende matratzenauflage"}
+    items = [(p, None) for p in SAMPLE_REPORT["problems"] + REALISTIC_PROBLEMS + NEW_CATEGORY_PROBLEMS]
+    items += [(SQP_MAIN_PROBLEM, sqp_main), (SQP_EXPANSION_PROBLEM, SQP_SAMPLE)]
+    items += [({"title": "판매 채널 2개", "type": "내부", "detail": "채널이 적습니다.",
+                "target": "Amazon.de, 자사몰에서 비교하는 구매자", "metric": "매출, 전환율"}, None)]
+    for p, sqp in items:
+        ibt = hypothesis_resolve_ibt(p, sqp)
+        label = str(p.get("title"))[:30]
+        check(all(", " not in v for v in ibt.values()), f"[③연결:{label}] If/Because/Then 조각 안에 ', '가 없음 ({ibt})")
+        check(ibt["because"].endswith("때문에"), f"[③연결:{label}] Because가 '때문에'로 끝남")
+        check(" 때문에 " not in ibt["then"], f"[③연결:{label}] Then 안에 ' 때문에 '가 없음")
+
+
+def test_candidate_action_diversity() -> None:
+    # 실행 방법(액션)이 같은 문제 2개가 후보에 같이 들어가면 안 됨 — 다른 액션 문제가 있으면 그걸 먼저
+    from modules.hypothesis.hypothesis_page import hypothesis_action_key
+    report = {"problems": [
+        {"title": "장바구니 이탈률 71%", "type": "내부", "detail": "배송비 노출 뒤 이탈"},
+        {"title": "장바구니 이탈 증가", "type": "내부", "detail": "결제 직전 이탈 증가"},   # 같은 액션
+        {"title": "OEKO-TEX 인증 미취득", "type": "내부", "detail": "인증이 없습니다."},
+        {"title": "베스트셀러 품절 임박", "type": "내부", "detail": "재고 9일분"},
+    ]}
+    cands = hypothesis_pick_candidates(report)
+    keys = [hypothesis_action_key(p, None) for p in cands]
+    check(len(set(keys)) == len(keys) == 3, f"[다양성] 후보 3개의 실행 방법이 모두 다름 (실제: {keys})")
+    check([c["title"] for c in cands] == ["장바구니 이탈률 71%", "OEKO-TEX 인증 미취득", "베스트셀러 품절 임박"],
+          "[다양성] 겹치는 두 번째 문제만 건너뛰고 나머지는 report 순서 유지")
+    # 서로 다른 액션이 limit보다 적으면 겹치는 문제로라도 채움
+    few = {"problems": report["problems"][:2]}
+    check(len(hypothesis_pick_candidates(few)) == 2, "[다양성] 다른 액션이 부족하면 겹치는 문제로 채움")
+
+    # "결제 수단 선택 단계 이탈"은 배송비 배너가 아니라 결제수단 액션 (예전엔 '이탈'이 먼저 걸렸음)
+    action, _, _, _ = hypothesis_pick_action("모바일에서 결제 수단 선택 단계 이탈이 데스크톱보다 높습니다.",
+                                             False, "", "모바일 결제 이탈")
+    check("결제수단" in action, f"[분류] 결제 수단 단계 이탈은 결제수단 액션 (실제: {action})")
+    action, _, _, _ = hypothesis_pick_action("결제 단계 이탈률 68%. 배송비가 마지막 단계에 보이는 것이 원인입니다.",
+                                             False, "")
+    check("장바구니" in action, f"[분류] 배송비가 원인인 결제 단계 이탈은 여전히 장바구니 배너 (실제: {action})")
+
+
+def test_save_report_plus_hypothesis() -> None:
+    # "선택하기" → ② 칸에 ① 리포트 값 전체가 먼저, 그 아래 ② 내용(선택한 가설·실행 방법)이 붙어 저장
+    import copy as _copy
+    from modules.hypothesis.hypothesis_page import hypothesis_execution_rows
+    sqp_store = SQP_SAMPLE | {"query": "kühlende matratzenauflage"}
+    for report in (_copy.deepcopy(SAMPLE_REPORT),
+                   {"summary": "검색 클릭 문제", "problems": [SQP_MAIN_PROBLEM, SQP_EXPANSION_PROBLEM], "sqp": sqp_store}):
+        before = _copy.deepcopy(report)
+        at = _new_apptest()
+        at.session_state["store-report"] = report
+        at.run()
+        cands = hypothesis_pick_candidates(_copy.deepcopy(report))
+        for j, p in enumerate(cands):
+            at.button(key=f"hypothesis-btn-save-{j}").click().run()
+            saved = at.session_state["store-hypothesis"]
+            sel = saved.get("selected") or {}
+            label = f"[①+② 저장:{str(p.get('title'))[:16]}]"
+            check(not at.exception, f"{label} 예외 없음")
+            check(list(saved)[:2] == ["report", "selected"], f"{label} ① 리포트가 맨 앞, 그 아래 ② 내용 순서 (실제: {list(saved)[:3]})")
+            check(saved["report"] == before, f"{label} ① 리포트 값이 그대로 들어감")
+            check(sel.get("problem", {}).get("title") == p.get("title"), f"{label} 선택한 문제가 저장됨")
+            check(sel.get("execution") == dict(hypothesis_execution_rows(p, report.get("sqp"))),
+                  f"{label} 실행 방법이 화면 표와 같음")
+            check(sel.get("sentence") == saved.get("text") == hypothesis_resolve_sentence(p, report.get("sqp")),
+                  f"{label} 가설 문장이 저장되고 기존 text 키와 같음")
+            check(all(k in saved for k in ("hypothesis", "text", "if_text", "because_text", "then_text", "problem_title")),
+                  f"{label} ③·홈 탭이 읽는 기존 키 유지")
+            check(bool(sel.get("saved_at")), f"{label} 저장 시각 기록")
+        check(at.session_state["store-report"] == before, "[①+② 저장] ① 칸(report)은 바뀌지 않음")
+
+
+def test_badge_group() -> None:
+    # 외부 요인 배지는 report가 준 실제 분류를 붙여야 함 (예전엔 외부면 무조건 "· 경쟁사")
+    at = _new_apptest()
+    at.session_state["store-report"] = {"problems": [
+        {"title": "독일 경쟁법(UWG) 경고장 위험", "type": "외부", "group": "규제", "detail": "표기 조건 누락"},
+        {"title": "경쟁사 가격 인하", "type": "외부", "group": "경쟁사", "detail": "가격을 내렸습니다."},
+        {"title": "분류 없는 외부 문제", "type": "외부", "detail": "환율이 올랐습니다."},
+    ]}
+    at.run()
+    md = "".join(m.value for m in at.markdown)
+    check(not at.exception, "[배지] 예외 없음")
+    check("외부 요인 · 규제" in md, "[배지] 규제 문제는 '외부 요인 · 규제'로 표시")
+    check("외부 요인 · 경쟁사" in md, "[배지] 경쟁사 문제는 '외부 요인 · 경쟁사'로 표시")
+    check(md.count("외부 요인 · 경쟁사") == 1, "[배지] 경쟁사가 아닌 외부 문제에 '경쟁사'를 붙이지 않음")
+
+
 if __name__ == "__main__":
     test_core_flow()
     test_defensive()
@@ -641,6 +776,10 @@ if __name__ == "__main__":
     test_scenario_section()
     test_sqp_single_hypothesis()
     test_realistic_sweep()
+    test_media_split_ready()
+    test_badge_group()
+    test_candidate_action_diversity()
+    test_save_report_plus_hypothesis()
 
     print(f"\n총 {_ok + _fail}개 중 통과 {_ok}개, 실패 {_fail}개")
     if _fail:

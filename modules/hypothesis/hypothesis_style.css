@@ -27,6 +27,14 @@
   color: var(--color-card) !important;
 }
 
+/* 이미 선택된 후보의 "✓ 선택됨" 버튼은 흰 배경(secondary)이라 위의 흰 글씨 규칙에 묻혀
+   안 보였음 → 이 버튼만 보조 글씨색으로 */
+/* (위 흰 글씨 규칙보다 우선순위가 높아야 해서 .stButton button까지 붙임) */
+[class*="st-key-hypothesis-card-"] .stButton button[data-testid="stBaseButton-secondary"],
+[class*="st-key-hypothesis-card-"] .stButton button[data-testid="stBaseButton-secondary"] * {
+  color: var(--color-sub) !important;
+}
+
 /* 현지 특성 / 경쟁사 부정 리뷰 줄도 같이 조금 키워서 가독성을 맞춤 */
 [class*="st-key-hypothesis-card-"] [data-testid="stMarkdownContainer"] p {
   font-size: 14.5px;
@@ -67,8 +75,9 @@
 }
 
 /* ────────────────────────────────────────────────────────────
-   맨 위 "지금 선택된 가설" 칸 (전체 너비 1개 — "분석 리포트 문제 요약" 칸은
-   가설 후보 탭마다 내부/외부 요인을 이미 보여주고 있어서 중복이라 뺐습니다)
+   "지금 선택된 가설" 칸 (왼쪽 컬럼 — 오른쪽 "가설 후보"와 나란히 둬서 스크롤을
+   줄였습니다. "분석 리포트 문제 요약" 칸은 가설 후보 탭마다 내부/외부 요인을
+   이미 보여주고 있어서 중복이라 뺐습니다)
    ──────────────────────────────────────────────────────────── */
 
 .hypothesis-callout-box {
@@ -250,4 +259,128 @@
 /* 가설 후보 탭 안에서 펼치기들 사이 여백을 살짝 줘서 서로 안 붙어 보이게 */
 [class*="st-key-hypothesis-card-"] [data-testid="stExpander"] {
   margin-top: 4px;
+}
+
+/* ────────────────────────────────────────────────────────────
+   오른쪽 끝 아이콘 (① 탭 .st-key-report-side와 같은 모양). 가설 1/2/3 하부 탭마다
+   key="hypothesis-side-0/1/2"로 따로 그려지는데, 안 열린 탭은 숨겨지므로 열린 탭 것만 보임.
+   ──────────────────────────────────────────────────────────── */
+[class*="st-key-hypothesis-side-"] {
+  position: fixed;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 999;
+  width: 52px;
+  padding: 10px 4px;
+  gap: 10px;
+  align-items: center;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+[class*="st-key-hypothesis-side-"] .stButton > button {
+  min-height: 0;
+  padding: 4px;
+  background: transparent;
+  color: var(--color-primary);
+}
+
+[class*="st-key-hypothesis-side-"] .stButton > button:hover {
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
+[class*="st-key-hypothesis-side-"] button span[data-testid="stIconMaterial"] {
+  font-size: 24px;
+}
+
+/* 마우스를 올리면 왼쪽에 이름 말풍선 */
+[class*="st-key-hypothesis-btn-side-"] {
+  position: relative;
+}
+
+[class*="st-key-hypothesis-btn-side-"]:hover::after {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: var(--color-card);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+[class*="st-key-hypothesis-btn-side-judge-"]:hover::after { content: "KPI 표 · 판단 기준"; }
+[class*="st-key-hypothesis-btn-side-evidence-"]:hover::after { content: "근거 · 출처"; }
+
+/* 오른쪽 "지금 선택된 가설" 카드를 왼쪽 "가설 1/2/3" 탭 줄 높이만큼 내려서,
+   왼쪽 후보 카드와 윗선을 맞춤 */
+.hypothesis-tab-spacer {
+  height: 62px;
+}
+
+/* "가설 후보" / "지금 선택된 가설" 제목: 페이지 제목("2. 가설 수립")과 크기가 거의 같아서
+   한 단계 작게 */
+.st-key-hypothesis-heading-candidates h4,
+.st-key-hypothesis-heading-selected h4 {
+  font-size: 18px !important;
+  padding: 0 !important;
+}
+
+/* ② 가설 탭이 열려 있을 때만 페이지 아래 기본 여백(160px)을 줄여서, 내용이 화면 안에
+   들어가는데도 여백 때문에 생기던 세로 스크롤을 없앰. Streamlit은 열린 탭만 화면에
+   그리므로 :has()가 다른 탭에는 걸리지 않음. (내용 자체가 화면보다 길면 스크롤은 남음) */
+[data-testid="stMainBlockContainer"]:has(.st-key-hypothesis-candidate-tabs) {
+  padding-bottom: 24px !important;
+}
+
+/* 페이지 제목("2. 가설 수립") 바로 밑에 두 칸이 붙어 보여서 조금 내림 */
+.hypothesis-top-gap {
+  height: 20px;
+}
+
+/* 두 칸 제목 줄 아래 간격 (제목은 그대로, 그 아래 탭·박스만 내림) — 양쪽에 같이 둬서 윗선 정렬 유지 */
+.hypothesis-heading-gap {
+  height: 12px;
+}
+
+/* 오른쪽 "지금 선택된 가설" 박스를 왼쪽 후보 박스와 같은 높이로 (위·아래 끝선 맞춤).
+   오른쪽 칸은 이미 왼쪽 칸과 같은 높이로 늘어나 있으므로 박스가 남은 높이를 채우게 하고,
+   왼쪽 칸 맨 아래의 고정 여백(후보 박스 아래 16px, 브라우저 실측)만큼 뺌 */
+[data-testid="stLayoutWrapper"]:has(> .st-key-hypothesis-selected-card) {
+  flex: 1 1 auto;
+  margin-bottom: 16px;
+}
+
+.st-key-hypothesis-selected-card {
+  flex: 1 1 auto;
+}
+
+/* 높이를 맞춘 "지금 선택된 가설" 박스 안에서, 안쪽 회색 If·Because·Then 박스(또는 선택 전
+   안내 박스)가 바깥 박스 높이를 끝까지 채우고 세 줄을 그 안에 고르게 배치 — 안쪽 박스가
+   내용 높이만큼만 있어서 아래가 비어 보이던 문제. 바깥 박스 → 안쪽 박스 사이의 감싸는 요소들도
+   높이를 이어받게 함 */
+.st-key-hypothesis-selected-card > [data-testid="stElementContainer"]:has(.hypothesis-ibt-box, .hypothesis-callout-box) {
+  flex: 1 1 auto;
+}
+
+.st-key-hypothesis-selected-card div:has(.hypothesis-ibt-box, .hypothesis-callout-box) {
+  height: 100%;
+}
+
+.st-key-hypothesis-selected-card .hypothesis-ibt-box,
+.st-key-hypothesis-selected-card .hypothesis-callout-box {
+  /* 위 여백(24px)과 아래 여백이 같도록 16px 덜 채움 (브라우저 실측) */
+  height: calc(100% - 16px);
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.st-key-hypothesis-selected-card .hypothesis-ibt-box {
+  justify-content: space-evenly;
 }
