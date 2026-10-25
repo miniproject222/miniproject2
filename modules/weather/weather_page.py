@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 import ui_theme as ui
+from common.common_store import store_set
 from modules.weather.weather_data import (
     WEATHER_HOT_C,
     WEATHER_STOCK_LABEL,
@@ -15,7 +16,8 @@ from modules.weather.weather_data import (
     weather_fetch_regions,
     weather_get_competitors,
     weather_reco_items,
-    weather_recommended_amazon_share,
+    WEATHER_AMAZON_ONLY,
+    weather_amazon_days,
     weather_sample_regions,
     weather_short_date,
     weather_stock_checked,
@@ -30,14 +32,13 @@ P = ui.PALETTE
 T = ui.THEME
 WEATHER_SOFT_LAVENDER = f"color-mix(in srgb, {P['lavender']} 35%, {T['card']})"
 WEATHER_BUDGET_DEFAULT = (1000, 20000, 5000)   # 슬라이더 최소, 최대, 처음 값 (€)
-WEATHER_FONT_CSS = "https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/static/woff2/SUIT.css"
-WEATHER_FONT_FAMILY = "SUIT, Pretendard, sans-serif"
+WEATHER_FONT_FAMILY = '"Source Sans", sans-serif'   # 그래프 글꼴: ① 문제 분석 탭과 같은 앱 기본 글꼴
 
 
 def _weather_tile_colors(tmax):
-    """7일 최고기온 → 권역 카드 (배경, 글자) 색."""
+    """7일 최고기온 → 권역 카드 (배경, 글자) 색. 글자는 ① 탭과 같은 글자색으로 통일하고 배경만 기온별로."""
     if tmax >= 33:
-        return T["down_bg"], T["down_text"]
+        return T["down_bg"], T["text"]
     if tmax >= WEATHER_HOT_C:
         return P["peach"], T["text"]
     if tmax >= 25:
@@ -57,12 +58,12 @@ def _weather_header():
     with c1:
         _weather_html(
             '<div class="weather-title">날씨 광고 타이밍</div>'
-            '<div class="weather-subtitle">독일 4개 권역 예보와 경쟁사 재고로 이번 주 메타·아마존 예산을 나눕니다</div>'
+            '<div class="weather-subtitle">독일 4개 권역 예보와 경쟁사 재고로 이번 주 아마존 광고 예산을 날짜별로 나눕니다</div>'
         )
     with c2:
         return st.toggle(
-            "폭염 시나리오(샘플)", key="weather-toggle-sample",
-            help="실제 예보 대신 여름 폭염 샘플 데이터로 화면과 보고서를 확인합니다.",
+            "폭염 시나리오(샘플)", key="weather-toggle-sample", value=True,   # 처음부터 켜짐 (끄면 실제 예보)
+            help="실제 예보 대신 여름 폭염 샘플 데이터로 화면과 보고서를 확인합니다. 끄면 Open-Meteo 실제 예보.",
         )
 
 
@@ -74,13 +75,14 @@ def _weather_region_tiles(regions, failed):
         hot = len([d for d in r["days"] if d["tmax"] >= WEATHER_HOT_C])
         chip = f"7일 최고 {r['max7']:.0f}°" + (f" · {WEATHER_HOT_C}°C+ {hot}일" if hot else "")
         cities = " · ".join(f"{escape(c['city'])} <b>{c['now']:.0f}°</b>" for c in r.get("cities", []))
+        plain = " · ".join(f"{c['city']} {c['now']:.0f}°" for c in r.get("cities", []))
         tiles.append(
             f'<div class="weather-kpi" style="background:{bg};color:{fg}">'
             f'<div class="weather-kpi-head"><span>{r["name"]} <em>{r["de"]}</em></span>'
             f'<span class="weather-kpi-emoji" title="{weather_wmo_text(r["wcode"])}">{weather_wmo_emoji(r["wcode"])}</span></div>'
             f'<div class="weather-kpi-temp">{r["now"]:.0f}°<small>{weather_wmo_text(r["wcode"])}</small></div>'
             f'<span class="weather-kpi-chip">{chip}</span>'
-            f'<div class="weather-kpi-cities">{cities}</div></div>'
+            f'<div class="weather-kpi-cities" title="{escape(plain)}">{cities}</div></div>'
         )
     for r in failed:
         tiles.append(
@@ -91,14 +93,13 @@ def _weather_region_tiles(regions, failed):
 
 
 def _weather_budget_card(competitors):
-    """예산 카드: ① 주간 예산(범위는 '범위 설정'에서 입력) ② 채널 비율 ③ 결과 금액."""
+    """예산 카드: 주간 예산(범위는 '범위 설정'에서 입력) → 아마존 결과 금액. 메타는 운영하지 않음 (아마존만)."""
     lo_def, hi_def, val_def = WEATHER_BUDGET_DEFAULT
-    rec_meta = round((1 - weather_recommended_amazon_share(competitors)) * 100)
     with st.container(border=True, key="weather-card-budget"):
         h1, h2 = st.columns([3, 1], vertical_alignment="center")
         with h1:
             _weather_html('<div class="weather-card-title weather-flat">이번 주 광고 예산<span class="weather-chip">7일 합계</span></div>'
-                          '<div class="weather-card-desc">주간 예산을 설정하고 채널 비율을 조정하세요.</div>')
+                          '<div class="weather-card-desc">주간 예산을 설정하면 아마존 날짜별 예산을 계산합니다.</div>')
         with h2, st.popover("범위 설정", icon=":material/tune:", width="stretch", key="weather-pop-range"):
             lo = st.number_input("최소 (€)", min_value=0, value=lo_def, step=500, key="weather-budget-min")
             hi = st.number_input("최대 (€)", min_value=0, value=hi_def, step=500, key="weather-budget-max")
@@ -109,7 +110,6 @@ def _weather_budget_card(competitors):
         cur = st.session_state.get("weather-budget-week", val_def)
         st.session_state["weather-budget-week"] = min(max(cur, lo), hi)
 
-        # ① 주간 예산
         budget_head = st.empty()
         budget = st.slider("주간 예산", min_value=int(lo), max_value=int(hi), step=step, format="€%d",
                            key="weather-budget-week", label_visibility="collapsed")
@@ -118,37 +118,27 @@ def _weather_budget_card(competitors):
             f'<div class="weather-note weather-range-note">설정 범위 {weather_eur(lo)} ~ {weather_eur(hi)}</div>',
             unsafe_allow_html=True,
         )
-
-        # ② 채널 비율
-        share_head = st.empty()
-        # 처음에는 경쟁사 재고에 맞춘 추천 비율로 시작하고, 이후로는 사용자가 슬라이더로 바로 조정
-        if "weather-meta-share" not in st.session_state:
-            st.session_state["weather-meta-share"] = rec_meta
-        meta_pct = st.slider("메타 비율", min_value=0, max_value=100, step=5, format="메타 %d%%",
-                             key="weather-meta-share", label_visibility="collapsed")
-        share_head.markdown(
-            f'<div class="weather-field weather-field-gap"><span>채널 비율</span>'
-            f'<b>메타 {meta_pct}% · 아마존 {100 - meta_pct}%</b></div>',
-            unsafe_allow_html=True,
-        )
         summary_slot = st.empty()
-    return int(budget), (100 - meta_pct) / 100, summary_slot
+    return int(budget), WEATHER_AMAZON_ONLY, summary_slot
 
 
 def _weather_budget_summary(slot, plan):
-    meta_pct = (1 - plan["amazon_share"]) * 100
+    days = weather_amazon_days(plan)
+    peak = max(days, key=lambda d: d["eur"]) if days else None
     slot.markdown(
         '<div class="weather-results">'
-        f'<div class="weather-result"><span><i style="background:{T["primary"]}"></i>메타 · 지역 타겟</span>'
-        f'<b>{weather_eur(plan["meta"])}</b><em>{meta_pct:.0f}%</em></div>'
         f'<div class="weather-result"><span><i style="background:{P["peach"]}"></i>아마존 · 전국</span>'
-        f'<b>{weather_eur(plan["amazon"])}</b><em>{100 - meta_pct:.0f}%</em></div>'
-        '</div>',
+        f'<b>{weather_eur(plan["amazon"])}</b><em>주간 예산 전부</em></div>'
+        + (f'<div class="weather-result"><span><i style="background:{weather_temp_color(peak["tmax"])}"></i>가장 많이 쓰는 날</span>'
+           f'<b>{weather_eur(peak["eur"])}</b><em>{weather_short_date(peak["date"])} · 최고 {peak["tmax"]:.0f}°</em></div>' if peak else "")
+        + '</div>',
         unsafe_allow_html=True,
     )
 
 
 def _weather_channel_card(plan):
+    """추천 집행 액션 (아마존만): 권역별 막대(주간 예산을 권역 날씨로 나눈 비중) + 경쟁사 ASIN 타겟.
+    날짜별 금액은 아래 '아마존 7일 예산' 그래프."""
     top = max((r["week"] for r in plan["regions"]), default=1) or 1
     rows = []
     for r in sorted(plan["regions"], key=lambda r: -r["week"]):
@@ -162,39 +152,39 @@ def _weather_channel_card(plan):
             f'<b>{weather_eur(r["week"])}</b>{diff_html}</div>'
         )
     asin = "".join(f'<span class="weather-pill">{escape(c["competitor"])} ASIN 타겟 ON</span>' for c in plan["soldout"])
-    if not plan["soldout"]:   # 품절이 없으면 빈칸 대신 지금 비중의 이유를 안내
-        rec = f'{plan["recommended_share"] * 100:.0f}%'
-        reason = f"재고 낮음 반영 비중 {rec}" if plan["low"] else f"기본 비중 {rec}"
-        msg = f"품절 경쟁사 없음 · {reason}로 운영"
-        if plan["share_manual"]:
-            msg = f"품절 경쟁사 없음 · 추천 {reason} (지금은 직접 설정 {plan['amazon_share'] * 100:.0f}%)"
+    if not plan["soldout"]:
+        msg = "품절 경쟁사 없음 · ASIN 타겟 광고는 대기"
         checked = weather_stock_checked(plan["competitors"])
         if checked:
             msg += f" (Keepa {checked} 확인)"
         asin = f'<span class="weather-note">{escape(msg)}</span>'
     with st.container(border=True, key="weather-card-channel"):
         _weather_html(
-            '<div class="weather-card-title">채널별 추천 액션<span class="weather-chip">7일 합계</span></div>'
-            f'<div class="weather-channel-head"><span>∞ 메타 · 지역 타겟</span><b>{weather_eur(plan["meta"])}</b></div>'
+            '<div class="weather-card-title">추천 집행 액션<span class="weather-chip">7일 합계</span></div>'
+            f'<div class="weather-channel-head"><span>🛒 아마존 · 권역별 비중</span><b>{weather_eur(plan["amazon"])}</b></div>'
+            '<div class="weather-note" style="margin-bottom:6px">더운 권역에 더 배정 (지역 타겟 기준 · 균등 대비 %)</div>'
             f'{"".join(rows)}'
-            f'<div class="weather-channel-head weather-gap"><span>🛒 아마존 · 전국</span>'
-            f'<b>{weather_eur(plan["amazon"])}</b></div><div class="weather-pills">{asin}</div>'
+            f'<div class="weather-channel-head weather-gap"><span>🎯 경쟁사 ASIN 타겟</span>'
+            f'<b>{len(plan["soldout"])}곳</b></div><div class="weather-pills">{asin}</div>'
         )
 
 
-def _weather_forecast_chart(region):
-    days = region["days"]
+def _weather_amazon_chart(plan):
+    """아마존 7일 예산(전국) 막대: 날짜별 예산, 막대 색은 그날 4개 권역 중 가장 높은 최고기온."""
+    ok = [r for r in plan["regions"]]
+    days = plan["dates"]
+    tmax = [max(r["days"][i]["tmax"] for r in ok) for i in range(len(days))]
+    daily = plan["amazon_daily"]
     fig = go.Figure(go.Bar(
-        x=[f"{weather_weekday(d['date'])} {d['date'][5:].replace('-', '/')}<br><b>{d['tmax']:.0f}°</b>" for d in days],
-        y=region["daily"],
-        marker=dict(color=[weather_temp_color(d["tmax"]) for d in days], cornerradius=10, line=dict(width=0)),
-        text=[weather_eur(v) for v in region["daily"]],
+        x=[f"{weather_weekday(d)} {d[5:].replace('-', '/')}<br><b>{t:.0f}°</b>" for d, t in zip(days, tmax)],
+        y=daily,
+        marker=dict(color=[weather_temp_color(t) for t in tmax], cornerradius=10, line=dict(width=0)),
+        text=[weather_eur(v) for v in daily],
         textposition="outside",
         textfont=dict(color=T["text"], size=12),
         cliponaxis=False,
-        customdata=[[weather_short_date(d["date"]), d["tmax"], d["tmin"]] for d in days],
-        hovertemplate="%{customdata[0]}<br>최고 %{customdata[1]:.0f}° · 최저 %{customdata[2]:.0f}°"
-                      "<br>메타 예산 %{text}<extra></extra>",
+        customdata=[[weather_short_date(d), t] for d, t in zip(days, tmax)],
+        hovertemplate="%{customdata[0]}<br>4개 권역 중 최고 %{customdata[1]:.0f}°<br>아마존 예산 %{text}<extra></extra>",
     ))
     fig.update_layout(
         height=250, margin=dict(l=4, r=4, t=26, b=4), bargap=0.34,
@@ -203,32 +193,47 @@ def _weather_forecast_chart(region):
         hoverlabel=dict(bgcolor=T["card"], bordercolor=T["line"], font=dict(color=T["text"])),
     )
     fig.update_xaxes(showgrid=False, showline=False, fixedrange=True, tickfont=dict(size=12, color=T["muted"]))
-    fig.update_yaxes(visible=False, range=[0, max(region["daily"]) * 1.18], fixedrange=True)
+    fig.update_yaxes(visible=False, range=[0, (max(daily) if daily else 1) * 1.18], fixedrange=True)
     return fig
 
 
 def _weather_forecast_section(plan):
-    hot = plan["hot_regions"]
-    if not hot:
-        with st.container(border=True, key="weather-card-empty"):
-            _weather_html(
-                f'<div class="weather-card-title">{WEATHER_HOT_C}°C 이상 권역 · 7일 메타 예산</div>'
-                f'<div class="weather-empty"><b>앞으로 7일 동안 {WEATHER_HOT_C}°C 이상 예보된 권역이 없어요.</b><br>'
-                '메타 예산은 4개 권역에 고르게 나눠 운영합니다. 오른쪽 위 "폭염 시나리오(샘플)"를 켜면 그래프 예시를 볼 수 있어요.</div>'
-            )
+    """아마존 7일 예산 (전국): 날짜별 가중치 = 1 + 0.1 × 그날 권역 폭염 점수 합 → 더운 날에 더 배정."""
+    if not plan["amazon_daily"]:
         return
-    cols = st.columns(2 if len(hot) > 1 else 1, gap="small")
-    for i, r in enumerate(hot):
-        peak = max(r["days"], key=lambda d: d["tmax"])
-        with cols[i % len(cols)], st.container(border=True, key=f"weather-card-chart-{r['code']}"):
-            diff = f" · 균등 대비 +{r['vs_even']}%" if r["vs_even"] > 0 else ""
-            _weather_html(
-                f'<div class="weather-chart-head"><div class="weather-card-title">{r["name"]} 7일 메타 예산'
-                f'<span>{WEATHER_HOT_C}°C 이상 {len(r["hot_days"])}일 · 최고 {peak["tmax"]:.0f}° ({weather_short_date(peak["date"])})</span></div>'
-                f'<div class="weather-chart-total">주간 <b>{weather_eur(r["week"])}</b>{diff}</div></div>'
-            )
-            st.plotly_chart(_weather_forecast_chart(r), config={"displayModeBar": False},
-                            key=f"weather-chart-{r['code']}", width="stretch")
+    hot_days = sum(1 for i in range(len(plan["dates"])) if any(r["days"][i]["tmax"] >= WEATHER_HOT_C for r in plan["regions"]))
+    with st.container(border=True, key="weather-card-chart-amazon"):
+        _weather_html(
+            f'<div class="weather-chart-head"><div class="weather-card-title">아마존 7일 예산 · 전국'
+            f'<span>{WEATHER_HOT_C}°C 이상 예보일 {hot_days}일에 더 배정 · 막대 색 = 그날 4개 권역 중 최고기온</span></div>'
+            f'<div class="weather-chart-total">주간 <b>{weather_eur(plan["amazon"])}</b></div></div>'
+        )
+        st.plotly_chart(_weather_amazon_chart(plan), config={"displayModeBar": False}, key="weather-chart-amazon", width="stretch")
+
+
+def weather_save_store(plan, is_sample_weather=False):
+    """홈 탭이 읽는 store("weather"): 광고 빈도 배수·근거·알림(오늘의 추천 첫 줄). 내용이 바뀔 때만 저장."""
+    days = weather_amazon_days(plan)
+    peak = max(days, key=lambda d: d["eur"]) if days else None
+    hot_n = sum(1 for d in days if d["hot_regions"])
+    mult = round(1 + max(0, peak["vs_avg"]) / 100, 1) if peak else 1.0   # 가장 많이 쓰는 날 ÷ 평균 (아마존)
+    reason = (f"{weather_short_date(peak['date'])} 최고 {peak['tmax']:.0f}° · 폭염일 {hot_n}일 아마존 상향" if hot_n
+              else f"{WEATHER_HOT_C}°C 이상 예보 없음") \
+        + (f" + 경쟁사 품절 {len(plan['soldout'])}곳" if plan["soldout"] else "")         + (" (폭염 시나리오 샘플)" if is_sample_weather else "")
+    items = weather_reco_items(plan)
+    sample = " (폭염 시나리오 샘플)" if is_sample_weather else ""
+    alerts = [{"level": "high" if i["tone"] in ("hot", "stock") else "info",
+               "text": f"④ 광고 타이밍 · {i['text'].split('.')[0]}", "detail": f"{i['text']} ({i['tag']}){sample}",
+               "when": "오늘"} for i in items[:1]]
+    payload = {"ad_multiplier": mult, "reason": reason, "alerts": alerts,
+               "channel": "amazon", "amazon": plan["amazon"], "amazon_daily": plan["amazon_daily"], "dates": plan["dates"]}
+    if st.session_state.get("weather-stored-payload") != payload:
+        first = "weather-stored-payload" not in st.session_state
+        store_set("weather", payload)
+        st.session_state["weather-stored-payload"] = payload
+        if first:
+            # 홈 탭은 ④보다 먼저 그려져 첫 화면에서는 아직 이 값이 없음 → 이번 접속 처음 저장할 때만 한 번 다시 그려 홈에 반영
+            st.rerun()
 
 
 # ─────────────────────────────────────────────
@@ -291,8 +296,6 @@ def _weather_reco_card(plan, is_sample_weather, is_sample_stock):
 # ─────────────────────────────────────────────
 def weather_render():
     """'4. 날씨 광고 타이밍' 탭을 열 때마다 실행됩니다. 화면은 전부 이 함수 안에서 그립니다."""
-    # 팀 공용 글꼴 SUIT (common/fonts와 같은 글꼴의 웹 버전, 이 탭 안에만 적용)
-    _weather_html(f"<style>@import url('{WEATHER_FONT_CSS}');</style>")
     with st.container(key="weather-root"):
         is_sample_weather = _weather_header()
 
@@ -326,6 +329,7 @@ def weather_render():
         with side:
             _weather_stock_card(plan, is_sample_stock)
             _weather_reco_card(plan, is_sample_weather, is_sample_stock)
+        weather_save_store(plan, is_sample_weather)   # 홈 '지금 할 일'이 읽는 값 (광고 빈도 배수·알림)
 
         source = "폭염 시나리오 샘플 데이터 (실제 예보 아님)" if is_sample_weather else "Weather data by Open-Meteo.com"
         stock = ("샘플 데이터" if is_sample_stock

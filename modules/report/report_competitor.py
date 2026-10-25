@@ -498,24 +498,18 @@ def report_severity_key(f):
     return REPORT_LEVEL_ORDER[f["level"]], -report_severity(f)["score"]
 
 
-def report_key_problems(internal, external, limit=None):
-    """경쟁 포지션 핵심 문제: 내부 요인과 외부 위협을 섞어 위험도(높음 > 중간 > 낮음) 순, 같은 위험도면 심각도 점수 순으로
-    정렬하고 질문(HMW)을 붙입니다. limit이 없으면 전부 돌려줍니다."""
+def report_four_problems(internal, external):
+    """① 핵심 문제: 내부 요인 상위 2개 + 외부 위협 상위 2개(각 카드에 보이는 4개)를 다시 위험도 → 심각도 순으로 1~4순위.
+    결과 박스는 이 중 1·2순위를 보여 주고, 카드의 같은 문제에 'N순위' 표시를 붙입니다 (internal·external 항목에 rank_label)."""
     threats = [f for f in external if f["kind"] == "위협"]
-    picked = sorted(internal + threats, key=report_severity_key)
+    picked = sorted(internal[:2] + threats[:2], key=report_severity_key)
     out = []
-    for i, f in enumerate(picked[:limit], 1):
+    for i, f in enumerate(picked, 1):
+        f["rank_label"] = f"{i}순위"
         out.append({"rank": i, "type": "내부" if f in internal else "외부", "level": f["level"], "group": f["group"],
                     "title": f["title"], "detail": f["detail"], "gap": f.get("gap"), "severity": report_severity(f),
-                    "question": REPORT_HMW.get(f["group"], f"'{f['title']}' 문제를 어떻게 풀까?")})
+                    "question": f.get("question") or REPORT_HMW.get(f["group"], f"'{f['title']}' 문제를 어떻게 풀까?")})
     return out
-
-
-def report_merge_key_problems(first, position, limit=3):
-    """① 결과 Top N: 검색어 클릭 문제(first)와 경쟁 포지션 문제(내부·외부)를 섞어 위험도 순, 같으면 심각도 점수 순으로.
-    (검색어 분석은 가상 SQP라 신뢰도 0.5로 계산 → 같은 위험도의 실제 데이터 문제보다 뒤로 갈 수 있음)"""
-    merged = sorted(first + position, key=report_severity_key)[:limit]
-    return [{**p, "rank": i, "severity": report_severity(p)} for i, p in enumerate(merged, 1)]
 
 
 def report_marketing_rules():

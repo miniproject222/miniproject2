@@ -438,3 +438,15 @@
   background: var(--color-primary);
   color: var(--color-card);
 }
+
+/* 내부·외부 요인 카드: 결과 박스 순위 대상이면 제목 앞 'N순위' 표시 (결과 박스 배지와 같은 빨강 계열) */
+.report-rank-chip {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid var(--report-red, #F2546B);
+  color: var(--report-red, #F2546B);
+  font-size: 12px;
+  font-weight: 700;
+}

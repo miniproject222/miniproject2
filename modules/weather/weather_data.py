@@ -225,7 +225,8 @@ def weather_stock_text(c):
 # ─────────────────────────────────────────────
 # 3. 예산 추천 계산 (규칙 기반, 금액은 유로)
 # ─────────────────────────────────────────────
-WEATHER_AMAZON_SHARE = 0.40          # 기본 아마존 비중 (나머지는 메타)
+WEATHER_AMAZON_ONLY = 1.0            # 2026-10-25: 메타는 운영하지 않고 아마존만 (예산 전부 아마존, 날짜별 배분)
+WEATHER_AMAZON_SHARE = 0.40          # (예전) 기본 아마존 비중 - 메타를 함께 쓸 때만
 WEATHER_AMAZON_SHARE_LOW = 0.45      # 경쟁사 재고 낮음일 때
 WEATHER_AMAZON_SHARE_SOLDOUT = 0.50  # 경쟁사 품절일 때
 
@@ -282,15 +283,17 @@ def weather_build_plan(regions, competitors, budget, amazon_share=None):
     amazon = round(budget * amazon_share)
     meta = budget - amazon
 
-    # 2) 메타: 60%는 권역·날짜에 똑같이, 40%는 30°C 이상 예보일에 (최고기온-29)점 비례로 추가
+    # 2) 권역 배분: 60%는 권역·날짜에 똑같이, 40%는 30°C 이상 예보일에 (최고기온-29)점 비례로 추가
+    #    메타를 안 쓰면(아마존만) 아마존 예산을 권역 날씨로 나눈 값 = 권역별 아마존 비중 (지역 타겟 기준)
+    region_total = meta if meta > 0 else amazon
     n_days = min((len(r["days"]) for r in ok), default=7)
     cells = [(r["code"], i) for r in ok for i in range(n_days)]
     heat = [weather_heat_points(r["days"][i]["tmax"]) for r in ok for i in range(n_days)]
-    pool = round(meta * WEATHER_HEAT_POOL) if sum(heat) else 0
-    base = [v for part in weather_split(meta - pool, [1] * len(ok)) for v in weather_split(part, [1] * n_days)]
+    pool = round(region_total * WEATHER_HEAT_POOL) if sum(heat) else 0
+    base = [v for part in weather_split(region_total - pool, [1] * len(ok)) for v in weather_split(part, [1] * n_days)]
     boost = weather_split(pool, heat) if pool else [0] * len(cells)
     cell_eur = {c: b + h for c, b, h in zip(cells, base, boost)}
-    even = meta / len(ok) if ok else 0   # 4개 권역에 똑같이 나눴을 때 금액
+    even = region_total / len(ok) if ok else 0   # 4개 권역에 똑같이 나눴을 때 금액
 
     scored = []
     for r in ok:
@@ -318,6 +321,7 @@ def weather_build_plan(regions, competitors, budget, amazon_share=None):
         "budget": budget,
         "meta": meta,
         "amazon": amazon,
+        "region_total": region_total,
         "amazon_share": amazon_share,
         "recommended_share": recommended,
         "share_manual": manual,
@@ -339,16 +343,28 @@ def weather_eur(value):
     return f"€{value:,.0f}"
 
 
+def weather_amazon_days(plan):
+    """아마존 날짜별 배분 [{date, tmax(4개 권역 중 최고), hot_regions, eur, vs_avg(평균 대비 %)}]."""
+    days = plan["dates"]
+    avg = plan["amazon"] / len(days) if days else 0
+    out = []
+    for i, d in enumerate(days):
+        tmax = max(r["days"][i]["tmax"] for r in plan["regions"])
+        eur = plan["amazon_daily"][i]
+        out.append({"date": d, "tmax": tmax, "eur": eur,
+                    "hot_regions": [r["name"] for r in plan["regions"] if r["days"][i]["tmax"] >= WEATHER_HOT_C],
+                    "vs_avg": round((eur / avg - 1) * 100) if avg else 0})
+    return out
+
+
 def weather_headline(plan):
-    """배너 제목 한 줄."""
-    if plan["hot_regions"]:
-        top = plan["hot_regions"][0]
-        head = f"{top['name']} 메타 {weather_eur(top['week'])}"
-        if top["vs_even"] > 0:
-            head += f" (균등 대비 +{top['vs_even']}%)"
-    else:
-        head = f"메타 {weather_eur(plan['meta'])} 권역 균등 운영"
-    return f"{head} · 아마존 {weather_eur(plan['amazon'])}"
+    """배너 제목 한 줄 (아마존만)."""
+    days = weather_amazon_days(plan)
+    hot = [d for d in days if d["hot_regions"]]
+    if hot:
+        peak = max(hot, key=lambda d: d["eur"])
+        return f"아마존 {weather_eur(plan['amazon'])} · 폭염일 {len(hot)}일 상향 (최고 {weather_short_date(peak['date'])} {weather_eur(peak['eur'])})"
+    return f"아마존 {weather_eur(plan['amazon'])} · 날짜별 고르게 운영"
 
 
 def weather_wmo_text(code):
@@ -390,41 +406,51 @@ def _weather_date_range(days):
     return weather_short_date(first) if first == last else f"{weather_short_date(first)}~{weather_short_date(last)}"
 
 
+def _weather_eur_range(lo, hi):
+    """금액 범위 글자 (같으면 한 금액만)."""
+    return weather_eur(lo) if round(lo) == round(hi) else f"{weather_eur(lo)}~{weather_eur(hi)}"
+
+
 def weather_reco_items(plan):
-    """'오늘의 추천' 할 일 목록: [{tag, text, tone}] (tone: hot / stock / calm)."""
+    """'오늘의 추천' 할 일 목록 (아마존만): [{tag, text, tone}] (tone: hot / stock / calm)."""
     items = []
-    for r in plan["hot_regions"]:
-        streak = f"{r['streak']}일 연속" if r["streak"] >= 2 else f"{len(r['hot_days'])}일"
-        up = f"(균등 대비 +{r['vs_even']}%)" if r["vs_even"] > 0 else ""
+    days = weather_amazon_days(plan)
+    hot = [d for d in days if d["hot_regions"]]
+    cool = [d for d in days if not d["hot_regions"]]
+    if hot:
+        regions = "·".join(dict.fromkeys(n for d in hot for n in d["hot_regions"]))
+        lo, hi = min(d["eur"] for d in hot), max(d["eur"] for d in hot)
+        up = max(d["vs_avg"] for d in hot)
         items.append({
-            "tag": f"{r['name']} · {_weather_date_range(r['hot_days'])}",
-            "text": f"{streak} {WEATHER_HOT_C}°C 이상 예보. 메타 {r['name']} 예산을 {weather_eur(r['week'])}{up}로 올려 집행하세요.",
+            "tag": f"아마존 · {_weather_date_range(hot)}",
+            "text": f"{len(hot)}일 {WEATHER_HOT_C}°C 이상 예보({regions}). 이 날 아마존 일 예산을 "
+                    f"{_weather_eur_range(lo, hi)}(평균 대비 최대 +{up}%)로 올려 집행하세요.",
             "tone": "hot",
         })
     for c in plan["soldout"]:
         items.append({
             "tag": f"아마존 · {c['competitor']}",
-            "text": f"{c['product']} {weather_stock_text(c)}. ASIN 타겟 광고를 켜고 아마존에 {weather_eur(plan['amazon'])}를 배정하세요.",
+            "text": f"{c['product']} {weather_stock_text(c)}. 경쟁사 ASIN 타겟 광고를 켜서 그 검색 수요를 가져오세요.",
             "tone": "stock",
         })
     for c in plan["low"]:
         items.append({
             "tag": f"아마존 · {c['competitor']}",
-            "text": f"{c['product']} 재고가 낮아요. 품절로 바뀌면 아마존 비중을 50%까지 올리세요.",
+            "text": f"{c['product']} 재고가 낮아요. 품절되면 바로 ASIN 타겟 광고를 켤 수 있게 준비하세요.",
             "tone": "calm",
         })
-    cool = [r for r in plan["regions"] if not r["hot_days"]]
-    if plan["hot_regions"] and cool:
-        names = "·".join(r["name"] for r in cool)
+    if hot and cool:
+        lo, hi = min(d["eur"] for d in cool), max(d["eur"] for d in cool)
         items.append({
-            "tag": f"{names} · 7일",
-            "text": f"{WEATHER_HOT_C}°C 미만 예보. 권역별 {weather_eur(min(r['week'] for r in cool))} 안팎 기본 금액으로 유지하세요.",
+            "tag": f"아마존 · 평소일 {len(cool)}일",
+            "text": f"{WEATHER_HOT_C}°C 미만 예보일은 일 {_weather_eur_range(lo, hi)} 기본 금액으로 유지하세요.",
             "tone": "calm",
         })
-    if not plan["hot_regions"]:
+    if not hot:
         items.insert(0, {
-            "tag": "메타 · 4개 권역",
-            "text": f"7일 동안 {WEATHER_HOT_C}°C 이상 예보가 없어요. 메타 {weather_eur(plan['meta'])}를 권역별로 고르게 운영하세요.",
+            "tag": "아마존 · 7일",
+            "text": f"7일 동안 {WEATHER_HOT_C}°C 이상 예보가 없어요. 아마존 {weather_eur(plan['amazon'])}를 "
+                    f"날짜별로 고르게(일 {weather_eur(plan['amazon'] / max(len(days), 1))} 안팎) 운영하세요.",
             "tone": "calm",
         })
     return items
