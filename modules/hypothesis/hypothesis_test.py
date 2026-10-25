@@ -49,8 +49,9 @@ def check(cond: bool, msg: str) -> None:
         print(f"[FAIL] {msg}")
 
 
-def _new_apptest() -> AppTest:
-    """hypothesis_render()를 실제로 그려서 클릭까지 흉내 낼 수 있는 AppTest를 만듭니다."""
+def _new_apptest(loaded: bool = True) -> AppTest:
+    """hypothesis_render()를 실제로 그려서 클릭까지 흉내 낼 수 있는 AppTest를 만듭니다.
+    loaded=True면 '불러오기'를 이미 누른 상태로 시작합니다 (불러오기 흐름 자체는 test_core_flow에서 확인)."""
     script = (
         "import sys\n"
         f"sys.path.insert(0, {str(ROOT_DIR)!r})\n"
@@ -60,7 +61,16 @@ def _new_apptest() -> AppTest:
     tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8")
     tmp.write(script)
     tmp.close()
-    return AppTest.from_file(tmp.name)
+    at = AppTest.from_file(tmp.name)
+    if loaded:
+        at.session_state["hypothesis-loaded"] = True
+    return at
+
+
+def select_and_store(at: AppTest, index: int) -> None:
+    """'선택하기'(고르기만) → 오른쪽 위 '저장하기'(store에 저장)."""
+    at.button(key=f"hypothesis-btn-save-{index}").click().run()
+    at.button(key="hypothesis-btn-store").click().run()
 
 
 def plan(action="상세 이미지 B안", now=10, goal=12, unit="%", better="up", visual=True, **extra) -> dict:
@@ -94,12 +104,19 @@ def real_report() -> dict | None:
 # 1. 핵심 흐름: 빈 상태 → 샘플 → 가설 1/2/3 → 선택(저장) → 다른 후보로 재선택
 # ─────────────────────────────────────────────
 def test_core_flow() -> None:
-    at = _new_apptest()
+    at = _new_apptest(loaded=False)
     at.run()
     check(not at.exception, "[핵심] 1차 실행에 예외 없음")
-    check(any("아직 분석된 문제가 없어요" in m.value for m in at.markdown), "[핵심] 리포트 없으면 empty 안내 표시")
+    check(any("아직 불러오지 않음" in c.value for c in at.caption), "[핵심] 불러오기 전에는 기본 틀만 (안내 문구)")
+    check(at.button(key="hypothesis-btn-store").disabled, "[핵심] 불러오기 전에는 저장하기 비활성")
+    check(not [t for t in at.tabs if t.label.startswith("가설")], "[핵심] 불러오기 전에는 가설 탭 없음")
+    at.button(key="hypothesis-btn-load").click().run()
+    check(not at.exception, "[핵심] 불러오기 후 예외 없음")
+    check(any("불러올 ① 리포트가 없어요" in c.value for c in at.caption), "[핵심] ① 저장 리포트 없으면 기본 틀 + 안내 한 줄")
+    check(not any("아직 분석된 문제가 없어요" in m.value for m in at.markdown), "[핵심] 따로 빈 화면(예시 데이터 버튼)은 없음")
+    at.session_state["store-report"] = SAMPLE_REPORT   # ① 탭에서 저장했다고 가정
+    at.run()
 
-    at.button(key="hypothesis-btn-sample").click().run()
     check(not at.exception, "[핵심] 샘플 클릭 후 예외 없음")
     # 사진·영상 소재가 필요한 plan(visual=True)이 먼저: 경쟁사 가격 인하 → 장바구니 이탈 → 배송 지연 리뷰
     cands = hypothesis_pick_candidates(SAMPLE_REPORT)
@@ -111,16 +128,23 @@ def test_core_flow() -> None:
     check([b.label for b in at.button if b.key and b.key.startswith("hypothesis-btn-save-")] == ["선택하기"] * 3,
           "[핵심] 후보마다 '선택하기' 버튼 1개")
 
+    check(at.button(key="hypothesis-btn-store").disabled, "[핵심] 고르기 전에는 저장하기 비활성")
     at.button(key="hypothesis-btn-save-0").click().run()
     check(at.button(key="hypothesis-btn-save-0").label == "✓ 선택됨", "[핵심] 선택 후 버튼 라벨 변경")
     check(at.button(key="hypothesis-btn-save-0").disabled, "[핵심] 이미 선택된 가설 버튼은 비활성화")
+    check(at.session_state["store-hypothesis"] is None, "[핵심] '선택하기'만으로는 저장 안 됨")
+    check(not at.button(key="hypothesis-btn-store").disabled, "[핵심] 고르면 저장하기 활성")
+    check(any("아직 저장 안 됨" in c.value for c in at.caption), "[핵심] 저장 전 안내")
+    at.button(key="hypothesis-btn-store").click().run()
+    check(at.button(key="hypothesis-btn-store").disabled, "[핵심] 저장 후 저장하기 다시 비활성")
+    check(any("저장됨" in c.value for c in at.caption), "[핵심] 저장 후 '저장됨' 표시")
     saved = at.session_state["store-hypothesis"]
     check(saved.get("text") == hypothesis_build_sentence(cands[0]), "[핵심] 저장 문장 = 화면 후보 문장")
     check(saved.get("hypothesis") == saved.get("text"), "[핵심] 홈이 읽는 'hypothesis' 키도 같이 저장")
     ibt = hypothesis_build_ibt(cands[0])
     check(all(any(v in m.value for m in at.markdown) for v in ibt.values()), "[핵심] '지금 선택된 가설'에 If·Because·Then 표시")
 
-    at.button(key="hypothesis-btn-save-1").click().run()
+    select_and_store(at, 1)
     check(at.button(key="hypothesis-btn-save-1").label == "✓ 선택됨", "[핵심] 가설 2 선택 → 가설 2가 '선택됨'")
     check(at.button(key="hypothesis-btn-save-0").label == "선택하기", "[핵심] 가설 1은 '선택됨'에서 풀림")
     check(at.session_state["store-hypothesis"].get("text") == hypothesis_build_sentence(cands[1]), "[핵심] 최종 저장은 항상 1개")
@@ -271,7 +295,7 @@ def test_save_report_plus_hypothesis() -> None:
         at.run()
         cands = hypothesis_pick_candidates(copy.deepcopy(report))
         for j, p in enumerate(cands):
-            at.button(key=f"hypothesis-btn-save-{j}").click().run()
+            select_and_store(at, j)
             label = f"[저장:{str(p.get('title'))[:14]}]"
             check(not at.exception, f"{label} 예외 없음")
             saved = at.session_state["store-hypothesis"]
@@ -301,7 +325,7 @@ def test_hypothesis_pdf() -> None:
     at.session_state["store-report"] = copy.deepcopy(SAMPLE_REPORT)
     at.run()
     check("hypothesis-btn-side-pdf-0" not in {b.key for b in at.button}, "[PDF] 선택 전에는 다운로드 아이콘 없음")
-    at.button(key="hypothesis-btn-save-0").click().run()
+    select_and_store(at, 0)
     check("hypothesis-btn-side-pdf-0" in {b.key for b in at.button}, "[PDF] 선택 후 다운로드 아이콘")
     at.button(key="hypothesis-btn-side-pdf-0").click().run()
     check(not at.exception, "[PDF] 다운로드 창 예외 없음")

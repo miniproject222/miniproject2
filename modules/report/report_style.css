@@ -338,3 +338,103 @@
 .st-key-report-btn-side-comp:hover::after { content: "경쟁 포지션 · 경쟁사 비교"; }
 .st-key-report-btn-side-ab:hover::after { content: "해결안 A/B 테스트"; }
 
+
+/* 제목 줄 오른쪽 위 '불러오기'·'저장하기' 버튼: 제목은 남는 폭을 다 쓰고 버튼은 글자 폭만, 줄바꿈 없이 */
+.st-key-report-head .st-key-report-head-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.st-key-report-head .stButton button {
+  white-space: nowrap;
+}
+/* '저장하기'(primary): 공통 글자색(p)이 버튼 글자를 진하게 덮어 배경과 같은 색이 됨 → 흰 글자 (비활성일 때는 기본 회색 유지) */
+.st-key-report-btn-save button:not(:disabled) p,
+.st-key-report-btn-save button:not(:disabled) span {
+  color: var(--color-card) !important;
+}
+/* '불러오기' 전 기본 틀: 분류 태그가 비어 있으면 숨김 (빈 알약 모양이 보이지 않게) */
+.report-tag:empty {
+  display: none;
+}
+
+/* ── 불러오기 직후 한 번: 글자가 위에서부터 차례로 나타남 (데이터를 불러오는 느낌) ── */
+[class*="st-key-report-card-"]:has(.report-reveal) .report-row {
+  animation: report-reveal 0.5s ease-out both;
+}
+[class*="st-key-report-card-"]:has(.report-reveal) .report-row:nth-child(2) { animation-delay: 0.25s; }
+[class*="st-key-report-card-"]:has(.report-reveal) .report-row:nth-child(3) { animation-delay: 0.5s; }
+@keyframes report-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="st-key-report-card-"] .report-row { animation: none !important; }
+}
+
+/* ── 홈 화면처럼 여러 색 쓰기 (홈 탭 home_page.py HOME_COLORS와 같은 값, ① 탭 클래스에만 적용) ── */
+:root {
+  --report-red: #F2546B;
+  --report-orange: #F9A65A;
+  --report-purple: #7B6CF2;
+  --report-blue: #46A6F5;
+  --report-green: #3CC58A;
+}
+
+/* 위험도 배지: 높음 빨강 · 중간 주황 · 낮음 초록 (글자는 배경 위에서 읽히게 진하게 섞음)
+   본문 카드(문제 분석 결과·내부·외부 요인)에만 적용, 오른쪽 아이콘으로 여는 창은 예전 색 그대로 */
+[class*="st-key-report-card-"] .report-level-high {
+  background: var(--report-red);
+  border-color: var(--report-red);
+  color: var(--color-card);
+}
+[class*="st-key-report-card-"] .report-level-mid {
+  background: color-mix(in srgb, var(--report-orange) 16%, var(--color-card));
+  border-color: var(--report-orange);
+  color: color-mix(in srgb, var(--report-orange) 55%, #000);
+}
+[class*="st-key-report-card-"] .report-level-low {
+  background: color-mix(in srgb, var(--report-green) 14%, var(--color-card));
+  border-color: var(--report-green);
+  color: color-mix(in srgb, var(--report-green) 55%, #000);
+}
+
+/* 분류 태그: 알약 모양, 한 가지 색(보라)으로 통일 - 본문 카드에만 */
+[class*="st-key-report-card-"] .report-tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--report-purple) 12%, var(--color-card));
+  color: var(--report-purple);
+  font-weight: 600;
+}
+
+/* 카드 제목 아이콘 색: 결과 = 빨강 · 내부 = 보라 · 외부 = 파랑 */
+.st-key-report-card-result:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-red); }
+.st-key-report-card-internal:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-purple); }
+.st-key-report-card-external:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-blue); }
+
+/* 불러오기·저장하기 버튼: 홈 버튼과 같은 밝은 보라 */
+.st-key-report-btn-load button {
+  background: var(--color-card);
+  border: 1px solid var(--report-purple);
+}
+.st-key-report-btn-load button p,
+.st-key-report-btn-load button span { color: var(--report-purple) !important; }
+.st-key-report-btn-save button:not(:disabled) {
+  background: var(--report-purple);
+  border-color: var(--report-purple);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--report-purple) 30%, transparent);
+}
+
+/* 오른쪽 아이콘 줄 아이콘: 밝은 보라 */
+.st-key-report-side button span[data-testid="stIconMaterial"] { color: var(--report-purple); }
+
+/* '불러오기' 전 기본 틀: 결과를 모르니 배지는 예전 기본색(보라 테두리)으로만, 불러오면 실제 위험도 색 */
+[class*="st-key-report-card-"]:has(.report-skeleton) .report-level {
+  background: var(--color-card);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.st-key-report-card-result:has(.report-skeleton) .report-level {
+  background: var(--color-primary);
+  color: var(--color-card);
+}

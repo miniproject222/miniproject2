@@ -1,6 +1,8 @@
-# 3. 매체 제작 > 3단계 ④·⑤: 작업물 보관 (탭을 옮기거나 새로고침해도 유지)
-# 만든 사진·영상, 스토리보드, 만드는 중인 영상 작업 번호를 data/workspace/ 폴더에 저장하고,
+# 3. 매체 제작 > 3단계 ④·⑤: 작업물 보관
+# 만든 결과 기록(history), 고른 목록, 만드는 중인 영상 작업 번호 등을 data/workspace/ 폴더에 저장하고,
 # 화면을 그릴 때 session_state가 비어 있으면 여기서 다시 읽어 옵니다.
+# 사진·영상 초안 제작 탭의 작업물(사진·영상·스토리보드)은 이번 접속 동안만 둡니다 (MEDIA_S3_SESSION_ONLY):
+# 탭을 옮겨도 남지만, 앱을 새로 열거나 새로고침하면 빈 상태로 시작하고 만든 것은 '만든 결과 보기'에만 남습니다.
 # 이 폴더는 각자 컴퓨터의 작업물이라 .gitignore에 넣어 GitHub에 올리지 않습니다.
 import json
 from pathlib import Path
@@ -15,20 +17,19 @@ MEDIA_S3_WORK_JSON = {"media-s3-storyboard": "storyboard.json", "media-s3-storyb
                     "media-s3-file-group": "file_group.json",     # 작업 공간 파일 이름 → 만든 가설 묶음 id
                     "media-s3-history": "history.json",           # 만든 결과 기록 목록 (session 키 → 파일)
                     "media-s3-pick": "pick.json"}                 # '만든 결과 보기'에서 ⑤로 보내려고 고른 기록(file) 목록
+MEDIA_S3_SESSION_ONLY = {"media-s3-assets-photos", "media-s3-assets-videos",   # 폴더에서 읽지도, 폴더에 쓰지도 않는 키
+                         "media-s3-storyboard", "media-s3-storyboard-done"}
 MEDIA_S3_HISTORY_DIR = MEDIA_S3_WORK_DIR / "history"   # 만든 결과 사본 (작업 공간에서 지우거나 바꿔도 남음)
 MEDIA_S3_HISTORY_KEEP = 5   # 만든 결과 기록은 최근 가설 묶음 5개까지만 남김 (오래된 묶음은 사본까지 지움)
 
 
 def media_s3_store_load() -> None:
     """session_state에 없는 작업물을 폴더에서 읽어 옵니다. 화면 맨 위에서 한 번 부릅니다."""
-    for key, folder in MEDIA_S3_WORK_FILES.items():
-        if key not in st.session_state:
-            path = MEDIA_S3_WORK_DIR / folder
-            files = sorted(path.iterdir(), key=lambda f: f.stat().st_mtime) if path.exists() else []
-            st.session_state[key] = [(f.name, f.read_bytes()) for f in files if f.is_file()]
+    for key in MEDIA_S3_WORK_FILES:
+        st.session_state.setdefault(key, [])   # 사진·영상 작업물은 이번 접속에서 만든 것만 (빈 상태로 시작)
     for key, name in MEDIA_S3_WORK_JSON.items():
         path = MEDIA_S3_WORK_DIR / name
-        if key not in st.session_state and path.exists():
+        if key not in st.session_state and key not in MEDIA_S3_SESSION_ONLY and path.exists():
             try:
                 st.session_state[key] = json.loads(path.read_text(encoding="utf-8"))
             except ValueError:
@@ -36,7 +37,9 @@ def media_s3_store_load() -> None:
 
 
 def media_s3_store_file(key: str, name: str, content: bytes | None) -> None:
-    """파일 하나를 저장합니다 (content가 None이면 지움)."""
+    """파일 하나를 저장합니다 (content가 None이면 지움). 이번 접속에만 두는 작업물은 저장하지 않습니다."""
+    if key in MEDIA_S3_SESSION_ONLY:
+        return
     path = MEDIA_S3_WORK_DIR / MEDIA_S3_WORK_FILES[key] / Path(name).name
     if content is None:
         path.unlink(missing_ok=True)
@@ -46,7 +49,9 @@ def media_s3_store_file(key: str, name: str, content: bytes | None) -> None:
 
 
 def media_s3_store_json(key: str, value) -> None:
-    """스토리보드·작업 번호 등을 저장합니다 (value가 None이면 지움)."""
+    """작업 번호·기록 등을 저장합니다 (value가 None이면 지움). 이번 접속에만 두는 스토리보드는 저장하지 않습니다."""
+    if key in MEDIA_S3_SESSION_ONLY:
+        return
     path = MEDIA_S3_WORK_DIR / MEDIA_S3_WORK_JSON[key]
     if value is None:
         path.unlink(missing_ok=True)
@@ -95,3 +100,10 @@ def media_s3_store_history_read(entry: dict) -> bytes | None:
     path = MEDIA_S3_HISTORY_DIR / Path(entry["file"]).name
     return path.read_bytes() if path.exists() else None
 
+
+def media_s3_store_history_remove(file: str) -> None:
+    """만든 결과 기록 하나를 지웁니다 (사본 파일까지). '만든 결과 보기'의 지우기 버튼에서 부릅니다."""
+    (MEDIA_S3_HISTORY_DIR / Path(file).name).unlink(missing_ok=True)
+    history = [e for e in st.session_state.get("media-s3-history") or [] if e["file"] != file]
+    st.session_state["media-s3-history"] = history
+    media_s3_store_json("media-s3-history", history)

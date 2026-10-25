@@ -9,6 +9,8 @@ from fpdf.fonts import FontFace
 
 import ui_theme as ui
 
+from modules.report.report_competitor import report_shop_review_count
+
 REPORT_FONT_DIR = Path(__file__).resolve().parents[2] / "common" / "fonts"   # 공통 폰트 (읽기만)
 REPORT_COMPANY = "SEORI(서리)"
 REPORT_SOURCES = "출처: 경쟁사 DB·독일 DB(2026-10-23), Keepa(Amazon.de), Open-Meteo"
@@ -167,6 +169,7 @@ class ReportPdf(FPDF):
         rows = [head]
         # 원페이지(compact)는 공간이 좁아 Keepa 값이 있는 경쟁사와 서리만
         brands = [r for r in c["competitors"] if not compact or r.get("keepa") or r["kind"] == "자사"]
+        shop_n = report_shop_review_count()
         for r in brands:
             k = r.get("keepa") or {}
             sign = "€" if r["currency"] == "EUR" else r["currency"] + " "
@@ -176,7 +179,8 @@ class ReportPdf(FPDF):
                 "amazon": f"€{k['price']:.2f}" if k.get("price") else ("품절" if k else "-"),
                 "change": f"{k['change'] * 100:+.0f}%" if k.get("change") is not None else "-",
                 "rating": f"{k['rating']:.1f}" if k.get("rating") else "-",
-                "reviews": f"{k['reviews']:,}" if k.get("reviews") is not None else "-",
+                "reviews": (f"{(k.get('reviews') or 0) + shop_n:,}" if r["kind"] == "자사" and shop_n
+                            else f"{k['reviews']:,}" if k.get("reviews") is not None else "-"),   # 서리 = Amazon + 자사몰
                 "sqm": (f"€{r['keepa_sqm']:.1f}" if r.get("keepa_sqm") else f"{sign}{r['sqm_price']:.1f}" if r["sqm_price"] else "-"),
                 "score": f"{r['score']:.2f}" if r["score"] else "-",
             }

@@ -17,6 +17,7 @@ REPORT_KNOWLEDGE_DB = REPORT_ROOT_DATA / "common_germany_knowledge_seori_202610.
 REPORT_MODULE_DATA = Path(__file__).resolve().parent / "data"
 REPORT_SEORI_ASSUME_FILE = REPORT_MODULE_DATA / "report_seori_assumption_202610.json"   # 가정: 국내 기업 자료 기반 완제품 판매
 REPORT_MARKET10_FILE = REPORT_MODULE_DATA / "report_market_cooling10_202610.json"     # 냉감패드 경쟁 10개사 ㎡당 가격
+REPORT_SHOP_REVIEW_FILE = REPORT_MODULE_DATA / "report_shop_reviews_202610.json"      # 자사몰 리뷰 (가정: SleepCOOL 공식몰 Trusted Shops)
 REPORT_PRICE_ALERT = 0.10         # Keepa 90일 평균 대비 이만큼 오르내리면 외부 요인으로 표시
 REPORT_SEASON_MONTHS = (6, 7, 8)  # 냉감패드 성수기 (독일 DB CAL-002, 추론)
 REPORT_SCORE_COLS = ["Novilla", "RIBECO", "Traumnacht", "Paradies", "potow", "웰크론(세사)", "GlacialPad", "Mara Vital", "Herlag", "SEORI (목표)"]
@@ -63,6 +64,20 @@ def report_db_rows(path):
 def report_seori_assumption():
     """서리 완제품 가정 (Q-max, 인증 상태, 시험 결과, 남은 보완 항목). 파일이 없으면 None."""
     return json.loads(REPORT_SEORI_ASSUME_FILE.read_text(encoding="utf-8")) if REPORT_SEORI_ASSUME_FILE.exists() else None
+
+
+def report_shop_review_count():
+    """자사몰 리뷰 수 (상점 전체). 서리 리뷰 수 = Amazon + 자사몰로 합산 (2026-10-25 결정, 경쟁사는 Amazon 리뷰만). 파일이 없으면 0."""
+    if not REPORT_SHOP_REVIEW_FILE.exists():
+        return 0
+    return int((json.loads(REPORT_SHOP_REVIEW_FILE.read_text(encoding="utf-8")).get("shop") or {}).get("reviews") or 0)
+
+
+def report_seori_reviews(seori):
+    """서리 리뷰 수 (Amazon, 자사몰, 합계)."""
+    amazon = (seori.get("keepa") or {}).get("reviews") or 0
+    shop = report_shop_review_count()
+    return amazon, shop, amazon + shop
 
 
 def report_market10():
@@ -204,7 +219,7 @@ def report_position_kpis(rows, checklist):
     must = [c for c in checklist if c["group"].startswith("필수")]
     done = [c for c in must if c["status"].startswith("완료")]
     own = report_sqm(seori)
-    own_reviews = (seori.get("keepa") or {}).get("reviews") or 0
+    own_amazon, own_shop, own_reviews = report_seori_reviews(seori)   # 서리 = Amazon + 자사몰
     market = report_market10()
     if market:   # 냉감패드 경쟁 10개사 중앙값과 비교
         mid = median(c["sqm"] for c in market["companies"])
@@ -217,7 +232,7 @@ def report_position_kpis(rows, checklist):
     if reviews:
         top = max(reviews)
         kpis.append({"label": "리뷰 수", "value": f"{own_reviews:,}건", "badge": f"경쟁사 최다 {top[0]:,}건 ({top[1].split()[0]})",
-                     "tip": f"서리 리뷰 {own_reviews:,}건 · 경쟁사 최다 {top[1]} {top[0]:,}건",
+                     "tip": f"서리 리뷰 {own_reviews:,}건 (Amazon {own_amazon:,} + 자사몰 {own_shop:,}) · 경쟁사 최다 {top[1]} {top[0]:,}건 (Amazon만)",
                      "good": own_reviews >= top[0]})
     kpis.append({"label": "판매 채널", "value": f"{report_channel_count(seori)}개",
                  "badge": f"경쟁사 최다 {report_channel_count(wide)}개 ({wide['brand'].split()[0]})",
@@ -239,14 +254,15 @@ def report_internal_factors(rows, criteria, checklist, tests, keepa_time):
 
     reviews = sorted([(r["keepa"]["reviews"], r["brand"]) for r in rivals
                       if r.get("keepa") and r["keepa"].get("reviews")], reverse=True)
-    own_reviews = (seori.get("keepa") or {}).get("reviews") or 0
+    own_amazon, own_shop, own_reviews = report_seori_reviews(seori)   # 서리 = Amazon + 자사몰 (경쟁사는 Amazon만)
     if reviews and own_reviews < reviews[0][0]:
         tops = ", ".join(f"{b} {n:,}건" for n, b in reviews[:2])
         who = f" ({seori['proxy']} 실적 가정)" if seori.get("proxy") else ""
         ratio = own_reviews / reviews[0][0]
         out.append({"title": f"리뷰 {own_reviews:,}건, 경쟁사의 {ratio * 100:.0f}% 수준",
                     "level": report_review_level(ratio), "group": "신뢰", "gap": 1 - ratio,
-                    "detail": f"서리{who} · 경쟁사 {tops} (Keepa {keepa_time}) · 온라인 쇼핑객 54%가 구매 전 리뷰 확인 (독일 DB SHP-006)"})
+                    "detail": f"서리{who} Amazon {own_amazon:,} + 자사몰 {own_shop:,}건 · 경쟁사 {tops} (Amazon만, Keepa {keepa_time}) · "
+                              "온라인 쇼핑객 54%가 구매 전 리뷰 확인 (독일 DB SHP-006)"})
     k = seori.get("keepa") or {}
     tops_rank = [r for r in rivals if (r.get("keepa") or {}).get("rank")]
     detail = report_keepa_detail().get("items", {})
@@ -305,8 +321,10 @@ def report_internal_factors(rows, criteria, checklist, tests, keepa_time):
                     "detail": " · ".join(f"{c['item'].split(' (')[0]} {c['seori']:.0f} vs {c['best_brand']} {c['best']:.0f}" for c in gaps[:4])
                               + " (경쟁사 DB '경쟁우위 비교', 서리는 목표 점수)"})
 
+    # 근거는 경쟁사 DB 서리 약점 중 제목과 관련된 부분(여름 전용·물류)만 (리뷰·가격 등 다른 약점은 각 요인에서 따로 계산)
+    related = [w.strip() for w in seori["weakness"].split(",") if any(k in w for k in ("여름", "시즌", "재고", "물류"))]
     out.append({"title": "여름 전용 제품, 독일 물류 거점 없음", "level": "중간", "group": "제품·물류",
-                "detail": f"{seori['weakness']} (경쟁사 DB 서리 약점)"})
+                "detail": f"{', '.join(related) or seori['weakness']} (경쟁사 DB 서리 약점)"})
     return sorted(out, key=report_severity_key)
 
 
