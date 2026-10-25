@@ -297,23 +297,22 @@ def hypothesis_build_components(problem: dict) -> dict:
     desc = str(problem.get("detail") or title or "")
     is_external = problem.get("type") == "외부"
     group = str(problem.get("group") or "").strip()
-    local_context = str(problem.get("local_context") or "").strip()
     competitor_review = str(problem.get("competitor_review") or "").strip()
 
     action, amount, _is_visual, test_method = hypothesis_pick_action(desc, is_external, competitor_review, title, group)
     sensitivity = hypothesis_pick_sensitivity(desc, is_external, competitor_review, group)
 
-    # local_context가 있으면 "현지 특성 반영" 요구사항대로 이유에 항상 포함시킵니다. 예전에는
-    # 여기서 50자로 잘라 "…"로 끝냈는데, If·Because·Then 카드는 한 줄짜리 문장이 아니라
-    # 그 안에서 자연스럽게 줄바꿈되는 칸이라 짧게 자를 필요가 없어서(오히려 중간에 끊겨
-    # 어색해 보이는 문제) 전체 문장을 그대로 씁니다.
-    if local_context:
-        reason_fragment = f"{local_context} 때문에 고객이 {sensitivity}에 민감하게 반응할 가능성이 크기"
-    else:
-        # desc(detail)가 "~했습니다." 처럼 이미 완결된 문장으로 끝나는 경우가 많아서,
-        # 마침표 뒤에 바로 "로"를 붙이면 "습니다.로"처럼 비문이 됩니다. 끝의 문장부호를 떼어내고 붙입니다.
-        desc_for_reason = (desc or "분석 결과").rstrip(". !?。")
-        reason_fragment = f"{desc_for_reason}로 미루어 볼 때 고객이 {sensitivity}에 민감하게 반응할 가능성이 크기"
+    # 이유(because)는 항상 title(문제 제목 — report가 늘 짧고 깔끔한 명사구로 줌)을 바탕으로
+    # 짧게 만듭니다. 예전에는 desc/local_context(문제 설명·현지 특성 원문)를 그대로 넣었는데,
+    # 이 필드들은 report가 실제로 "핵심 ... (Keepa 2026-10-24 19:41) · 통계 ... (독일 DB
+    # SHP-006)"처럼 중간·끝에 출처·통계가 여러 번 섞인 긴 문장으로 줄 때가 많아서(예: "경쟁사
+    # Novilla 310건, RIBECO Germany 173건 (Keepa ...) · 온라인 쇼핑객 54%가 ... (독일 DB
+    # SHP-006)"), 끝 괄호만 떼어내는 정도로는 "한눈에 읽기 좋게"가 안 됐습니다. title은 이런
+    # 문제가 없는 짧은 제목이라({target}·{action}·{kpi}와 합쳐도 한 줄로 읽힘), 이유 문장에는
+    # title만 쓰고 desc/local_context/competitor_review 원문은 전부
+    # hypothesis_evidence_section()의 "📚 근거·출처 보기" 토글로만 보여줍니다.
+    title_for_reason = (title or "분석 결과").rstrip(". !?。")
+    reason_fragment = f"{title_for_reason}로 미루어 볼 때 고객이 {sensitivity}에 민감하게 반응할 가능성이 크기"
 
     return {
         "target": target,
@@ -356,10 +355,11 @@ def hypothesis_build_sentence(problem: dict) -> str:
 def hypothesis_generic_detail_section(problem: dict) -> None:
     """sqp(검색어 클릭 분석) 근거가 없는 — 즉 규칙 기반으로 문장을 만든 — 가설 후보 탭 안에서,
     If·Because·Then 카드(hypothesis_page.py가 공통으로 그림) 바로 아래 실행 세부사항을
-    보여줍니다. 타깃·목표 KPI·테스트 방법·현지 특성·경쟁사 부정 리뷰 원문을 표로 전부 다시
-    채워서 "실행 방법이 너무 간단해 보인다"는 피드백을 반영했습니다. 테스트 방법은 카테고리
-    마다 전부 똑같던 "A/B 테스트로 적용 전/후 {kpi} 비교" 대신, hypothesis_pick_action()이
-    액션(카테고리)별로 고른 구체적인 비교 방식·기간·표본 기준을 그대로 씁니다."""
+    보여줍니다. 타깃·목표 KPI·테스트 방법을 표로 보여줘서 "실행 방법이 너무 간단해 보인다"는
+    피드백을 반영했습니다. 테스트 방법은 카테고리마다 전부 똑같던 "A/B 테스트로 적용 전/후
+    {kpi} 비교" 대신, hypothesis_pick_action()이 액션(카테고리)별로 고른 구체적인 비교 방식·
+    기간·표본 기준을 그대로 씁니다. 문제 설명·현지 특성·경쟁사 근거 원문·출처는 여기 말고
+    hypothesis_evidence_section()이 바로 아래 별도 토글("📚 근거·출처 보기")로 모아 보여줍니다."""
     c = hypothesis_build_components(problem)
     kpi_particle = hypothesis_particle(c["kpi"], "이", "가")
     rows = [
@@ -367,13 +367,30 @@ def hypothesis_generic_detail_section(problem: dict) -> None:
         ("목표 KPI", f"{c['kpi']}{kpi_particle} {c['amount']} 개선"),
         ("테스트 방법", c["test_method"]),
     ]
+    with st.expander("🔧 실행 세부사항 보기 (타깃 · 목표 KPI · 테스트 방법)", expanded=False):
+        st.markdown(hypothesis_scenario_table(rows))
+        st.caption("규칙 기반으로 자동 구성된 근거예요. 실제 실행 전에 내용을 검토해 주세요.")
+
+
+def hypothesis_evidence_section(problem: dict) -> None:
+    """가설 후보 탭에서 "🔧 실행 세부사항" 바로 아래, 문제 설명(detail)·현지 특성
+    (local_context)·경쟁사 부정 리뷰(competitor_review) 원문(출처 포함)을 한데 모아 보여주는
+    토글입니다. If·Because·Then 문장에는 이 원문을 안 넣고 짧게 요약만 남겨서 "한눈에 읽기
+    좋게" 만들었고, 원문·출처가 궁금하면 이 토글에서 모아 볼 수 있게 했습니다("출처들을 모아서
+    토글에 담아 실행 세부사항 위나 아래에 넣어달라"는 피드백 반영 — 세 유형(소재 개선/노출
+    확대/규칙 기반) 가설 후보 전부에서 공통으로 씁니다). 행이 하나도 없으면 아예 안 그립니다."""
+    rows = []
+    if problem.get("detail"):
+        rows.append(("문제 설명", str(problem["detail"])))
     if problem.get("local_context"):
         rows.append(("현지 특성 근거", str(problem["local_context"])))
     if problem.get("competitor_review"):
         rows.append(("경쟁사 부정 리뷰 근거", str(problem["competitor_review"])))
-    with st.expander("🔧 실행 세부사항 보기 (타깃 · 목표 KPI · 테스트 방법 · 근거 전문)", expanded=False):
+    if not rows:
+        return
+    with st.expander("📚 근거 · 출처 보기", expanded=False):
         st.markdown(hypothesis_scenario_table(rows))
-        st.caption("규칙 기반으로 자동 구성된 근거예요. 실제 실행 전에 내용을 검토해 주세요.")
+        st.caption("원문은 report(1번) 리포트가 준 값 그대로예요. 끝 괄호가 데이터 출처입니다.")
 
 
 def hypothesis_resolve_ibt(problem: dict, sqp: dict | None) -> dict:
@@ -390,7 +407,7 @@ def hypothesis_resolve_ibt(problem: dict, sqp: dict | None) -> dict:
             and sqp.get("query")
             and sqp.get("query") == problem.get("query")
         ):
-            return hypothesis_scenario_ibt(sqp, problem.get("competitor_review", ""))
+            return hypothesis_scenario_ibt(sqp)
         p2 = sqp.get("problem2")
         if (
             problem.get("sqp_type") == "노출 확대"
@@ -498,10 +515,10 @@ def _hypothesis_handle_save(problem: dict, text: str, ibt: dict) -> None:
 
 def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, saved: dict | None) -> None:
     """가설 후보 1개(탭)를 그립니다. 가설 문장은 따로 수정 가능한 칸으로 보여주지 않고,
-    제목 → 근거(현지 특성·경쟁사 부정 리뷰·타깃/액션/이유/KPI/테스트 방법)를 쭉 읽은 뒤
-    맨 아래에서 "이 가설 선택하기"를 누르는 흐름입니다. 가설 문장 자체(hypothesis_resolve_sentence)는
-    화면에 그대로 노출하지 않고, 선택 시 저장할 값으로만 씁니다. index는 위젯 key를 후보마다
-    다르게 만드는 데만 씁니다."""
+    제목 → If·Because·Then 가설 카드(짧고 읽기 좋게) → 실행 세부사항·근거·출처 토글을 쭉
+    읽은 뒤 맨 아래에서 "이 가설 선택하기"를 누르는 흐름입니다. 가설 문장 자체
+    (hypothesis_resolve_sentence)는 화면에 그대로 노출하지 않고, 선택 시 저장할 값으로만
+    씁니다. index는 위젯 key를 후보마다 다르게 만드는 데만 씁니다."""
     # report_sqp.py(검색어 클릭 분석)의 "소재 개선"/"노출 확대" 문제면, 가설 문장이 이미 sqp
     # 원본 근거로 만들어진 것이므로 그 근거(타깃·액션·이유·KPI 등)를 이 탭 안에 이어서 보여줍니다.
     is_sqp_main = bool(
@@ -522,9 +539,7 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
     # 붙여줘서, hypothesis_style.css가 (와일드카드 선택자로) 이 카드들만 정확히 골라 스타일을 고칩니다.
     with st.container(border=True, key=f"hypothesis-card-{index}"):
         is_external = problem.get("type") == "외부"
-        # 배지 + 제목을 한 줄로. 현지 특성/경쟁사 부정 리뷰는 줄여서 자르지 않고 전문을
-        # 그대로 보여줍니다 ("…"로 잘려 어색해 보인다는 피드백 반영) — 대신 작은 글자로
-        # 압축해 공간을 아낍니다.
+        # 배지 + 제목을 한 줄로.
         badge_label = "⚠️ 외부 요인 · 경쟁사" if is_external else "🏷️ 내부 요인"
         badge_class = "hypothesis-badge-external" if is_external else "hypothesis-badge-internal"
         st.markdown(
@@ -535,20 +550,15 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
 
         # 가설(If·Because·Then)을 내부/외부 요인 배지·제목 바로 아래, 펼치지 않아도 보이는
         # 형태로 먼저 보여줍니다 (가설을 가장 먼저 보고 싶다는 요청 반영). 설명·현지 특성·
-        # 경쟁사 부정 리뷰 같은 근거 글은 그 아래로 옮겼습니다. 소재 개선/노출 확대/규칙
-        # 기반 어느 쪽이든 같은 카드로 통일해서 그립니다.
+        # 경쟁사 부정 리뷰 같은 근거 원문은 문장 안에 안 섞고, 바로 아래 토글들(실행
+        # 세부사항 · 근거·출처 보기)로 모았습니다 ("문장을 읽고 한번에 이해하기 좋게
+        # 정리해 달라"는 피드백 반영). 소재 개선/노출 확대/규칙 기반 어느 쪽이든 같은
+        # 카드로 통일해서 그립니다.
         hypothesis_if_then_card([
             ("If", "if", ibt["if"]),
             ("Because", "because", ibt["because"]),
             ("Then", "then", ibt["then"]),
         ])
-
-        if problem.get("detail"):
-            st.caption(str(problem["detail"]))
-        if problem.get("local_context"):
-            st.caption(f"📍 {problem['local_context']}")
-        if problem.get("competitor_review"):
-            st.caption(f"💬 {problem['competitor_review']}")
 
         if is_sqp_main:
             hypothesis_scenario_detail_section(sqp)
@@ -556,6 +566,7 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
             hypothesis_scenario_problem2_detail_section(p2)
         else:
             hypothesis_generic_detail_section(problem)
+        hypothesis_evidence_section(problem)
 
         st.divider()
         # media, home 탭이 읽을 수 있게 "hypothesis" 키에 가설 1개만 저장 (가설 1/2/3 중

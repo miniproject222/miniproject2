@@ -86,8 +86,18 @@ def test_core_flow() -> None:
         any("아직 선택한 가설이 없어요" in m.value for m in at.markdown),
         "[핵심] 처음에는 '지금 선택된 가설' 칸이 비어있다고 안내함",
     )
-    check(any("📍" in c.value for c in at.caption), "[핵심] 현지 특성 줄 표시")
-    check(any("💬" in c.value for c in at.caption), "[핵심] 경쟁사 부정 리뷰 줄 표시")
+    # 현지 특성/경쟁사 부정 리뷰 원문은 더 이상 캡션(📍/💬)으로 상시 노출되지 않고,
+    # "📚 근거 · 출처 보기" 토글 안에 모여 있습니다(가설 문장을 짧고 읽기 좋게 하기 위함).
+    evidence_labels = [e.label for e in at.get("expander") if "근거 · 출처" in e.label]
+    check(len(evidence_labels) == 3, f"[핵심] 가설 후보마다 '근거·출처' 토글이 1개씩 뜸 (실제: {len(evidence_labels)}개)")
+    check(
+        any("가격 비교 사이트(idealo)" in m.value for m in at.markdown),
+        "[핵심] 현지 특성 원문이 근거·출처 토글 안에 표시됨",
+    )
+    check(
+        any("냉감 부족" in m.value for m in at.markdown),
+        "[핵심] 경쟁사 부정 리뷰 원문이 근거·출처 토글 안에 표시됨",
+    )
     check(
         sum("hypothesis-ibt-box" in m.value for m in at.markdown) == 3,
         "[핵심] 가설 후보마다 If · Because · Then 카드가 펼치지 않아도 바로 보임 (3개)",
@@ -518,10 +528,10 @@ def test_sqp_single_hypothesis() -> None:
     sqp_store = SQP_SAMPLE | {"query": "kühlende matratzenauflage", "ratio": 0.63, "kpi_goal": 0.8}
 
     # (1) sqp 쿼리가 일치하면("소재 개선"), 규칙 기반으로 다시 만들지 않고
-    # hypothesis_scenario_sentence()를 그대로 씀 (problem의 competitor_review도 그대로 전달됨)
+    # hypothesis_scenario_sentence()를 그대로 씀
     resolved = hypothesis_resolve_sentence(SQP_MAIN_PROBLEM, sqp_store)
     check(
-        resolved == hypothesis_scenario_sentence(sqp_store, SQP_MAIN_PROBLEM["competitor_review"]),
+        resolved == hypothesis_scenario_sentence(sqp_store),
         "[시나리오 통합] sqp가 일치하면 hypothesis_scenario.py의 문장을 그대로 유일한 가설로 씀 (키워드 기반 재생성 안 함)",
     )
     rule_based = hypothesis_build_sentence(SQP_MAIN_PROBLEM)

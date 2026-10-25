@@ -18,19 +18,19 @@ HYPOTHESIS_SCENARIO_KPIS = [
 ]
 
 
-def hypothesis_scenario_ibt(sqp: dict, competitor_review: str = "") -> dict:
+def hypothesis_scenario_ibt(sqp: dict) -> dict:
     """'소재 개선' 가설의 If·Because·Then 조각을 돌려줍니다. hypothesis_if_then_card()로
     그리는 쪽(가설 후보 탭, 선택되면 맨 위 "선택된 가설" 칸)과 hypothesis_scenario_sentence()
-    (저장용 한 문장)가 전부 이 한 곳에서만 내용을 가져가므로 서로 어긋나지 않습니다."""
+    (저장용 한 문장)가 전부 이 한 곳에서만 내용을 가져가므로 서로 어긋나지 않습니다.
+    competitor_review 원문(경쟁 제품 약점 목록)·Keepa 평점/리뷰수 같은 통계는 길어서 문장에
+    넣으면 "한눈에 읽기 좋게"가 안 돼서 Because에는 아예 안 넣고, 원문은 전부
+    hypothesis_evidence_section()의 "📚 근거·출처 보기" 토글로만 보여줍니다."""
     listing = sqp.get("listing") or {}
     goal = sqp.get("kpi_goal", 0.8)
-    review = str(competitor_review or "").strip()
 
     because = (f"클릭 이후 전환은 시장과 비슷해서(클릭 대비 장바구니 우리 {sqp.get('cart_rate_ours')}% vs "
                f"시장 {sqp.get('cart_rate_market')}%) 문제는 첫인상이고, 저가 제품과 비슷해 보이는 사진으로는 "
                f"클릭된 상품 중앙 가격보다 €{sqp.get('price_gap', 0):.0f} 더 비싼 이유가 안 보이기 때문에")
-    if review:
-        because += f" (경쟁 제품 약점({review})이 두께·원단과 관련 있다면 그것이 곧 차별점)"
 
     return {
         "if": f"메인 이미지를 {listing.get('main_image', '현재 사진')}(A)에서 펼친 패드의 모서리를 살짝 들어 "
@@ -41,10 +41,10 @@ def hypothesis_scenario_ibt(sqp: dict, competitor_review: str = "") -> dict:
     }
 
 
-def hypothesis_scenario_sentence(sqp: dict, competitor_review: str = "") -> str:
+def hypothesis_scenario_sentence(sqp: dict) -> str:
     """시나리오 메인 가설 한 문장 (If → Because → Then). hypothesis_scenario_ibt()의 조각을
     그대로 이어붙인 것이라, 카드에 보이는 내용과 저장되는 문장이 항상 같습니다."""
-    ibt = hypothesis_scenario_ibt(sqp, competitor_review)
+    ibt = hypothesis_scenario_ibt(sqp)
     return f"만약 {ibt['if']}, {ibt['because']} {ibt['then']}."
 
 
@@ -96,7 +96,9 @@ def hypothesis_scenario_detail_section(sqp: dict) -> None:
     """'소재 개선' 가설 후보 탭 안에서, If·Because·Then 카드 바로 아래 실행 세부사항·KPI
     판단 기준을 보여줍니다 (If·Because·Then 카드는 hypothesis_page.py가 공통으로 그리므로
     여기서는 세부사항만 다룹니다). 타깃·목표 KPI·고정 요소·테스트 방법을 표로 한 번에
-    보여줘서 "실행 방법이 너무 간단해 보인다"는 피드백을 반영해 다시 충분히 채웠습니다."""
+    보여줘서 "실행 방법이 너무 간단해 보인다"는 피드백을 반영해 다시 충분히 채웠습니다.
+    문제 설명·현지 특성·경쟁사 근거 원문·출처는 여기 말고 hypothesis_page.py의
+    hypothesis_evidence_section()이 바로 아래 별도 토글("📚 근거·출처 보기")로 모아 보여줍니다."""
     listing = sqp.get("listing") or {}
     goal = sqp.get("kpi_goal", 0.8)
 

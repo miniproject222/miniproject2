@@ -87,6 +87,8 @@
 | 없음 (P-21 직후 화면을 더 보고 받은 2차 피드백) | ① If·Because·Then이 선택된 가설 칸에는 안 보임 ② "실행 세부사항"이 너무 간소화됨 ③ 컨트롤바가 여전히 안 예쁨 ④ 현지 특성/경쟁사 리뷰·액션 문구가 "…"로 잘려 보임 | ① If·Because·Then을 3조각(dict)으로 분리하는 `_ibt()` 함수로 리팩터링해 선택된 가설 칸도 같은 카드로 그림 ② 실행 세부사항 표에 타깃·목표KPI·근거 전문까지 다시 채움 ③ 탭 CSS를 `!important`+이중 선택자로 강화 ④ 글자 수 제한(`hypothesis_shorten`) 호출을 전부 제거하고 원문 그대로 노출 | P-22 |
 | 없음 (자체 재점검 + "테스트 방법을 가설마다 다르게" 요청) | "테스트 방법" 줄이 sqp 근거가 없는 가설은 전부 `A/B 테스트로 적용 전/후 {kpi} 비교`라는 똑같은 문장이었음(체험단 영상·배너·쿠폰 발송이 전부 동일 문구) | `hypothesis_pick_action()`이 액션마다 그 액션에 맞는 `test_method`(비교 대상 + 기간·표본)도 같이 돌려주도록 확장(22개 카테고리 전부 다르게), `hypothesis_generic_detail_section()`이 그 값을 그대로 씀. sqp 기반 두 가설의 테스트 방법 문구도 분할 비율/대조 기준을 더해 보강 | P-23 |
 | 없음 (스크린샷으로 받은 레이아웃 순서 피드백) | 가설 후보 카드 안에서 배지·제목 바로 아래 설명/현지 특성/경쟁사 리뷰 캡션이 먼저 나오고, If·Because·Then 가설 카드는 그 아래에 나와서 "가설을 먼저 보고 싶다"는 순서와 안 맞음 | `_hypothesis_render_candidate()`에서 `hypothesis_if_then_card()` 호출을 배지·제목 바로 다음으로 옮기고, 설명/📍/💬 캡션 3줄을 그 아래로 이동 (내용은 그대로, 순서만 교체) | P-24 |
+| 없음 (가설 문장 가독성 피드백) | report가 주는 `local_context`/`competitor_review`에 항상 "(독일 DB SHP-006)"/"(경쟁사 DB 약점, Keepa 평점)" 같은 출처 괄호가 맨 끝에 붙어 있어서, 가설 문장(Because)과 📍/💬 캡션에도 그대로 섞여 나와 문장이 지저분해 보임 | `hypothesis_split_source()`를 새로 만들어 맨 끝 "(...DB...)" 출처 괄호만 떼어내고, 가설 문장·캡션에는 본문만 쓰고 출처는 "🔧 실행 세부사항" 토글 안 "출처" 행으로만 옮김 | P-25 |
+| P-25로는 부족했음 (요청을 한 번에 다 못 담음) | P-25는 "DB" 꼬리표만 뗐을 뿐, Because 절에는 여전히 현지 특성 통계 인용문 전체(또는 경쟁사 근거 원문)가 그대로 들어 있어서 "한눈에 읽기 좋게"는 아니었고, 📍/💬 캡션도 "토글로 숨기면 좋겠다"던 원래 의도(실행 세부사항처럼 접기)와 달리 여전히 상시 노출 상태였음 | Because 절을 전부 `desc`(문제 설명) 기반의 짧은 이유로 통일하고(현지 특성 원문 인용 제거), 문제 설명·현지 특성·경쟁사 근거 원문(출처 포함)은 📍/💬 캡션 없애고 `hypothesis_evidence_section()`(새 "📚 근거·출처 보기" 토글, 실행 세부사항 바로 아래)로 전부 모음 | P-26 |
 
 ---
 
@@ -609,3 +611,79 @@
 **결과**: `hypothesis_page.py`(`_hypothesis_render_candidate()` 안에서 If·Because·Then 카드와 근거 캡션 3줄의 순서만 교체). `hypothesis_test.py` 282개 그대로 전부 통과(회귀 없음).
 **미검증**: 실제 화면에서 바뀐 순서를 브라우저로 직접 확인하지 않음 — 사용자가 새로고침 후 확인 필요.
 **다음에 쓸 팁**: 레이아웃 "순서만" 바꿔 달라는 요청은 보통 내용 변경이 없어 기존 테스트가 내용 포함 여부만 확인한다면(렌더 순서를 직접 검증하지 않는다면) 테스트 수정 없이 끝나는 경우가 많음 — 다만 테스트가 순서에 의존하는지(`md_values[i]`처럼 인덱스로 특정 위치를 확인하는지)는 수정 전에 먼저 확인할 것.
+
+### P-25 · 2026-10-25 · 가설 문장에서 출처 괄호 빼고 토글로 이동
+
+- 분류: 디자인 / 기능 구현
+- 문제 유형: 없음 (가설 문장 가독성 피드백)
+
+**잘 쓴 프롬프트 (원문)**
+```text
+가설 부분에 출처가 굳이 나올 필요 없이 깔끔하게 문장을 다듬어 주면 좋을 거 같고
+출처 부분도 실행 세부사항처럼 토글로 숨겨지면 좋을 거 같아
+```
+
+**처음 시도와 문제**: 없음. 먼저 report(1번)가 `local_context`/`competitor_review`를 실제로 어떤 형태로 주는지 `report_competitor.py`/`report_sqp.py`를 읽어 확인 — 두 필드 모두 항상 `"핵심 내용 (출처)"` 형태이고, 출처 괄호는 예외 없이 "DB"라는 단어를 포함하며(`"(독일 DB SHP-006)"`, `"(경쟁사 DB 약점, Keepa 평점)"` 등), `report_competitor.py`의 주석이 "가설 탭은 앞부분만 잘라 쓰므로 핵심은 앞에, 출처는 뒤에 둡니다"라고 그 의도를 스스로 밝히고 있음을 확인 — 즉 끝에서부터 "(...DB...)" 패턴만 떼어내면 안전하게 본문/출처를 분리할 수 있음.
+
+**해결 전략**:
+1. `hypothesis_scenario.py`에 `hypothesis_split_source(text) -> (본문, 출처)`를 새로 만듦 (정규식으로 문자열 맨 끝의 "(...DB...)" 그룹만 떼어냄 — 문장 중간에 있는 다른 괄호(예: "idealo 의뢰 Kantar 조사(2,000명, ...)")는 안 건드림).
+2. `hypothesis_build_components()`의 `reason_fragment`(because절에 들어가는 현지 특성 이유)에 `local_context` 대신 `hypothesis_split_source()`로 뗀 본문만 씀.
+3. `hypothesis_scenario_ibt()`(sqp "소재 개선" 가설)의 "경쟁 제품 약점(...)" because 절에도 같은 함수로 뗀 본문만 씀.
+4. `_hypothesis_render_candidate()`의 📍/💬 캡션도 본문만 쓰도록 수정.
+5. 뗀 출처는 버리지 않고 "🔧 실행 세부사항" 토글에 "출처 (현지 특성)"/"출처 (경쟁사 근거)" 행으로 추가 — `hypothesis_generic_detail_section()`과 `hypothesis_scenario_detail_section()`(새 `competitor_review` 매개변수 추가) 둘 다 반영.
+6. `python modules/hypothesis/hypothesis_test.py` 재실행으로 282개 전부 통과 확인 — 기존 테스트의 동등성 검사(`hypothesis_resolve_sentence(...) == hypothesis_scenario_sentence(...)`)는 양쪽 다 같은 변환을 거치므로 영향 없음.
+**결과**: `hypothesis_scenario.py`(`hypothesis_split_source()` 신규, `hypothesis_scenario_ibt()`/`hypothesis_scenario_detail_section()`에 반영), `hypothesis_page.py`(`hypothesis_build_components()`/`_hypothesis_render_candidate()`/`hypothesis_generic_detail_section()`에 반영, `hypothesis_scenario_detail_section()` 호출에 `competitor_review` 전달), `hypothesis.md`(출처 분리 로직 섹션 추가). `hypothesis_test.py` 282개 그대로 전부 통과.
+**미검증**: 실제 화면에서 가설 문장·캡션에 출처가 더 이상 안 보이고, "🔧 실행 세부사항"을 펼치면 "출처" 행이 제대로 뜨는지는 브라우저로 직접 확인하지 않음 — 사용자가 새로고침 후 확인 필요.
+**다음에 쓸 팁**: "이 텍스트에서 특정 부분만 빼 달라"는 요청을 받으면, 그 텍스트를 만드는 쪽(이번엔 report 모듈)의 코드/주석을 먼저 읽어 "항상 지켜지는 형식 규칙"이 있는지부터 확인할 것 — 이번처럼 "핵심은 앞, 출처는 뒤"라는 규칙이 이미 주석으로 명시돼 있으면, 눈대중 문자열 자르기보다 그 규칙에 맞춘 정규식이 훨씬 안전함(중간에 있는 다른 괄호를 잘못 건드리지 않음).
+
+### P-26 · 2026-10-25 · If·Because·Then을 더 짧게 + 근거·출처를 전용 토글 하나로 통합
+
+- 분류: 디자인 / 기능 구현
+- 문제 유형: P-25로는 부족했음 (사용자가 실제 화면을 보고 "아니야 이게 아니라..."로 더 구체화)
+
+**잘 쓴 프롬프트 (원문)**
+```text
+아니야 이게 ...
+내 말은 뭐냐면 각 가설별로 첫 번째 사진이랑 because에 써있는 출처들을 모아서 토글에 모아주고
+이걸 실행 세부사항 위나 아래에 넣어줘
+그리고 if because then 부분에 있는 문장들을 읽고 한번에 이해하기 좋게 문장을 깔끔하게 정리해줘
+```
+(스크린샷 2장: ① 캡션 영역 — "90일 평균 €29.38 → 현재 €25.66 (Keepa ...)" / 📍 현지 특성(긴 Kantar 조사 통계 인용문) / 💬 경쟁사 리뷰 ② If·Because·Then 카드 — Because 절에 그 Kantar 조사 인용문 전체가 그대로 들어가 있는 모습)
+
+**처음 시도와 문제**: P-25에서는 "출처"를 "본문 맨 끝 (독일 DB SHP-006) 같은 괄호 하나"로 좁게 해석해서 그 괄호만 뗐는데, 사용자가 실제로 원한 건 더 넓은 범위 — ① 캡션(문제 설명/현지 특성/경쟁사 리뷰) 전체를 상시 노출에서 토글로 옮기는 것, ② Because 절 안에 들어간 긴 통계 인용문 자체(출처 괄호를 떼도 여전히 길었음)도 짧게 정리하는 것이었음을 재확인.
+
+**해결 전략**:
+1. `hypothesis_build_components()`의 reason_fragment를 `local_context` 원문 대신 **항상** `desc`(문제 설명, 짧은 편)로 만들도록 통일 — local_context의 긴 통계 인용문은 Because 절에서 아예 뺌. `hypothesis_split_source()`의 정규식도 "DB" 단어 요구를 없애고 "문자열 맨 끝 괄호는 전부 출처"로 일반화해서 `desc`에 붙은 Keepa 시각 등 다른 출처도 함께 뗄 수 있게 함.
+2. `hypothesis_scenario_ibt()`(sqp "소재 개선" 가설)의 Because 절도 경쟁사 근거 원문 인용을 없애고, 있으면 `"(경쟁 제품 약점도 근거 — 아래 '📚 근거·출처 보기' 참고)"`라는 짧은 포인터 문구만 붙임.
+3. `_hypothesis_render_candidate()`의 📍/💬 상시 캡션 2줄과 `detail` 캡션 1줄을 전부 제거.
+4. 새 `hypothesis_evidence_section(problem)`을 만들어 "🔧 실행 세부사항" 바로 아래에 "📚 근거 · 출처 보기"라는 별도 토글을 추가 — 문제 설명(`detail`)·현지 특성(`local_context`)·경쟁사 부정 리뷰(`competitor_review`) 원문(출처 포함, 안 자름)을 표로 모음. 세 가설 유형(소재 개선/노출 확대/규칙 기반) 전부 이 함수 하나를 공통으로 씀 — 유형별 detail-section 함수에 중복 코드를 넣지 않음.
+5. P-25에서 `hypothesis_generic_detail_section()`/`hypothesis_scenario_detail_section()`에 넣었던 "출처 (현지 특성)"/"출처 (경쟁사 근거)" 행은 이제 `hypothesis_evidence_section()`과 중복이라 되돌림(실행 세부사항 쪽은 타깃·KPI·테스트 방법만 남김).
+6. `hypothesis_test.py`의 📍/💬 캡션 체크 2개를 "📚 근거·출처 보기" 토글 존재 + 그 안에 현지 특성/경쟁사 리뷰 원문이 들어있는지 확인하는 체크로 교체. `python modules/hypothesis/hypothesis_test.py` 재실행으로 283개 전부 통과 확인.
+**결과**: `hypothesis_scenario.py`(`hypothesis_split_source()` 정규식 일반화, `hypothesis_scenario_ibt()` Because 간소화, `hypothesis_scenario_detail_section()` 출처 행 되돌림), `hypothesis_page.py`(`hypothesis_build_components()` reason_fragment를 desc 기반으로 통일, `hypothesis_generic_detail_section()` 출처 행 되돌림, `hypothesis_evidence_section()` 신규, `_hypothesis_render_candidate()`에서 캡션 3줄 제거 + evidence_section 호출 추가), `hypothesis.md`(섹션 재작성), `hypothesis_test.py`(캡션 체크 교체). `hypothesis_test.py` 283개 전부 통과.
+**미검증**: 실제 화면에서 If·Because·Then이 짧아지고 "📚 근거·출처 보기" 토글이 "🔧 실행 세부사항" 바로 아래에 뜨는지는 브라우저로 직접 확인하지 않음 — 사용자가 새로고침 후 확인 필요. 또한 Because 절이 이제 local_context 대신 desc(문제 설명) 기반이라, desc 끝이 "(3일 전)"처럼 괄호로 끝나는 경우 "...(3일 전)로 미루어 볼 때"처럼 약간 어색하게 붙는 경우가 있음(문법 오류는 아니지만 매끄럽지 않음) — 발견했지만 범위를 벗어나 고치지 않았으니 다음에 다듬을 것.
+**다음에 쓸 팁**: 피드백을 한 번 반영한 뒤 "아니야 이게 아니라..."로 다시 돌아오면, 직전 해석이 요청 범위를 좁게 잡았을 가능성이 크므로 스크린샷을 다시 꼼꼼히 보고 **"출처"처럼 같은 단어라도 사용자가 가리키는 범위가 더 넓을 수 있다**는 전제로 재해석할 것 — 이번에도 "출처"가 괄호 하나가 아니라 "원문 전체"를 뜻했음.
+
+### P-27 · 2026-10-25 · Because 절에서 detail/경쟁사 근거 원문까지 완전히 제거 (title만 사용)
+
+- 분류: 기능 구현
+- 문제 유형: P-26도 부족했음 (실제 화면 스크린샷으로 구체적 잔여 사례 지적)
+
+**잘 쓴 프롬프트 (원문)**
+```text
+이 부분들도 가설에서 빼주고 근거랑 출처 부분에 넣어줘
+그리고 최종적으로 완성한 부분 push, pull, merge하게 도와줘
+```
+(스크린샷 4장: ① sqp 가설의 Because 끝에 "(경쟁 제품 약점도 근거 — 아래 '📚 근거·출처 보기' 참고)" 포인터 문구가 그대로 남아있는 모습 ②③④ "경쟁사 Novilla 310건, RIBECO Germany 173건 (Keepa 2026-10-24 19:41)"처럼 Keepa 시각·건수가 포함된 문장이 가설 영역에 여전히 보이는 모습)
+
+**처음 시도와 문제**: P-26에서 Because를 `desc`(문제 설명) 기반으로 바꿨는데, 실제 report 데이터(`report_competitor.py`)를 다시 확인해보니 `detail` 필드 자체가 "경쟁사 {tops} (Keepa {keepa_time}) · 온라인 쇼핑객 54%가 구매 전 리뷰 확인 (독일 DB SHP-006)"처럼 **문장 중간과 끝 모두**에 출처·통계가 섞인 경우가 많아서(이런 패턴이 `report_competitor.py`에만 최소 5곳), `desc`를 그대로 쓰는 한 "끝 괄호만 떼면 깨끗해진다"는 전제 자체가 틀렸음을 재확인. sqp 가설의 "(경쟁 제품 약점도 근거 — ...)" 포인터도, 사용자 입장에서는 그 괄호 문구 자체가 여전히 "가설에 섞인 참고 표시"로 거슬렸던 것.
+
+**해결 전략**:
+1. `report_competitor.py`/`report_sqp.py`의 모든 `"title":` 생성부를 다시 훑어, 실제 데이터에서 title은 예외 없이 짧고 출처가 안 섞인 명사구임을 확인 (`"리뷰 0건 (신규 브랜드)"`, `"출시 필수 인증·규제 2건 미착수"` 등 — 괄호가 있어도 자연어의 일부일 뿐 "(출처)" 패턴이 아님).
+2. `hypothesis_build_components()`의 reason_fragment를 `desc`에서 **`title`로 교체** — detail/local_context 원문을 Because에서 완전히 뺌.
+3. `hypothesis_scenario_ibt()`의 "(경쟁 제품 약점도 근거 — 아래 ... 참고)" 포인터 문구도 완전히 삭제 — competitor_review를 아예 안 받도록 시그니처도 정리(`hypothesis_scenario_ibt(sqp)`, `hypothesis_scenario_sentence(sqp)`로 매개변수 제거).
+4. 더 이상 어디서도 쓰이지 않게 된 `hypothesis_split_source()`(P-25·P-26에서 만든 "맨 끝 괄호만 떼기" 함수)는 완전히 삭제 — 이제 Because 절이 report 원문을 아예 참조하지 않으므로 "일부만 떼는" 로직 자체가 불필요해짐.
+5. `hypothesis_test.py`의 관련 호출부(`hypothesis_scenario_sentence(sqp_store, competitor_review)`) 인자를 시그니처 변경에 맞춰 수정.
+6. `python modules/hypothesis/hypothesis_test.py` 재실행으로 283개 전부 통과 확인, 실제 report 데이터와 동일한 모양("경쟁사 Novilla 310건... (Keepa ...) · ... (독일 DB SHP-006)")의 detail을 가진 문제로 직접 `hypothesis_build_ibt()`를 호출해 Because에 "Keepa"/"DB" 등 어떤 출처·통계 흔적도 안 남는지 확인.
+**결과**: `hypothesis_scenario.py`(`hypothesis_split_source()`/정규식/`import re` 전부 삭제, `hypothesis_scenario_ibt()`/`hypothesis_scenario_sentence()`에서 `competitor_review` 매개변수·포인터 문구 제거), `hypothesis_page.py`(`hypothesis_build_components()` reason_fragment를 title 기반으로 교체, `hypothesis_split_source` import 제거, `hypothesis_scenario_ibt()` 호출부 인자 제거), `hypothesis_test.py`(`hypothesis_scenario_sentence()` 호출 인자 수정), `hypothesis.md`(섹션 재작성). `hypothesis_test.py` 283개 그대로 전부 통과.
+**미검증**: 실제 화면에서 가설 1(소재 개선)·가설 3(경쟁사/신뢰 등) 후보 전부 Because에 출처·통계 흔적이 완전히 없는지는 브라우저로 직접 확인하지 않음 — 사용자가 새로고침 후 확인 필요.
+**다음에 쓸 팁**: "이 필드 끝에 있는 괄호만 떼면 되겠지"라는 가정은 실제 데이터 생성 코드(`report_competitor.py`)를 보기 전까지는 검증된 게 아님 — 이번처럼 "끝 괄호 제거"(P-25) → "그래도 길다, 아예 다른 필드로 바꾸자"(P-26) → "그 필드도 중간에 출처가 섞여 있었다, 완전히 다른(더 안전한) 필드로 바꾸자"(P-27)처럼 **점진적으로 좁혀가며 고치기보다, 처음부터 실제 데이터 생성 코드를 읽고 "이 필드는 항상 깨끗한가"를 직접 확인했으면 세 라운드를 한 번에 끝낼 수 있었음.
