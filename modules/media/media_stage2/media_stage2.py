@@ -24,8 +24,6 @@ from modules.media.media_stage2.media_stage2_ai import (MEDIA_S2_AI_KEY, MEDIA_S
 from modules.media.media_variable import media_variable_confirmed_plan, media_variable_go_step
 
 MEDIA_S2_TAB_LABEL = "A/B 소재 준비"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
-# B 카드 설명 (옛 media_ab.py 문구 그대로)
-MEDIA_S2_B_NOTE = "저가 제품과의 품질 차이(두께·원단)가 검색 결과에서 바로 보이게"
 MEDIA_S2_DIR = Path(__file__).resolve().parent   # 2단계 폴더 (data/ 경로 만들 때 사용)
 
 
@@ -272,7 +270,9 @@ def media_s2_ab_section() -> bool:
     with c2:
         with st.container(border=True):
             st.markdown("**B · 제안 (실험군)**")
-            st.markdown(f"{plan['b']}  \n<span class=\"media-desc\">{MEDIA_S2_B_NOTE}</span>", unsafe_allow_html=True)
+            # B 카드 아래는 확정한 독립 변수 (min #42에서 고정 문구 대신 바꾼 것을 반영, 어떤 가설에도 맞게)
+            st.markdown(f"{plan['b']}  \n<span class=\"media-desc\">독립 변수: {plan['variable']}</span>",
+                        unsafe_allow_html=True)
     return True
 
 

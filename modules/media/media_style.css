@@ -220,6 +220,28 @@
   line-height: 1.9;
 }
 
+/* 가설 콜아웃 오른쪽 위 구석의 '원문 ⓘ' (media_variable.py key="media-hypo-origin") - 콜아웃 높이를 늘리지 않게 띄움 */
+.st-key-media-hypo-callout {
+  position: relative;
+}
+
+/* 첫 줄 글자가 '원문 ⓘ' 밑으로 들어가지 않게 오른쪽 여백 */
+.st-key-media-hypo-callout [data-testid="stAlertContentInfo"] {
+  padding-right: 44px;
+}
+
+.st-key-media-hypo-origin {
+  position: absolute !important;
+  top: 6px;
+  right: 10px;
+  width: auto !important;
+  z-index: 1;
+}
+
+.st-key-media-hypo-origin p {
+  font-size: 12px;
+}
+
 /* [요약 | 콜아웃] 줄 바로 아래 구분선 (media_variable.py key="media-hypo-divider") - 기본 hr 여백 2em 제거 */
 .st-key-media-hypo-divider hr {
   margin: 0 0 4px;
