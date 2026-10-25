@@ -124,3 +124,15 @@ store_set("report", {
 python modules/hypothesis/hypothesis_test.py
 ```
 pytest 같은 추가 설치 없이 Streamlit 내장 테스트 도구만 씁니다. 핵심 흐름(가설 1/2/3 탭 생성·선택·재선택), 방어적 처리, home_data.py 호환, 문법/키워드 회귀, `group` 기준 competitor_review 게이팅 회귀, 결정성(같은 입력 → 같은 결과), 신규 카테고리(인증/시험/채널/신뢰/비수기/가격), 검색어 클릭 문제(소재 개선/노출 확대) 근거 통합 회귀, 모든 가설 후보에 근거 표가 펼치지 않아도 바로 뜨는지(제너릭/시나리오 둘 다) 회귀, MODO 독일 사업 실전 시나리오 20개까지 총 282개를 확인합니다. 전부 통과해야 안전합니다.
+
+## 2026-10-25 변경: 고정값 없는 가설 + ① 리포트 하단 저장 (report 담당이 하루 대리 작업)
+
+- **문장 재료는 ①이 데이터로 만들어 줌**: `problem["plan"]` = action(행동)·because(데이터 이유)·kpi·now(지금 값)·goal(목표 값)·unit·better(up/down)·visual·material·fixed·test·period·goal_basis. 만드는 곳: `modules/report/report_plan.py`
+- **키워드 규칙·고정 개선율 삭제**: `hypothesis_pick_action`·`hypothesis_pick_sensitivity`·`hypothesis_build_components` 삭제. 변화율 = (목표 - 지금) ÷ 지금 (`hypothesis_change_pct`). 이 섹션 위의 '규칙 기반 액션'·'키워드' 설명은 예전 방식입니다
+- 문장: "만약 [대상]에 [행동]을 적용한다면, [데이터 이유] 때문에 [지표]가 [지금 값]에서 [목표 값]으로 [변화율] 오를 것이다." 검색어 문제도 같은 plan으로 만듦 (예전 `hypothesis_scenario_ibt` 경로는 화면에서 쓰지 않음, KPI 판단 기준 창만 사용)
+- **plan이 없는 문제는 후보가 아님**: 문제는 있는데 plan이 하나도 없으면 "가설로 만들 데이터가 있는 문제가 없어요" + ①이 준 이유(`plan_none`) 표시
+- 실행 방법 표: 타깃·목표 KPI(지금 → 목표, 변화율)·준비할 소재·고정 요소·테스트 방법·기간·표본, 표 아래 목표 근거
+- **저장**: '선택하기' → 기존 `store("hypothesis")`(①+② 합친 값, 홈·③이 읽는 키 유지) + **`store("report")` 맨 아래 `hypothesis` 키**에도 저장 (`problem`, `if`, `because`, `then`, `sentence`, `plan`, `execution`, `saved_at`, `stale`, `stale_reason`). ③은 ① 분석 + ② 가설이 든 리포트 하나만 읽으면 됨. ①이 다시 저장해도 유지되고, 그 문제가 ① 목록에서 사라지면 `stale: True`
+- 조사: 끝 괄호·문장부호를 건너뛰고 받침 판단 ("…고친 사진)을")
+- 화면 폭: ② 탭을 연 동안 최대 1720px·양옆 3.5rem (④ 기준), 위 1rem·아래 3rem (③ 기준)
+- 테스트: `hypothesis_test.py`를 새 구조로 다시 씀 (175개: 핵심 흐름, 방어, 고정값 없음, 문장 품질·조사, 결정성, ③ 쉼표 분리, 행동 중복, ①+② 저장·리포트 하단, PDF, 배지, 실제 ① 리포트)

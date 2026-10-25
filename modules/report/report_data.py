@@ -22,6 +22,7 @@ from modules.report.report_competitor import (
 from modules.report.report_review import report_cooling_sales, report_review_analysis
 from common.common_store import store_get
 from modules.report.report_ga4 import report_ga4_fetch, report_ga4_ready
+from modules.report.report_plan import report_attach_plans
 from modules.report.report_keepa import report_keepa_auto_daily, report_keepa_detail, report_keepa_products, report_keepa_snapshot, report_keepa_usage
 from modules.report.report_sqp import report_sqp_analyze, report_sqp_handoff
 
@@ -94,6 +95,8 @@ def report_data_rules(keepa_time):
         {"지표": "가격 변화", "비교 기준": "작년 같은 날 가격 대비 ±10% 이상만 인하·인상 (90일 평균은 계절이 섞여 보조로만)",
          "출처": "Keepa", "기준일": k, "신선도": fresh, "구분": "실제"},
         {"지표": "리뷰", "비교 기준": "현재 리뷰 수 + 최근 1년 증가", "출처": "Keepa", "기준일": k, "신선도": fresh, "구분": "실제"},
+        {"지표": "자사몰 리뷰", "비교 기준": "상점 평점·리뷰 수 + 냉감 리뷰 주제 (Amazon 리뷰 수 지표에는 안 더함, 근거로만)",
+         "출처": "Trusted Shops (sleepcool.de)", "기준일": "2026-10-25", "신선도": "-", "구분": "실제 (서리 자사몰 = SleepCOOL 공식몰 가정)"},
         {"지표": "㎡당 가격", "비교 기준": "현재가 ÷ 면적, 냉감패드 10개사 중앙값과 비교", "출처": "Keepa·경쟁사 DB", "기준일": k,
          "신선도": fresh, "구분": "실제 (서리는 가정 실적)"},
         {"지표": "검색어 노출·클릭", "비교 기준": "2026년 6~8월 주별, 배수 0.7 미만 2주 연속이면 문제", "출처": "가상 SQP",
@@ -171,6 +174,7 @@ def report_load_data():
         merged = sqp_problems + data["problems"]
         first = [next(p for p in merged if p["title"] == k["title"]) for k in data["key_problems"]]
         data["problems"] = first + [p for p in merged if p not in first]
+    report_attach_plans(data)   # ② 가설 재료: 문제마다 행동·이유·지금 값→목표 값·테스트 (데이터로, 고정값 없음)
     saved = store_get("report")
     # [보류] 해결안 A/B: ③ 탭이 UTM·GA4·A/B 실행 결과를 store("media")에 저장하면, 매일 아침(한국 08:00 이후 첫 접속)
     # 한 번 읽어 분석하고 전날 분석과 비교해 보여 주는 기능. ③ 탭에서 저장 기능을 아직 만들지 않아 꺼 둠.

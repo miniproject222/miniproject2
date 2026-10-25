@@ -58,6 +58,7 @@ Streamlit Cloud는 앱이 다시 시작되면 실행 중에 쓴 파일이 지워
 | `data/common_competitor_seori_202610.csv` | 공통 경쟁사 DB (여러 시트) |
 | `data/common_germany_knowledge_seori_202610.csv` | 독일 시장 지식 DB |
 | `modules/report/data/report_seori_assumption_202610.json` | 서리 가정 (Q-max·인증·시험·광고 문구) |
+| `modules/report/data/report_shop_reviews_202610.json` | 자사몰 리뷰 (가정: SleepCOOL 공식몰 Trusted Shops, 2026-10-25 조회) |
 | `modules/report/data/report_market_cooling10_202610.json` | 냉감패드 10개사 ㎡당 가격 |
 | `modules/report/data/report_keepa_asin_202610.json` | Keepa 조회 상품 목록 |
 | `modules/report/data/report_sqp_*`, `report_listing_dummy_*`, `report_ads_keywords_dummy_*` | 검색어 분석 가상 데이터 |

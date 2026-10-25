@@ -11,13 +11,7 @@ from common.common_store import store_get, store_set
 from modules.hypothesis.hypothesis_scenario import (
     hypothesis_ibt_clean,
     hypothesis_if_then_card,
-    hypothesis_scenario_detail_section,
-    hypothesis_scenario_execution_rows,
-    hypothesis_scenario_ibt,
     hypothesis_scenario_judgement,
-    hypothesis_scenario_problem2_detail_section,
-    hypothesis_scenario_problem2_execution_rows,
-    hypothesis_scenario_problem2_ibt,
     hypothesis_scenario_table,
 )
 
@@ -57,6 +51,12 @@ SAMPLE_REPORT = {
             "metric": "전환율",
             "local_context": "독일은 가격 비교 사이트(idealo)와 리뷰를 꼼꼼히 보고 사는 시장",
             "competitor_review": "경쟁 냉감패드 브랜드에 '냉감 부족', '세탁 후 변형' 부정 리뷰 다수",
+            "plan": {   # 예시 값 (실제는 ① 문제 분석이 데이터로 만들어 줌)
+                "action": "우리 vs 경쟁사 B 가격·냉감 성능 비교 상세 이미지", "because": "경쟁사 B가 €39에서 €29로 내려 가격 차이가 €10 벌어졌기",
+                "kpi": "전환율", "now": 2.4, "goal": 2.9, "unit": "%", "better": "up", "visual": True,
+                "material": "비교 상세 이미지 1장", "fixed": "가격·메인 이미지 그대로", "test": "상세 이미지 A/B 50:50",
+                "period": "예시: 안별 4,000세션", "goal_basis": "예시 값",
+            },
         },
         {
             "title": "배송 지연 리뷰",
@@ -64,6 +64,12 @@ SAMPLE_REPORT = {
             "detail": "최근 7일 부정 리뷰 12건 중 7건이 배송 지연을 언급했습니다.",
             "target": "München, Berlin 등 대도시 재구매 고객",
             "metric": "재구매율",
+            "plan": {
+                "action": "배송 예정일 안내 메일", "because": "최근 7일 부정 리뷰 12건 중 7건이 배송 지연을 언급했기",
+                "kpi": "배송 관련 부정 리뷰", "now": 7, "goal": 3, "unit": "건", "better": "down", "visual": False,
+                "material": "안내 메일 문안", "fixed": "배송 업체 그대로", "test": "안내 전후 7일 부정 리뷰 비교",
+                "period": "예시: 2주", "goal_basis": "예시 값",
+            },
         },
         {
             "title": "장바구니 이탈 증가",
@@ -71,14 +77,23 @@ SAMPLE_REPORT = {
             "detail": "결제 단계 이탈률 68% (+9%p). 배송비가 마지막 단계에 보이는 것이 원인으로 추정됩니다.",
             "target": "장바구니에 상품을 담은 독일 전체 고객",
             "metric": "결제 완료율",
+            "plan": {
+                "action": "상품 페이지 배송비 사전 표시 배너", "because": "결제 단계 이탈률이 68%로 9%p 올랐고 배송비가 마지막 단계에 보이기",
+                "kpi": "결제 완료율", "now": 32.0, "goal": 41.0, "unit": "%", "better": "up", "visual": True,
+                "material": "배송비 안내 배너 1장", "fixed": "가격·배송비 그대로", "test": "배너 A/B 50:50",
+                "period": "예시: 안별 1,500세션", "goal_basis": "예시 값 (이탈률 상승 전 수준)",
+            },
         },
     ],
 }
 
 
 def hypothesis_has_batchim(word: str) -> bool:
-    """마지막 글자에 받침이 있는지 (조사 이/가, 을/를을 고를 때 씀)"""
-    word = (word or "").strip()
+    """마지막 글자에 받침이 있는지 (조사 이/가, 을/를을 고를 때 씀). 끝의 괄호·문장부호는 건너뜀
+    (예: "…고친 사진)" → "진" 기준으로 "을")."""
+    word = str(word or "").strip()
+    while word and not (word[-1].isalnum() or "가" <= word[-1] <= "힣"):
+        word = word[:-1]
     if not word:
         return False
     code = ord(word[-1]) - 0xAC00
@@ -111,326 +126,104 @@ def hypothesis_particle_ro(word: str) -> str:
     return "으로" if _HYPOTHESIS_DIGIT_FINAL.get(last) == "other" else "로"
 
 
-def hypothesis_pick_action(
-    desc: str,
-    is_external: bool,
-    competitor_review: str,
-    title: str = "",
-    group: str = "",
-) -> tuple[str, str, bool, str]:
-    """문제 제목(title)·설명(desc)을 보고 액션 문구·목표 변화량(%)·이 액션이 A/B 테스트용
-    사진·영상 결과물(크리에이티브)로 바로 이어지는지(`is_visual`)·그 액션에 맞는 테스트 방법
-    (`test_method`, 비교 방식과 기간·표본까지 구체적으로)을 고릅니다. 같은 입력이면
-    항상 같은 결과를 돌려줍니다 (무작위 요소 없음) — 분석 결과에서 나온 "하나의 가설"이라는
-    전제와 맞게, 같은 문제에 대해 여러 후보 중 하나를 고르는 게 아니라 항상 같은 답을 내야
-    하기 때문입니다.
-    action은 "~을 적용한다면"에 자연스럽게 붙도록 항상 명사형으로 끝냅니다
-    (예: "노출한다"처럼 완결된 문장으로 끝내면 "노출한다을 적용한다면"처럼 비문이 됩니다).
-
-    group: report가 문제 분류(예: "경쟁사", "날씨")를 같이 주면 그걸 우선 씁니다. 없으면(예: 샘플
-    데이터) is_external로 대신 판단합니다. (실제 데이터로 검증하며 추가 — 아래 참고)
-
-    is_visual: 메인 이미지 교체, 배너·인포그래픽, 체험 영상처럼 "찍거나 만든 사진·영상"이
-    있어야 실행되는 액션이면 True, 입찰가 조정·결제수단 추가·공지문처럼 소재 없이도 되는
-    운영성 액션이면 False입니다. `hypothesis_pick_candidates()`가 A/B 테스트 결과물이
-    잘 나오는 가설을 우선 보여주려고 이 값을 씁니다.
-
-    test_method: 그 액션을 실제로 어떻게 검증할지(무엇과 무엇을 비교하는지, 기간·표본
-    기준)를 카테고리마다 다르게 구체적으로 적습니다. 예전에는 카테고리와 무관하게
-    "A/B 테스트로 적용 전/후 {kpi} 비교" 한 문장만 모든 가설에 똑같이 붙어 있어서 "테스트
-    방법이 가설마다 안 다르다"는 문제가 있었습니다.
-    """
-    # title + detail을 합쳐서 찾습니다. detail은 수치·인용 위주라 키워드가 없을 때가 많고,
-    # title이 오히려 더 핵심 키워드(인증, 시험, 채널 등)를 담고 있는 경우가 많습니다.
-    search = f"{title} {desc}"
-    action = "타깃 맞춤 프로모션 배너 이미지 집중 노출"
-    amount = "8%" if is_external else "10%"
-    is_visual = True
-    test_method = "타깃 세그먼트 대상 배너 노출 A/B 테스트 (2주 또는 노출 2,000회 중 먼저 도달하는 쪽까지, 노출군 vs 비노출군 전환율 비교)"
-
-    # "경쟁사" 그룹일 때만(그룹 정보가 없으면 외부 요인일 때만) competitor_review를 액션에 반영합니다.
-    # report가 모든 문제에 같은 competitor_review를 채워 보낼 수도 있어서(실제로 그렇습니다),
-    # "값이 있으면 무조건 최우선"으로 두면 PayPal 결제 문제 같은 것도 "경쟁사 리뷰 대응"으로
-    # 잘못 나옵니다. 그 문제가 진짜 경쟁사 비교 문제일 때만 쓰도록 좁힙니다.
-    is_competitor_problem = (group == "경쟁사") if group else is_external
-    if competitor_review and is_competitor_problem:
-        # 경쟁사 부정 리뷰 원문은 이미 화면에 별도 줄(💬)로 그대로 보여주고 있으므로,
-        # 여기서는 짧게 잘라 또 인용하지 않고(끝이 "…"로 잘려 어색해 보이는 문제) 행동만 짧게 적습니다.
-        action = "독일 경쟁사 부정 리뷰 대응 홍보 콘텐츠 노출"
-        amount = "8%"
-        is_visual = True
-        test_method = "경쟁사 비교 홍보 콘텐츠 노출 여부로 A/B 테스트 (2주 또는 노출 2,000회, 노출군 vs 비노출군 전환율 비교)"
-    # report_sqp.py(검색어 클릭 분석)가 만든 문제는 group="검색 클릭"으로 옵니다. 이 중 "소재
-    # 개선" 문제는 hypothesis_render()가 report["sqp"] 원본으로 hypothesis_scenario_sentence()의
-    # 더 구체적인 문장(메인 이미지 각도 등)을 우선 쓰므로 보통 여기까지 안 오지만, sqp 원본이
-    # 없거나 쿼리가 안 맞는 등 그 경로를 못 탈 때를 대비해 그럴듯한 기본값을 만들어 둡니다.
-    elif group == "검색 클릭" and ("안 눌림" in search or "눌리게" in search):
-        action = "메인 이미지를 두께·냉감 원단 질감이 보이는 각도로 교체"
-        amount = "27%"
-        is_visual = True
-        test_method = "메인 이미지 A(현재)/B(두께·질감 각도) A/B 테스트 (Manage Your Experiments, 최소 2주 또는 각 안 1,000노출)"
-    elif group == "검색 클릭" and "덜 보임" in search:
-        action = "더운 날 위주로 입찰가를 올려 노출 점유율 확대"
-        amount = "20%"
-        is_visual = False   # 소재(사진·영상) 없이 입찰가만 조정하는 운영성 액션
-        test_method = "더운 날 입찰 상향 전/후 노출 점유율 비교 (최소 1주, 같은 요일대 평소 입찰과 대조)"
-    # "이탈/장바구니"를 "배송"보다 먼저 확인합니다. "장바구니 이탈" 문제의 설명 안에도
-    # "배송비" 같은 단어가 곁다리로 섞여 있을 수 있는데, 그런 경우까지 "배송 지연" 액션으로
-    # 잘못 분류되지 않도록 더 구체적인 키워드(이탈/장바구니)를 우선합니다.
-    # 단, "결제 수단 선택 단계 이탈"처럼 결제수단이 원인이면 아래 결제 분기로 보냅니다
-    # (예전엔 '이탈'이 먼저 걸려 배송비 배너로 잘못 분류됐음)
-    elif ("이탈" in search or "장바구니" in search) and not ("결제 수단" in search or "결제수단" in search):
-        action = "장바구니 단계에서 배송비를 미리 안내하는 배너 이미지 노출"
-        amount = "9%"
-        is_visual = True
-        test_method = "장바구니 페이지 배너 노출 A/B 테스트 (2주 또는 장바구니 진입 1,000건, 결제 완료율 비교)"
-    # ("배송 지연 리뷰"처럼 설명에 "리뷰"가 섞여 있어도, 내부 문제면 경쟁사 리뷰 대응이 아니라
-    # 그 내부 문제에 맞는 액션을 고르기 위해 "배송"을 "리뷰" 체크보다 먼저 둡니다.
-    # "물류"도 배송과 이어지는 문제라 같이 묶습니다 — 예: "독일 물류 거점 없음")
-    elif "배송" in search or "물류" in search:
-        action = "배송 현황을 안내하는 알림과 배송 지연 보상 쿠폰 제공"
-        amount = "10%"
-        is_visual = False   # 알림·쿠폰 발송이라 사진·영상 소재가 필요 없음
-        test_method = "알림·쿠폰 발송군 vs 미발송군 재구매율 비교 (발송 후 4주 관찰)"
-    elif "품절" in search or "재고" in search:
-        action = "품절 임박 상품 묶음 할인 배너 이미지 노출"
-        amount = "10%"
-        is_visual = True
-        test_method = "품절 임박 배너 노출 A/B 테스트 (1~2주, 노출군 vs 비노출군 재고 소진 속도 비교)"
-    # "비시즌/열대야"처럼 계절·시기 문제는 지금 날씨가 아니라 "비수기"라는 뜻이라
-    # 날씨 카테고리와 액션을 다르게 둡니다 (광고 빈도 조정이 아니라 비수기 수요 평준화).
-    elif any(w in search for w in ("비시즌", "비수기", "열대야", "성수기")):
-        action = "비수기 전용 번들 프로모션 배너 이미지로 수요 평준화"
-        amount = "10%"
-        is_visual = True
-        test_method = "비수기 번들 프로모션 노출 A/B 테스트 (비수기 기간 전체 또는 4주, 노출군 vs 비노출군 매출 비교)"
-    elif any(w in search for w in ("날씨", "폭염", "한파", "우천")):
-        action = "날씨 상황에 맞춘 광고 노출 빈도 자동 조정"
-        amount = "15%"
-        is_visual = False   # 기존 소재 그대로, 노출 빈도만 조정
-        test_method = "날씨 특보 발효일 광고 빈도 상향 전/후 비교 (특보 발효 기간 vs 평소 동일 요일대)"
-    # "신뢰"(리뷰가 아예 없는 신규 브랜드 등)는 "신규 고객 유입"과는 다른 문제라
-    # (유입은 이미 되는데 신뢰가 없어서 전환이 안 되는 경우) 따로 둡니다.
-    # report가 "리뷰 31건 (… 실적 가정), 경쟁사의 10% 수준"처럼 제목을 바꿔도 분류(group="신뢰")는
-    # 그대로라서 group도 같이 봅니다 (제목 키워드만 보면 기본값 액션으로 빠졌음).
-    elif "신뢰" in search or "리뷰 0" in search or group == "신뢰":
-        action = "체험단 착용·세탁 비교 사진·영상 콘텐츠로 초기 신뢰 구축"
-        amount = "10%"
-        is_visual = True
-        test_method = "체험단 콘텐츠 게시 전/후 전환율 비교 (체험단 모집 2주 + 콘텐츠 게시 후 4주 관찰)"
-    elif "신규" in search or "유입" in search:
-        action = "신규 고객 대상 첫 구매 할인 배너 이미지 노출"
-        amount = "10%"
-        is_visual = True
-        test_method = "신규 방문자 대상 할인 배너 A/B 테스트 (신규 세션 1,000건 또는 2주, 첫 구매 전환율 비교)"
-    # 경쟁사(외부) 관련 리뷰/후기 언급일 때만 "경쟁사 리뷰 대응" 액션을 씁니다.
-    # (is_external 조건이 없으면, 우리 제품 자체의 배송/품질 리뷰를 언급한 내부 문제도
-    # 엉뚱하게 "경쟁사 리뷰를 겨냥한 홍보"로 오해하는 문장이 나옵니다)
-    elif is_external and ("리뷰" in search or "후기" in search):
-        action = "경쟁사의 부정 리뷰 내용을 우리 서비스 강점과 비교하는 홍보 콘텐츠 노출"
-        amount = "8%"
-        is_visual = True
-        test_method = "경쟁사 비교 콘텐츠 노출 A/B 테스트 (2주, 노출군 vs 비노출군 전환율 비교)"
-    elif "재방문" in search or "재구매" in search:
-        action = "재구매 고객 전용 할인 쿠폰 발송"
-        amount = "12%"
-        is_visual = False   # 쿠폰 발송(이메일·알림)이라 새 소재가 필요 없음
-        test_method = "쿠폰 발송군 vs 미발송군 재구매율 비교 (발송 후 30일 관찰)"
-    elif "품질" in search or "불만" in search or "평점" in search:
-        action = "품질 개선 공지와 무상 교환·보증 혜택 안내"
-        amount = "8%"
-        is_visual = False   # 공지문 위주라 사진·영상 소재와는 거리가 있음
-        test_method = "공지·보증 안내 노출 전/후 평점·불만 리뷰 비율 비교 (게시 후 4주)"
-    # "인증/규제"와 "시험"은 둘 다 출시 요건과 관련 있지만 액션이 달라서 분리합니다
-    # (인증 서류 확보 vs 성능 시험 결과 공개). "인증"을 먼저 확인합니다 — 시험성적서도
-    # 인증 문제의 설명에 같이 언급되는 경우가 많아서, 순서가 바뀌면 인증 문제가 시험
-    # 카테고리로 잘못 분류됩니다.
-    elif "인증" in search or "규제" in search:
-        action = "인증·시험성적서 획득 과정을 보여주는 인포그래픽 이미지로 투명하게 공개"
-        amount = "8%"
-        is_visual = True
-        test_method = "인증 인포그래픽 노출 A/B 테스트 (상세페이지 조회 1,000건 또는 2주, 전환율 비교)"
-    elif "시험" in search or "검증" in search:
-        action = "Q-max·세탁내구 등 공개 시험 결과 콘텐츠로 성능 입증"
-        amount = "8%"
-        is_visual = True
-        test_method = "시험 결과 콘텐츠 노출 A/B 테스트 (상세페이지 조회 1,000건 또는 2주, 전환율 비교)"
-    elif "채널" in search:
-        action = "신규 판매 채널(Otto, Kaufland 등) 입점 확대 안내"
-        amount = "9%"
-        is_visual = False   # 입점 운영 작업이라 소재와 무관
-        test_method = "신규 채널 입점 전/후 매출 비교 (입점 후 4주, 기존 채널 매출과 합산 추이 관찰)"
-    elif "결제" in search or "수단" in search:
-        action = "독일 선호 결제수단(Klarna 등) 추가 지원 안내"
-        amount = "9%"
-        is_visual = False   # 결제 시스템 연동이라 소재와 무관
-        test_method = "결제수단 추가 적용 전/후 결제 단계 이탈률 비교 (적용 후 2주)"
-    elif any(w in search for w in ("인지도", "바이럴", "참여율")):
-        action = "후기·스토리 중심 브랜드 콘텐츠 캠페인 노출"
-        amount = "7%"
-        is_visual = True
-        test_method = "캠페인 노출 전/후 브랜드 검색량·참여율 비교 (캠페인 기간 2주)"
-    elif "환율" in search:
-        action = "환율 변동과 무관한 고정가 번들 상품 프로모션 배너 이미지 노출"
-        amount = "8%"
-        is_visual = True
-        test_method = "고정가 번들 배너 노출 A/B 테스트 (2주, 노출군 vs 비노출군 전환율 비교)"
-    elif "고객센터" in search or "응답" in search:
-        action = "자주 묻는 질문 자동 응답과 고객센터 응답 시간 단축 안내"
-        amount = "8%"
-        is_visual = False   # 응답 시스템 운영이라 소재와 무관
-        test_method = "자동응답 도입 전/후 평균 응답시간·고객 만족도 비교 (도입 후 2주)"
-    elif "반품" in search:
-        action = "반품 사유 설문과 사이즈·색상 맞춤 교환 가이드 제공"
-        amount = "8%"
-        is_visual = False   # 설문·가이드 문서 위주
-        test_method = "교환 가이드 제공 전/후 반품률 비교 (제공 후 4주)"
-    # "가격" 격차 문제는 경쟁사 비교와 맞물릴 때가 많아 가장 뒤쪽(그 앞의 더 구체적인
-    # 카테고리에 안 걸렸을 때만)에 둡니다.
-    elif "가격" in search:
-        action = "가격대별 번들 구성 비교 이미지로 체감 가격 차이 완화"
-        amount = "8%"
-        is_visual = True
-        test_method = "가격 번들 구성 이미지 A/B 테스트 (2주 또는 전환 500건, 노출군 vs 비노출군 전환율 비교)"
-
-    return action, amount, is_visual, test_method
+def hypothesis_plan(problem: dict) -> dict | None:
+    """report(1번)가 문제마다 데이터로 만들어 준 가설 재료(plan). 필요한 칸이 다 있을 때만 돌려줍니다.
+    plan 칸: action(행동), because(이유), kpi(지표 이름), now(지금 값), goal(목표 값), unit(단위),
+    better("up"=클수록 좋음 / "down"=작을수록 좋음), visual(사진·영상 소재 필요 여부), material(준비할 소재),
+    fixed(고정 요소), test(테스트 방법), period(기간·표본), goal_basis(목표 근거).
+    고정 개선율·키워드 문구는 쓰지 않으므로, plan이 없는 문제는 가설 후보가 되지 않습니다."""
+    plan = problem.get("plan") if isinstance(problem, dict) else None
+    if not isinstance(plan, dict):
+        return None
+    if not all(str(plan.get(k) or "").strip() for k in ("action", "because", "kpi")):
+        return None
+    if not all(isinstance(plan.get(k), (int, float)) for k in ("now", "goal")):
+        return None
+    return plan
 
 
-def hypothesis_pick_sensitivity(
-    desc: str,
-    is_external: bool,
-    competitor_review: str,
-    group: str = "",
-) -> str:
-    """이유 문장에 쓸 "~에 민감하게 반응할 가능성이 크기" 앞부분을 고릅니다.
-    "외부" 요인이라고 전부 경쟁사 비교 문제는 아닙니다 (환율, 광고 플랫폼, 시장 트렌드 등도 외부 요인).
-    경쟁사와 직접 관련 있을 때만(group이 "경쟁사"일 때, 또는 group 정보가 없고 설명에 "경쟁사"가
-    나올 때) 그렇게 표현합니다. (group이 없을 때 competitor_review만 보고 판단하면
-    hypothesis_pick_action()과 같은 이유로 틀릴 수 있어 "경쟁사" 텍스트 매칭으로 바꿨습니다)"""
-    is_competitor_problem = (group == "경쟁사") if group else "경쟁사" in desc
-    if is_competitor_problem:
-        return "독일 경쟁사 대비 우리 혜택"
-    if is_external:
-        return "외부 시장 상황"
-    return "해당 요인"
+def hypothesis_change_pct(plan: dict) -> float | None:
+    """지금 값 → 목표 값의 변화율(%) = (목표 - 지금) ÷ 지금. 작을수록 좋은 지표는 줄어드는 비율.
+    지금 값이 0이면 비율을 계산할 수 없어 None (문장에는 값만 씀)."""
+    now, goal = plan["now"], plan["goal"]
+    if not now:
+        return None
+    pct = (goal - now) / now * 100
+    return -pct if plan.get("better") == "down" else pct
 
 
-def hypothesis_build_components(problem: dict) -> dict:
-    """가설 문장을 이루는 조각(타깃/액션/이유/KPI/증가율)을 따로 돌려줍니다.
-    hypothesis_build_sentence()가 이 조각들을 문장 하나로 합치고, 가설 후보 탭의
-    "가설 근거" 표(hypothesis_generic_evidence_section)는 같은 조각을 표로 풀어서
-    보여줍니다 — 문장과 표가 서로 다른 로직으로 각자 만들어지면 내용이 어긋날 수 있어서,
-    반드시 이 한 군데에서만 조각을 계산합니다."""
-    # report 쪽 값이 문자열이 아니거나(숫자 등) 아예 없을 수도 있으니 전부 str로 안전하게 바꿔 둡니다
-    target = str(problem.get("target") or "독일 전체 고객")
-    kpi = str(problem.get("metric") or "매출")
-    title = str(problem.get("title") or "")
-    desc = str(problem.get("detail") or title or "")
-    is_external = problem.get("type") == "외부"
-    group = str(problem.get("group") or "").strip()
-    competitor_review = str(problem.get("competitor_review") or "").strip()
+def hypothesis_num(value) -> str:
+    """정수는 1,234 / 소수는 0.63처럼 (불필요한 0 없이)."""
+    if isinstance(value, float) and not value.is_integer():
+        return f"{value:,.2f}".rstrip("0").rstrip(".")
+    return f"{int(value):,}"
 
-    action, amount, is_visual, test_method = hypothesis_pick_action(desc, is_external, competitor_review, title, group)
-    sensitivity = hypothesis_pick_sensitivity(desc, is_external, competitor_review, group)
 
-    # 이유(because)는 항상 title(문제 제목 — report가 늘 짧고 깔끔한 명사구로 줌)을 바탕으로
-    # 짧게 만듭니다. 예전에는 desc/local_context(문제 설명·현지 특성 원문)를 그대로 넣었는데,
-    # 이 필드들은 report가 실제로 "핵심 ... (Keepa 2026-10-24 19:41) · 통계 ... (독일 DB
-    # SHP-006)"처럼 중간·끝에 출처·통계가 여러 번 섞인 긴 문장으로 줄 때가 많아서(예: "경쟁사
-    # Novilla 310건, RIBECO Germany 173건 (Keepa ...) · 온라인 쇼핑객 54%가 ... (독일 DB
-    # SHP-006)"), 끝 괄호만 떼어내는 정도로는 "한눈에 읽기 좋게"가 안 됐습니다. title은 이런
-    # 문제가 없는 짧은 제목이라({target}·{action}·{kpi}와 합쳐도 한 줄로 읽힘), 이유 문장에는
-    # title만 쓰고 desc/local_context/competitor_review 원문은 전부
-    # hypothesis_evidence_section()의 "📚 근거·출처 보기" 토글로만 보여줍니다.
-    title_for_reason = (title or "분석 결과").rstrip(". !?。")
-    reason_fragment = (f"{title_for_reason}{hypothesis_particle_ro(title_for_reason)} 미루어 볼 때 "
-                       f"고객이 {sensitivity}에 민감하게 반응할 가능성이 크기")
-
-    # "준비할 소재"/"고정 요소"는 sqp 기반 가설(hypothesis_scenario.py)과 같은 구성으로 맞춰서
-    # "가설 2,3도 가설 1처럼 자세하게 나오게 해달라"는 요구를 반영합니다. 사진·영상이 필요한
-    # 액션(is_visual)이면 action 자체가 곧 준비할 소재이고, 아니면 소재 없이 운영만 바뀝니다.
-    prep_material = action if is_visual else "별도 소재 불필요 (운영성 액션)"
-    fixed_factor = ("가격·상세페이지 설명 등 소재 외 조건은 테스트 기간 동안 그대로 유지"
-                     if is_visual else "기존 운영 방식 그대로, 위 액션만 추가로 적용")
-
-    return {
-        "target": target,
-        "kpi": kpi,
-        "action": action,
-        "amount": amount,
-        "reason_fragment": reason_fragment,
-        "test_method": test_method,
-        "prep_material": prep_material,
-        "fixed_factor": fixed_factor,
-    }
+def hypothesis_goal_text(plan: dict) -> str:
+    """'31건 → 93건 (+200%)'처럼 지금 값·목표 값·변화율."""
+    unit = str(plan.get("unit") or "")
+    pct = hypothesis_change_pct(plan)
+    change = f" ({'+' if plan.get('better') != 'down' else '-'}{abs(pct):.0f}%)" if pct is not None else ""
+    return f"{hypothesis_num(plan['now'])}{unit} → {hypothesis_num(plan['goal'])}{unit}{change}"
 
 
 def hypothesis_build_ibt(problem: dict) -> dict:
-    """규칙 기반 가설의 If·Because·Then 조각을 돌려줍니다. hypothesis_build_sentence()(저장용
-    한 문장)와 가설 후보 탭의 If·Because·Then 카드가 전부 이 한 곳에서만 내용을 가져가므로
-    서로 어긋나지 않습니다."""
-    c = hypothesis_build_components(problem)
-    action_particle = hypothesis_particle(c["action"], "을", "를")
-    kpi_particle = hypothesis_particle(c["kpi"], "이", "가")
-    # 조각 안 쉼표를 없애서 ③ 탭이 저장 문장을 If/Because/Then으로 정확히 나누게 함
+    """가설 If·Because·Then. 전부 report의 plan(그 문제의 데이터)에서 만듭니다.
+    Then의 변화율은 지금 값과 목표 값으로 계산합니다 (고정 %가 아님). plan이 없으면 빈 조각."""
+    plan = hypothesis_plan(problem)
+    if not plan:
+        return {"if": "", "because": "", "then": ""}
+    target = str(problem.get("target") or plan.get("target") or "").strip()
+    action = str(plan["action"]).strip()
+    kpi = str(plan["kpi"]).strip()
+    unit = str(plan.get("unit") or "")
+    goal = f"{hypothesis_num(plan['goal'])}{unit}"
+    pct = hypothesis_change_pct(plan)
+    move = "오를" if plan.get("better") != "down" else "낮아질"
+    then = (f"{kpi}{hypothesis_particle(kpi, '이', '가')} {hypothesis_num(plan['now'])}{unit}에서 "
+            f"{goal}{hypothesis_particle_ro(goal)} {f'{abs(pct):.0f}% ' if pct is not None else ''}{move} 것이다")
+    where = f"{target}에 " if target else ""
     return hypothesis_ibt_clean({
-        "if": f"{c['target']}에 {c['action']}{action_particle} 적용한다면",
-        "because": f"{c['reason_fragment']} 때문에",
-        "then": f"{c['kpi']}{kpi_particle} {c['amount']} 개선될 것이다",
+        "if": f"{where}{action}{hypothesis_particle(action, '을', '를')} 적용한다면",
+        "because": f"{str(plan['because']).strip()} 때문에",
+        "then": then,
     })
 
 
 def hypothesis_build_sentence(problem: dict) -> str:
-    """
-    1번 분석 결과(문제)로 가설 문장을 만듭니다. (AI 연동 전까지는 규칙 기반으로 채웁니다)
-    형식: 만약 [타깃/지점]에 [구체적인 액션]을 적용한다면,
-          [이유/고객 심리] 때문에 [측정 가능한 지표/KPI]가 [얼마나] 개선될 것이다
-    같은 problem이면 항상 같은 문장을 돌려줍니다 (무작위 요소 없음). 같은 후보에 여러
-    버전이 있는 게 아니라 하나의 답이 있어야 하기 때문입니다.
-    """
+    """가설 한 문장: 만약 [대상]에 [행동]을 적용한다면, [데이터 이유] 때문에 [지표]가 [지금 값]에서 [목표 값]으로 [변화율] 오를 것이다.
+    같은 problem이면 항상 같은 문장입니다 (무작위 요소 없음). plan이 없으면 빈 문자열."""
     ibt = hypothesis_build_ibt(problem)
+    if not ibt["if"]:
+        return ""
     return f"만약 {ibt['if']}, {ibt['because']} {ibt['then']}."
-    # TODO(AI 연동): AI 사용 도구/키가 정해지면, 여기서 먼저 AI 호출을 시도하고
-    # 실패하거나 준비 전이면 지금처럼 규칙 기반 문장으로 대체하도록 바꿉니다.
 
 
 def hypothesis_generic_detail_section(problem: dict) -> None:
-    """sqp(검색어 클릭 분석) 근거가 없는 — 즉 규칙 기반으로 문장을 만든 — 가설 후보 탭 안에서,
-    If·Because·Then 카드보다 먼저 "실행 방법"을 보여줍니다(실행 방법을 보고 가설을 비교·
-    선택할 수 있어야 한다는 요구 반영). 타깃·목표 KPI·준비할 소재·고정 요소·테스트 방법을
-    전부 토글 없이 메인 표 하나로 보여줍니다(sqp 기반 가설과 같은 구성 — "가설 2,3도 가설
-    1처럼 자세하게" 요구 반영. 목표 KPI도 실행 방법과 같이 보는 게 비교에 더 편하다고 판단해
-    같은 표에 포함). 문제 설명·현지 특성·경쟁사 근거 원문·출처는 여기 말고
-    hypothesis_evidence_section()이 별도 토글("📚 근거·출처 보기")로 모아 보여줍니다."""
+    """가설 후보 탭 안의 "실행 방법" 표 (전부 report plan의 값)."""
     st.markdown("**:material/science: 실행 방법**")
     st.markdown(hypothesis_scenario_table(hypothesis_generic_execution_rows(problem)))
-    st.caption("규칙 기반으로 자동 구성된 근거예요. 실제 실행 전에 내용을 검토해 주세요.")
+    basis = (hypothesis_plan(problem) or {}).get("goal_basis")
+    st.caption(f"목표 근거: {basis}" if basis else "① 문제 분석 데이터로 만든 실행 방법이에요.")
 
 
 def hypothesis_generic_execution_rows(problem: dict) -> list[tuple[str, str]]:
-    """규칙 기반 가설의 실행 방법 표 행. 화면 표와 "선택하기" 저장값이 같은 행을 쓰도록 분리."""
-    c = hypothesis_build_components(problem)
-    kpi_particle = hypothesis_particle(c["kpi"], "이", "가")
-    return [
-        ("타깃", c["target"]),
-        ("목표 KPI", f"{c['kpi']}{kpi_particle} {c['amount']} 개선"),
-        ("준비할 소재", c["prep_material"]),
-        ("고정 요소", c["fixed_factor"]),
-        ("테스트 방법", c["test_method"]),
-    ]
+    """실행 방법 표 행. 화면 표와 "선택하기" 저장값이 같은 행을 씁니다."""
+    plan = hypothesis_plan(problem)
+    if not plan:
+        return []
+    rows = [("타깃", str(problem.get("target") or "-")),
+            ("목표 KPI", f"{plan['kpi']} {hypothesis_goal_text(plan)}"),
+            ("준비할 소재", str(plan.get("material") or "-")),
+            ("고정 요소", str(plan.get("fixed") or "-")),
+            ("테스트 방법", str(plan.get("test") or "-"))]
+    if plan.get("period"):
+        rows.append(("기간·표본", str(plan["period"])))
+    return rows
 
 
-def hypothesis_execution_rows(problem: dict, sqp: dict | None) -> list[tuple[str, str]]:
-    """가설 후보 탭에 보이는 "실행 방법" 표 행을 유형(소재 개선/노출 확대/규칙 기반)에 맞게 돌려줌.
-    화면과 같은 조건(hypothesis_resolve_ibt와 동일)으로 고르므로 저장값이 화면 표와 항상 같음."""
-    if isinstance(sqp, dict):
-        if (problem.get("sqp_type") == "소재 개선" and sqp.get("query")
-                and sqp.get("query") == problem.get("query")):
-            return hypothesis_scenario_execution_rows(sqp)
-        p2 = sqp.get("problem2")
-        if (problem.get("sqp_type") == "노출 확대" and isinstance(p2, dict)
-                and p2.get("query") and p2.get("query") == problem.get("query")):
-            return hypothesis_scenario_problem2_execution_rows(p2)
+def hypothesis_execution_rows(problem: dict, sqp: dict | None = None) -> list[tuple[str, str]]:
+    """실행 방법 표 행 (모든 유형이 같은 plan 기반). sqp 인자는 예전 호출과 맞추려고 남겨 둠."""
     return hypothesis_generic_execution_rows(problem)
 
 
@@ -483,58 +276,20 @@ def hypothesis_dialog_pdf(saved: dict) -> None:
     )
 
 
-def hypothesis_resolve_ibt(problem: dict, sqp: dict | None) -> dict:
-    """가설(If·Because·Then)은 각 후보마다 항상 1벌이어야 합니다. '검색 클릭' 문제(소재 개선 ·
-    노출 확대 유형) 중에는, report의 sqp 원본 데이터(메인 이미지·장바구니 전환율, 또는 기온·
-    입찰 등)로 hypothesis_scenario.py가 이미 더 구체적이고 근거 있는 조각을 만들어 둡니다.
-    그 경우 여기서(제목/설명 키워드만 보고) 다시 만들면 같은 문제에 서로 다른 내용 2벌이
-    생겨 "가설 1개" 원칙이 깨지므로, 그 조각을 그대로 유일한 가설로 씁니다. sqp가 없거나
-    문제가 다른 검색어를 가리키면(쿼리 불일치) 평소처럼 규칙 기반으로 만듭니다. 가설 후보
-    탭의 If·Because·Then 카드와 선택 시 저장되는 값이 전부 이 함수 하나를 거칩니다."""
-    if isinstance(sqp, dict):
-        if (
-            problem.get("sqp_type") == "소재 개선"
-            and sqp.get("query")
-            and sqp.get("query") == problem.get("query")
-        ):
-            return hypothesis_scenario_ibt(sqp)
-        p2 = sqp.get("problem2")
-        if (
-            problem.get("sqp_type") == "노출 확대"
-            and isinstance(p2, dict)
-            and p2.get("query")
-            and p2.get("query") == problem.get("query")
-        ):
-            return hypothesis_scenario_problem2_ibt(p2)
+def hypothesis_resolve_ibt(problem: dict, sqp: dict | None = None) -> dict:
+    """가설(If·Because·Then)은 후보마다 1벌. 검색어 문제도 다른 문제와 똑같이 report plan으로 만듭니다
+    (예전에는 검색어 문제만 hypothesis_scenario.py의 별도 문장을 썼음). sqp 인자는 예전 호출과 맞추려고 남겨 둠."""
     return hypothesis_build_ibt(problem)
 
 
-def hypothesis_resolve_sentence(problem: dict, sqp: dict | None) -> str:
-    """가설 문장(저장용 한 문장). hypothesis_resolve_ibt()의 조각을 그대로 이어붙인
-    것이라, 카드에 보이는 내용과 저장되는 문장이 항상 같습니다."""
-    ibt = hypothesis_resolve_ibt(problem, sqp)
-    return f"만약 {ibt['if']}, {ibt['because']} {ibt['then']}."
+def hypothesis_resolve_sentence(problem: dict, sqp: dict | None = None) -> str:
+    """가설 문장(저장용 한 문장). hypothesis_build_sentence()와 같음."""
+    return hypothesis_build_sentence(problem)
 
 
 def hypothesis_is_visual_candidate(problem: dict, sqp: dict | None = None) -> bool:
-    """이 문제의 가설이 A/B 테스트용 사진·영상 결과물(크리에이티브)로 바로 이어지는지
-    판단합니다. "결과물이 좋은 사진·영상으로 나와야 한다"는 요구에 맞춰, 가설 후보를 고를 때
-    이런 문제를 우선 보여주려고 씁니다 (hypothesis_pick_candidates 참고).
-    report_sqp.py(검색어 클릭 분석)의 "소재 개선"(메인 이미지 각도 변경)은 사진 자체가
-    핵심이라 항상 True, "노출 확대"(입찰가 조정)는 소재가 필요 없는 운영성 액션이라 항상
-    False로 고정하고, 그 외 문제는 hypothesis_pick_action()이 고른 액션 기준으로 판단합니다."""
-    sqp_type = problem.get("sqp_type")
-    if sqp_type == "소재 개선":
-        return True
-    if sqp_type == "노출 확대":
-        return False
-    desc = str(problem.get("detail") or problem.get("title") or "")
-    title = str(problem.get("title") or "")
-    is_external = problem.get("type") == "외부"
-    group = str(problem.get("group") or "").strip()
-    competitor_review = str(problem.get("competitor_review") or "").strip()
-    _, _, is_visual, _test_method = hypothesis_pick_action(desc, is_external, competitor_review, title, group)
-    return is_visual
+    """이 가설이 A/B 테스트용 사진·영상 소재로 바로 이어지는지 (report plan의 visual 값)."""
+    return bool((hypothesis_plan(problem) or {}).get("visual"))
 
 
 def hypothesis_pick_candidates(report: dict | None, limit: int = HYPOTHESIS_MAX_CANDIDATES) -> list[dict]:
@@ -559,6 +314,9 @@ def hypothesis_pick_candidates(report: dict | None, limit: int = HYPOTHESIS_MAX_
         # 키워드로 처리"라고 스스로 명시합니다. 가설을 만들 대상이 아니라고 1번 쪽이 이미
         # 판단한 문제이므로, 후보 목록에서도 건너뜁니다.
         if "가설 없이" in str(item.get("detail") or ""):
+            continue
+        # 고정 문구·고정 개선율을 쓰지 않으므로, report가 데이터로 가설 재료(plan)를 준 문제만 후보
+        if not hypothesis_plan(item):
             continue
         title = item["title"]
         if title in seen_titles:   # 같은 제목이 중복으로 와도 같은 가설 후보를 두 번 보여주지 않음
@@ -585,18 +343,9 @@ def hypothesis_pick_candidates(report: dict | None, limit: int = HYPOTHESIS_MAX_
     return (picked + held)[:limit]
 
 
-def hypothesis_action_key(problem: dict, sqp: dict | None) -> str:
-    """후보끼리 실행 방법이 겹치는지 비교할 때 쓰는 액션 이름. sqp 가설(소재 개선·노출 확대)은
-    hypothesis_resolve_ibt()와 같은 조건으로 고유 이름을, 나머지는 규칙 기반 액션을 씁니다."""
-    if isinstance(sqp, dict):
-        if (problem.get("sqp_type") == "소재 개선" and sqp.get("query")
-                and sqp.get("query") == problem.get("query")):
-            return "sqp:소재 개선"
-        p2 = sqp.get("problem2")
-        if (problem.get("sqp_type") == "노출 확대" and isinstance(p2, dict)
-                and p2.get("query") and p2.get("query") == problem.get("query")):
-            return "sqp:노출 확대"
-    return hypothesis_build_components(problem)["action"]
+def hypothesis_action_key(problem: dict, sqp: dict | None = None) -> str:
+    """후보끼리 실행 방법이 겹치는지 비교할 때 쓰는 액션 이름 (report plan의 action)."""
+    return str((hypothesis_plan(problem) or {}).get("action") or problem.get("title") or "")
 
 
 def hypothesis_pick_problem(report: dict | None) -> dict | None:
@@ -646,6 +395,24 @@ def _hypothesis_handle_save(problem: dict, text: str, ibt: dict) -> None:
             "competitor_review": problem.get("competitor_review"),
         },
     )
+    # ① 리포트("report") 맨 아래에도 선택한 가설을 붙여 저장 → ③ 탭은 ① 분석 + ② 가설이 든 리포트 하나만 읽으면 됨
+    # (① 탭이 다시 저장해도 이 칸은 유지하고, 문제가 사라지면 stale 표시: report_page.report_save_store)
+    if report is not None:
+        report_with_hyp = copy.deepcopy(report)
+        report_with_hyp.pop("hypothesis", None)   # 예전 선택을 지우고 맨 아래에 새로 붙임
+        report_with_hyp["hypothesis"] = {
+            "problem": copy.deepcopy(problem),
+            "if": ibt.get("if", ""),
+            "because": ibt.get("because", ""),
+            "then": ibt.get("then", ""),
+            "sentence": text,
+            "plan": copy.deepcopy(hypothesis_plan(problem)),
+            "execution": dict(hypothesis_execution_rows(problem, sqp)),
+            "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "stale": False,
+            "stale_reason": "",
+        }
+        store_set("report", report_with_hyp)
 
 
 def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, saved: dict | None) -> None:
@@ -655,16 +422,9 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
     똑같은 구성으로 그립니다(예전에는 이미 선택된 후보만 카드를 생략했는데, "선택 안 한
     가설들도 실행 방법이 위에 뜨면 좋겠다"는 요청으로 전부 통일). index는 위젯 key를
     후보마다 다르게 만드는 데만 씁니다."""
-    # report_sqp.py(검색어 클릭 분석)의 "소재 개선"/"노출 확대" 문제면, 가설 문장이 이미 sqp
-    # 원본 근거로 만들어진 것이므로 그 근거(타깃·액션·이유·KPI 등)를 이 탭 안에 이어서 보여줍니다.
+    # 검색어 '소재 개선' 문제면 오른쪽 끝에 KPI 판단 기준(CTR·CVR 안전장치) 창 아이콘을 더 둡니다
     is_sqp_main = bool(
         sqp and problem.get("sqp_type") == "소재 개선" and sqp.get("query") == problem.get("query")
-    )
-    p2 = sqp.get("problem2") if sqp else None
-    is_sqp_problem2 = bool(
-        isinstance(p2, dict)
-        and problem.get("sqp_type") == "노출 확대"
-        and p2.get("query") == problem.get("query")
     )
 
     ibt = hypothesis_resolve_ibt(problem, sqp)
@@ -706,12 +466,7 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
         # 가설 후보 탭 안에서는 "실행 방법"만 보여주고 If·Because·Then 카드는 그리지 않습니다
         # — 선택하면 어차피 맨 위 "지금 선택된 가설" 칸에 카드로 뜨니, 탭 안에서 또 보여주는
         # 건 중복이라는 지적을 반영했습니다. ibt 자체는 선택 시 저장할 값으로는 계속 씁니다.
-        if is_sqp_main:
-            hypothesis_scenario_detail_section(sqp)
-        elif is_sqp_problem2:
-            hypothesis_scenario_problem2_detail_section(p2)
-        else:
-            hypothesis_generic_detail_section(problem)
+        hypothesis_generic_detail_section(problem)   # 모든 유형 같은 표 (report plan 값)
 
     # 오른쪽 끝 아이콘(① 탭과 같은 방식, hypothesis_style.css의 [class*="st-key-hypothesis-side-"]가
     # 화면에 고정). 가설 1/2/3 하부 탭마다 따로 그려지지만, 열린 탭 것만 보입니다.
@@ -739,6 +494,17 @@ def hypothesis_render():
     candidates = hypothesis_pick_candidates(report)
     sqp = report.get("sqp") if report else None
     sqp = sqp if isinstance(sqp, dict) else None
+
+    problems = report.get("problems") if report else None
+    if not candidates and isinstance(problems, list) and any(isinstance(p, dict) and p.get("title") for p in problems):
+        # 문제는 있는데 데이터로 가설 재료(plan)를 만들 수 있는 문제가 없음 → 지어낸 문장 대신 이유를 보여 줌
+        with st.container(border=True, key="hypothesis-empty"):
+            st.markdown('<p class="hypothesis-empty-title">가설로 만들 데이터가 있는 문제가 없어요</p>', unsafe_allow_html=True)
+            st.caption("고정 문구·고정 개선율을 쓰지 않아서, ① 문제 분석이 지금 값과 목표 값을 데이터로 준 문제만 가설이 됩니다.")
+            reasons = [f"- {html.escape(str(p['title']), quote=False)}: {html.escape(str(p.get('plan_none') or '가설 재료 없음'), quote=False)}"
+                       for p in problems if isinstance(p, dict) and p.get("title")][:8]
+            st.markdown("\n".join(reasons))
+        return
 
     if not candidates:
         # key="hypothesis-empty"를 줘서 hypothesis_style.css의 .st-key-hypothesis-empty 규칙이
