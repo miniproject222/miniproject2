@@ -154,6 +154,7 @@ div, p, .stButton button { margin: 0; }
 
 ### 규칙 4. 탭끼리 데이터는 `store`로만 주고받기
 **내 모듈 이름의 키에만 저장하고, 다른 키는 읽기만** 합니다. 저장한 값은 Supabase에도 남아서 새로고침해도 유지됩니다.
+같은 접속 안에서는 처음 읽은 값을 다시 쓰므로, 다른 사람이 방금 저장한 값을 받아야 하면 `store_get("키", fresh=True)`로 읽습니다.
 
 ```python
 from common.common_store import store_get, store_set

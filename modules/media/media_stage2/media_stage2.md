@@ -52,10 +52,10 @@
 - 2-4 AI 다듬기 결과도 같이 넘깁니다: `prompt_a`, `prompt_b`(다듬은 프롬프트), `changes`(바꾼 곳 / 뺌·더함 / 이유 / 근거 DB ID), `avoid`·`include`(찍지 말 것 / 넣을 것 → ⑤ 촬영 브리프로 감)
 - 확인은 `media_handoff_check()`(빈칸만 다른가, 고정 요소가 남았나)로 하고, 통과했을 때만 넘깁니다.
 - 2-4에서 쓰는 리포트 값: `store_get("report")`의 `ad_claims.forbidden`(금지 표현), `marketing_rules`(독일 광고 표현 규칙 8개), `seori_profile`, `competitor_profiles` (`media_s2_report_rules()`). ① 탭을 한 번 열어야 들어옵니다.
-- 넘긴 값은 `data/media_stage2_prompt.json`에 저장됩니다. **이 파일을 커밋·푸시해야** 3단계 담당이 풀 받아 이어서 작업할 수 있습니다.
+- **'④로 넘기기' 버튼을 눌렀을 때만** Supabase(`store("media")`의 `handoff.prompt`)에 저장되고, 3단계는 다른 컴퓨터에서도 바로 받습니다. 탭을 열기만 해서는 저장되지 않습니다. 넘긴 뒤 프롬프트를 고치면 '다시 넘기기 필요'가 보입니다.
 
 ## 지금 상태
 
-- `media_stage2.py`: 2-1~2-3은 예시 값(`media_s2_draft()`)으로 자리만 있음 (2단계 담당이 만들 곳), 2-4는 A·B 나란히 비교·되돌리기·확인·리포트 규칙 보기·3단계로 넘기기까지 있음. `AI로 다듬기` 버튼은 AI 키 연결 전이라 꺼져 있음
+- `media_stage2.py`: 2-1~2-3은 예시 값(`media_s2_draft()`)으로 자리만 있음 (2단계 담당이 만들 곳). 단 **빈칸 B는 1단계에서 확정한 B안의 영어 문장(`plan["b_ref"]`)에서 기본 프롬프트 앞뒤를 잘라 씀** (`media_s2_slot_from_ref()`, 앞뒤가 다르거나 없으면 예시 빈칸). 1단계에서 다른 B를 확정하면 프롬프트 칸도 새 문장으로 바뀜, 2-4는 A·B 나란히 비교·되돌리기·확인·리포트 규칙 보기·3단계로 넘기기까지 있음. `AI로 다듬기` 버튼은 AI 키 연결 전이라 꺼져 있음
 - `media_stage2_judge.py`: 이전에 만든 A/B 결과·판정 코드 보관 (흐름에서 빠져 화면에 연결하지 않음, 다시 필요하면 `media_s2_judge_render()`를 연결)
 - `data/media_ab_result_dummy_202610.json`: 판정 코드가 쓰는 A/B 결과 더미 (보관)

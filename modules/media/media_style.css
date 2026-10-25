@@ -61,7 +61,7 @@
 
 .st-key-media-step [role="tab"] {
   height: auto;
-  padding: 7px 18px !important;
+  padding: 7px 14px !important;
   border-radius: 999px !important;
   background: transparent !important;
   color: var(--color-sub) !important;
@@ -111,7 +111,7 @@
     오른쪽 콜아웃과 겹치지 않음. 음수 여백은 실제 화면에서 잰 값. 제목이 바뀌면 맞춰야 함) */
 @media (min-width: 768px) {
   .st-key-media-root {
-    --media-tabbar-w: 560px;
+    --media-tabbar-w: 660px;   /* 하위 탭 5개가 스크롤 없이 들어가는 폭 (실측 약 645px) */
   }
 
   .st-key-media-step [role="tablist"] {
