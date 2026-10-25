@@ -111,7 +111,7 @@
     오른쪽 콜아웃과 겹치지 않음. 음수 여백은 실제 화면에서 잰 값. 제목이 바뀌면 맞춰야 함) */
 @media (min-width: 768px) {
   .st-key-media-root {
-    --media-tabbar-w: 660px;   /* 하위 탭 5개가 스크롤 없이 들어가는 폭 (실측 약 645px) */
+    --media-tabbar-w: 660px;   /* 하위 탭 5개 시절 실측(약 645px)으로 정한 폭. 2026-10-25 4개로 줄어 여유 있음 (줄이려면 화면에서 다시 잼) */
   }
 
   .st-key-media-step [role="tablist"] {
@@ -252,8 +252,7 @@
   white-space: nowrap;
 }
 
-/* 불러오기 전 빈 상태 카드 (하위 탭 ①) / 확정 전 빈 상태 카드 (하위 탭 ②, media_ab.py key="media-ab-empty") */
-.st-key-media-ab-empty,
+/* 불러오기 전 빈 상태 카드 (하위 탭 ①). 하위 탭 ②의 확정 전 빈 카드는 media_stage2_style.css(media-s2-ab-empty) */
 .st-key-media-hypo-empty {
   border-style: dashed !important;
   background: var(--color-bg);

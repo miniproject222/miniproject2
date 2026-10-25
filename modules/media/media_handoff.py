@@ -1,13 +1,13 @@
 # 3. 매체 제작 > 단계 사이 데이터 주고받기 (1단계 담당 파일 · 2·3단계는 읽고 부르기만)
-# 1단계(단일 변수 추출 ~ A/B 소재 선정) → 2단계(프롬프트 만들기·AI 다듬기) → 3단계(사진·영상 초안 → 외주 정리)로 넘기는 값의 모양을 여기서 정합니다.
+# 1단계(가설에서 변수 도출) → 2단계(A/B 소재 준비: 프롬프트 만들기·AI 다듬기) → 3단계(사진·영상 초안 → 외주 정리)로 넘기는 값의 모양을 여기서 정합니다.
 # 모양(키 이름)을 바꿀 때는 세 담당자가 같이 정하고 이 파일만 고칩니다.
 #
 # 넘긴 값은 Supabase의 공용 저장소(store "media"의 "handoff" 칸)에 저장됩니다. 프로젝트 파일은 바뀌지 않습니다.
 #   store("media") = {"results": [...], "handoff": {"plan": {...}, "prompt": {...}, "assets": {...}}}
 #   plan   : 1단계 '이 변수로 확정' 버튼   → 2단계가 읽음
-#   prompt : 2단계 '④로 넘기기' 버튼        → 3단계 ④가 읽음
-#   assets : 3단계 ④ '⑤로 넘기기' 버튼     → 3단계 ⑤가 읽음
-# 저장은 각 단계의 넘기기 버튼을 눌렀을 때만 합니다. (화면을 열기만 해서는 저장되지 않음)
+#   prompt : 2단계 'A/B 소재 준비'의 '다음' 버튼 (media_page.py → media_s2_handoff_now()) → 3단계 '사진·영상 초안 제작'이 읽음
+#   assets : 3단계 '사진·영상 초안 제작'의 넘기기 버튼                               → 3단계 '외주 정리'가 읽음
+# 저장은 각 단계의 확정·넘기기 버튼을 눌렀을 때만 합니다. (화면을 열기만 해서는 저장되지 않음)
 # 앞 단계가 아직 넘기지 않았으면 아래 예시 값에 "sample": True가 붙어 와서 각자 먼저 개발할 수 있습니다.
 # Supabase에 연결할 수 없으면 같은 브라우저 접속 안에서만 이어집니다.
 import time
@@ -146,7 +146,7 @@ def media_handoff_check(src: dict, prompt_a: str, prompt_b: str) -> dict:
             "ok": slot_ok and same_rest and not missing}
 
 
-# 3단계 ④ → ⑤: 넘긴 영상 스토리보드와 파일 이름 (사진·영상 파일 자체는 크기 때문에 같은 브라우저 접속 안에만 둠)
+# 3단계 사진·영상 초안 제작 → 외주 정리: 넘긴 영상 스토리보드와 파일 이름 (사진·영상 파일 자체는 크기 때문에 같은 브라우저 접속 안에만 둠)
 MEDIA_HANDOFF_ASSETS_SAMPLE = {
     "storyboard": [],   # 확정한 스토리보드 장면 목록
     "photos": [],       # 넘긴 사진 파일 이름
@@ -155,12 +155,12 @@ MEDIA_HANDOFF_ASSETS_SAMPLE = {
 
 
 def media_handoff_set_assets(assets: dict) -> None:
-    """3단계 ④가 '⑤로 넘기기' 버튼을 누르면 부릅니다. 모양은 MEDIA_HANDOFF_ASSETS_SAMPLE과 같게 넣습니다."""
+    """3단계 '사진·영상 초안 제작'에서 넘기기 버튼을 누르면 부릅니다. 모양은 MEDIA_HANDOFF_ASSETS_SAMPLE과 같게 넣습니다."""
     _media_handoff_put("assets", assets)
 
 
 def media_handoff_assets() -> dict:
-    """3단계 ④ → ⑤: 넘긴 스토리보드·파일 이름. 아직 안 넘겼으면 빈 예시 값에 "sample": True."""
+    """3단계 사진·영상 초안 제작 → 외주 정리: 넘긴 스토리보드·파일 이름. 아직 안 넘겼으면 빈 예시 값에 "sample": True."""
     saved = _media_handoff_get("assets")
     return {**MEDIA_HANDOFF_ASSETS_SAMPLE, **saved, "sample": False} if saved else         {**MEDIA_HANDOFF_ASSETS_SAMPLE, "sample": True}
 

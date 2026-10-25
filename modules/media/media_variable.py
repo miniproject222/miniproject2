@@ -309,15 +309,6 @@ def media_variable_confirmed_plan() -> tuple[dict | None, str]:
     return {k: v for k, v in saved.items() if k != "sample"}, media_variable_confirm_state(current)
 
 
-def media_variable_ref_prompt(b: str) -> str:
-    """지금 가설의 후보 묶음에서 B 문장이 같은 B안의 AI 레퍼런스 프롬프트 (없으면 빈 문자열)."""
-    for v in media_variable_candidate_set().get("variables", []):
-        for o in (v.get("b_options") or []) if isinstance(v, dict) else []:
-            if isinstance(o, dict) and o.get("b") == b:
-                return o.get("ref_prompt") or ""
-    return ""
-
-
 def media_variable_go_step() -> None:
     """'① 으로 가서 확정하기' 버튼 콜백. 하위 탭을 ①로 바꿉니다 (위젯이 그려지기 전에 실행됨)."""
     st.session_state["media-step"] = MEDIA_VARIABLE_TAB_LABEL
