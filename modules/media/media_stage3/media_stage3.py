@@ -3,6 +3,7 @@
 # 하위 탭 2개로 나눠 사진 초안 A·B(프롬프트 A·B로 생성)와 영상 초안(스토리보드 확정 → 영상 프롬프트로 생성)을 만듭니다. '⑤로 넘기기' 버튼을 누르면 ⑤ 외주 정리(media_stage3_export.py)가 받아 묶습니다.
 # 화면은 media_stage3_render() 안에서만 그립니다.
 # 이름 규칙: 함수 media_s3_..., 위젯 key·session_state 키·CSS class media-s3-...
+import time
 from pathlib import Path
 
 import streamlit as st
@@ -10,13 +11,19 @@ import streamlit as st
 from common.common_store import store_get
 from modules.media.media_handoff import (media_handoff_assets, media_handoff_check, media_handoff_prompt,
                                          media_handoff_set_assets)
+from modules.media.media_stage3.media_stage3_image import (MEDIA_S3_HF_FAIL, MEDIA_S3_HF_PENDING, MEDIA_S3_HF_WAIT_MAX,
+                                                           media_s3_hf_download, media_s3_hf_key, media_s3_hf_status,
+                                                           media_s3_hf_submit)
 
 MEDIA_S3_TAB_LABEL = "사진·영상 초안 제작"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
 MEDIA_S3_DIR = Path(__file__).resolve().parent   # 3단계 폴더 (data/ 경로 만들 때 사용)
 MEDIA_S3_MEDIA_NOTE = ("AI로 만든 사진·영상은 아마존 메인 이미지로 쓰지 않습니다. "
                        "외주 촬영 레퍼런스, 서브 이미지, 광고 초안으로만 씁니다.")
 # ④에서 만든 것을 ⑤로 넘기는 session_state 키 (탭을 옮기면 위젯 값이 지워져서 따로 보관)
-MEDIA_S3_PHOTOS = "media-s3-assets-photos"
+MEDIA_S3_PHOTOS = "media-s3-assets-photos"            # ⑤로 넘기는 사진 전체 (올린 사진 + 만든 사진)
+MEDIA_S3_PHOTO_UPLOADS = "media-s3-photo-uploads"    # 직접 올린 사진
+MEDIA_S3_AI_PHOTOS = "media-s3-ai-photos"            # Higgsfield로 만든 사진 {"A": (파일 이름, 내용), "B": ...}
+MEDIA_S3_PHOTO_JOB = "media-s3-photo-job"            # 만드는 중인 요청 (뒤에 -A / -B)
 MEDIA_S3_VIDEOS = "media-s3-assets-videos"
 MEDIA_S3_STORYBOARD = "media-s3-storyboard"
 MEDIA_S3_STORYBOARD_DONE = "media-s3-storyboard-done"   # 확정한 스토리보드 (영상 초안은 이걸로 만듦)
@@ -59,20 +66,81 @@ def media_s3_video_prompt(src: dict, storyboard: list) -> str:
                       *(["Avoid: " + ", ".join(src["avoid"])] if src["avoid"] else [])])
 
 
+def _media_s3_photo_start(name: str, prompt: str) -> None:
+    """'사진 A/B 만들기' 버튼 콜백: Higgsfield에 요청을 보내고 요청 번호를 보관합니다 (결과는 아래에서 기다림)."""
+    try:
+        job = {"id": media_s3_hf_submit(prompt), "status": "queued", "prompt": prompt, "start": time.time()}
+    except RuntimeError as err:
+        job = {"status": "error", "error": str(err), "prompt": prompt}
+    st.session_state[f"{MEDIA_S3_PHOTO_JOB}-{name}"] = job
+
+
+def _media_s3_photo_finish(name: str, job: dict, url: str) -> None:
+    """완성된 사진을 내려받아 AI 사진 보관함에 넣습니다 (같은 A/B의 이전 AI 사진은 바꿈). ⑤ 외주 정리로도 넘어감."""
+    data, ext = media_s3_hf_download(url)
+    file_name = f"photo_{name}_higgsfield{ext}"
+    st.session_state.setdefault(MEDIA_S3_AI_PHOTOS, {})[name] = (file_name, data)
+    job.update(status="completed", file=file_name)
+
+
+@st.fragment(run_every=3)
+def _media_s3_photo_wait(name: str) -> None:
+    """만드는 중인 사진을 3초마다 확인합니다. 끝나면(완성·실패) 화면 전체를 다시 그려 결과를 보여 줍니다."""
+    job = st.session_state.get(f"{MEDIA_S3_PHOTO_JOB}-{name}") or {}
+    if job.get("status") not in MEDIA_S3_HF_PENDING:
+        return
+    try:
+        state = media_s3_hf_status(job["id"])
+        if state["status"] == "completed" and state["url"]:
+            _media_s3_photo_finish(name, job, state["url"])
+        elif state["status"] in MEDIA_S3_HF_FAIL:
+            job.update(status="error", error=f"Higgsfield에서 {MEDIA_S3_HF_FAIL[state['status']]} {state['error']}".strip())
+        elif time.time() - job["start"] > MEDIA_S3_HF_WAIT_MAX:
+            job.update(status="error", error=f"{MEDIA_S3_HF_WAIT_MAX // 60}분이 지나도 사진이 나오지 않았어요. 다시 눌러 주세요.")
+        else:
+            job["status"] = state["status"] or job["status"]
+            st.caption(f"사진 {name} 만드는 중… ({int(time.time() - job['start'])}초)")
+            return
+    except RuntimeError as err:
+        job.update(status="error", error=str(err))
+    st.rerun()
+
+
 def media_s3_photo_section(src: dict):
-    """④-1 사진 초안 제작: 2단계에서 다듬은 프롬프트 A·B로 '이렇게 찍어 주세요' 견본을 만듭니다."""
+    """④-1 사진 초안 제작: 2단계에서 다듬은 프롬프트 A·B로 Higgsfield에서 '이렇게 찍어 주세요' 견본을 만듭니다.
+    키가 없으면 버튼이 꺼지고, 다른 곳에서 만든 사진을 올릴 수 있습니다. 만든 사진과 올린 사진은 함께 ⑤로 넘어갑니다."""
+    has_key = bool(media_s3_hf_key())
+    ai_photos = st.session_state.get(MEDIA_S3_AI_PHOTOS, {})
     c1, c2 = st.columns(2)
     for col, name in ((c1, "A"), (c2, "B")):
+        prompt = src[f"prompt_{name.lower()}"]
+        job = st.session_state.get(f"{MEDIA_S3_PHOTO_JOB}-{name}") or {}
+        busy = job.get("status") in MEDIA_S3_HF_PENDING
         with col:
             with st.container(border=True):
                 st.markdown(f"**사진 {name}** · 프롬프트 {name}")
-                st.code(src[f"prompt_{name.lower()}"], language=None, wrap_lines=True)
-                st.button(f"사진 {name} 만들기", key=f"media-s3-btn-photo-{name}", disabled=True,
-                          help="이미지 생성 AI가 정해지면 이 프롬프트로 만듭니다. 지금은 다른 곳에서 이 프롬프트로 만든 사진을 아래에 올려 주세요.")
+                st.code(prompt, language=None, wrap_lines=True)
+                st.button(f"사진 {name} 다시 만들기" if name in ai_photos else f"사진 {name} 만들기",
+                          key=f"media-s3-btn-photo-{name}", disabled=not has_key or busy,
+                          on_click=_media_s3_photo_start, args=(name, prompt),
+                          help=("secrets.toml에 HF_KEY를 넣으면 Higgsfield로 만들 수 있어요. 지금은 다른 곳에서 만든 사진을 아래에 올려 주세요."
+                                if not has_key else "Higgsfield로 이 프롬프트의 견본 사진을 만들어요 (누를 때마다 크레딧 차감)"))
+                if busy:
+                    _media_s3_photo_wait(name)
+                elif job.get("status") == "error":
+                    st.warning(f"사진 {name}: {job['error']}")
+                if name in ai_photos:
+                    file_name, data = ai_photos[name]
+                    st.image(data, caption=f"{file_name} · Higgsfield로 만든 견본 (메인 이미지에 쓰지 않음)")
+                    if job.get("prompt") and job["prompt"] != prompt:
+                        st.caption("프롬프트가 바뀌었어요. 새 프롬프트로 다시 만들어 주세요.")
     files = st.file_uploader("만든 사진 올리기 (파일 이름에 A 또는 B)", type=["png", "jpg", "jpeg", "webp"],
                              accept_multiple_files=True, key="media-s3-photo-files")
-    kept = media_s3_keep_files(files, MEDIA_S3_PHOTOS)
-    st.caption(f"보관된 사진 {len(kept)}장")
+    uploads = media_s3_keep_files(files, MEDIA_S3_PHOTO_UPLOADS)
+    # ⑤로 넘길 사진 = 올린 사진 + Higgsfield로 만든 사진
+    st.session_state[MEDIA_S3_PHOTOS] = list(uploads) + [ai_photos[n] for n in ("A", "B") if n in ai_photos]
+    st.caption(f"보관된 사진 {len(st.session_state[MEDIA_S3_PHOTOS])}장 (올린 사진 {len(uploads)}장 · "
+               f"만든 사진 {len(ai_photos)}장)")
 
 
 def _media_s3_confirm_storyboard() -> None:

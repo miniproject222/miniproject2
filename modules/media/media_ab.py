@@ -1,12 +1,12 @@
 # 3. 매체 제작 > 메인 이미지 A/B (문제 시나리오.md '가설과 소재 연결')
-# 하위 탭 ①과 같은 A/B 설계(plan, media_variable_plan())로 메인 이미지 A/B 안, 촬영 브리프,
-# Manage Your Experiments 안내를 보여 줍니다. 3번 탭의 하위 탭 'A/B 소재 준비'(1단계)에서 부릅니다.
+# 하위 탭 ①과 같은 A/B 설계(plan, media_variable_plan())로 메인 이미지 A/B 안을 보여 주고, 그 아래에
+# 2단계 프롬프트 만들기(media_s2_prompt_section())를 그립니다. 3번 탭의 하위 탭 'A/B 소재 준비'에서 부릅니다.
+# (2026-10-25 PM 결정: 촬영 브리프·Manage Your Experiments 안내는 화면에서 뺌. media_ab_brief()와 규칙 상수는 남겨 둠)
 # 가설·리포트는 직접 읽지 않고 media_variable.py의 함수를 거칩니다 (출처가 바뀌면 그쪽만 고침).
 # 이전 결과·판정 코드는 media_stage2/media_stage2_judge.py에 보관합니다 (지금 흐름에서는 안 씀).
 import streamlit as st
 
-from modules.media.media_variable import (media_variable_candidates, media_variable_hypothesis, media_variable_plan,
-                                          media_variable_report_sqp)
+from modules.media.media_variable import media_variable_plan, media_variable_report_sqp
 
 MEDIA_AB_REF_PROMPT = ("Product photo reference, white seamless background, a cooling mattress pad 90x200 cm laid flat, "
                        "camera 45 degrees above, one corner gently lifted to show the edge thickness and the knitted "
@@ -39,10 +39,9 @@ def media_ab_brief(plan, price, hypothesis_text):
 
 
 def media_ab_plan_step():
-    """하위 탭 ② A/B 소재 준비: A/B 안, 메인 이미지 규칙, 촬영 브리프, 테스트 도구. 반드시 media_render() 안에서 부릅니다.
+    """하위 탭 ② A/B 소재 준비: A/B 안 + 그 아래 프롬프트 만들기(2단계). 반드시 media_render() 안에서 부릅니다.
     가설은 하위 탭 ①에서 이미 보여 주므로 여기서는 다시 보여 주지 않습니다."""
     plan, price, defaults = media_variable_plan()
-    hypothesis_text, _ = media_variable_hypothesis()   # 2번 탭 가설 (없으면 기준 가설)
     # plan에 없는 값(노출·클릭 점유율, 지금 이미지의 문제점, 데이터 출처)만 리포트에서 따로 읽습니다
     sqp = media_variable_report_sqp()
     listing = sqp.get("listing") if isinstance(sqp.get("listing"), dict) else {}
@@ -64,28 +63,12 @@ def media_ab_plan_step():
             st.markdown(f"{plan['b']}  \n"
                         '<span class="media-desc">저가 제품과의 품질 차이(두께·원단)가 검색 결과에서 바로 보이게</span>',
                         unsafe_allow_html=True)
-    st.markdown(f'<div class="media-desc">고정 요소: 흰 배경 실제 사진, 제목, 가격 {price}, 쿠폰 없음 · '
-                '대안(제목 앞에 OEKO-TEX·두께)은 이 테스트가 끝난 뒤 따로 진행</div>', unsafe_allow_html=True)
-    if defaults:   # 하위 탭 ①과 같은 안내
+    if defaults:   # 하위 탭 ①과 같은 안내 (위 A·B 카드 값이 기본값일 때만 보임)
         st.caption(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
 
-    c1, c2 = st.columns(2, gap="medium")
-    with c1:
-        st.markdown("**메인 이미지 규칙 (아마존)**")
-        st.markdown("\n".join(f"- {r}" for r in MEDIA_AB_RULES))
-    with c2:
-        st.markdown("**테스트 도구: Manage Your Experiments**")
-        st.markdown("- 아마존 공식 A/B 도구. 메인 이미지, 제목, 불릿, 상세 설명, A+ 콘텐츠를 테스트할 수 있음\n"
-                    "- 브랜드 등록과 충분한 트래픽이 필요하고, 상품당 한 번에 하나의 테스트만 가능\n"
-                    "- 보통 4~10주 → 실제로는 성수기(5월) 전에 시작. 시연에서는 결과도 가상 데이터로 표시")
-
-    brief = media_ab_brief(plan, price, hypothesis_text)
-    c1, c2 = st.columns(2, gap="medium")
-    with c1:
-        with st.expander("📷 촬영 브리프 (외주용)", expanded=False):
-            st.code(brief, language=None)
-            st.download_button("브리프 다운로드 (.txt)", brief, file_name="media_ab_brief.txt", key="media-btn-ab-brief")
-    with c2:
-        with st.expander("🤖 AI 각도 레퍼런스 프롬프트 (메인 이미지로 쓰지 않음)", expanded=False):
-            # 하위 탭 ①에서 고른 후보의 레퍼런스 프롬프트 (후보 목록 파일에 없으면 기본 문장)
-            st.code(media_variable_candidates()["picked"].get("ref_prompt") or MEDIA_AB_REF_PROMPT, language=None)
+    # 2026-10-25 PM 결정: A·B 카드 아래의 고정 요소·메인 이미지 규칙·테스트 도구·촬영 브리프·AI 각도 레퍼런스는 화면에서 빼고,
+    # 그 자리에 2단계 '프롬프트 만들기'(별도 하위 탭이던 것)를 그립니다.
+    # (media_stage2_ai가 이 파일의 MEDIA_AB_RULES를 읽어서, 서로 import가 꼬이지 않게 함수 안에서 불러옴)
+    from modules.media.media_stage2.media_stage2 import media_s2_prompt_section
+    st.divider()
+    media_s2_prompt_section()

@@ -1,7 +1,7 @@
 # 3. 매체 제작 > 2단계: 프롬프트 만들기 + AI 다듬기 (`media_stage2`)
 
 - 담당 브랜치: `JY`
-- 3번 탭(`media`)의 하위 탭 ③(지금 이름 '프롬프트 만들기', 아래 "하위 탭 이름" 참고)을 만듭니다.
+- 3번 탭(`media`)의 '프롬프트 만들기'를 만듭니다. **2026-10-25 PM 결정으로 별도 하위 탭이 아니라 하위 탭 'A/B 소재 준비' 아래쪽에 들어갑니다** (`media_ab.py`가 `media_s2_prompt_section()`을 부름, `MEDIA_S2_TAB_LABEL`은 지금 탭 목록에서 쓰지 않음).
 - 1단계가 정한 단일 변수와 A/B 소재를 받아 **2-1 기본 프롬프트 쓰기 → 2-2 단일 변수 칸 비워 두기 → 2-3 빈칸 채워 A, B 만들기 → 2-4 리포트 값으로 AI 다듬기 + 확인**을 하고, 결과를 3단계(④ 사진·영상 초안, ⑤ 외주 정리)에 넘깁니다.
 - 개발이 끝나면 1단계(`min` 브랜치) 기준으로 합칩니다.
 
@@ -57,14 +57,17 @@
 
 ## 지금 상태
 
+- **화면 위치 (2026-10-25)**: 'A/B 소재 준비' 탭의 A·B 카드 아래 → `media_s2_prompt_section()` (제목 "📝 프롬프트 만들기"). 넘기기 버튼 이름은 '프롬프트 넘기기'(넘긴 뒤 바뀌면 '다시 넘기기'), 탭 번호(④) 대신 '사진·영상 초안 제작'으로 안내. `media_stage2_render()`는 이름만 남겨 둠
+
 - `media_stage2.py`: 2-1~2-3은 예시 값(`media_s2_draft()`)으로 자리만 있음 (2단계 담당이 만들 곳). 단 **빈칸 B는 1단계에서 확정한 B안의 영어 문장(`plan["b_ref"]`)에서 기본 프롬프트 앞뒤를 잘라 씀** (`media_s2_slot_from_ref()`, 앞뒤가 다르거나 없으면 예시 빈칸). 1단계에서 다른 B를 확정하면 프롬프트 칸도 새 문장으로 바뀜, 2-4는 A·B 나란히 비교·되돌리기·확인·리포트 규칙 보기·3단계로 넘기기까지 있음.
-- **2-4 AI로 다듬기 동작함** (`media_stage2_ai.py` + 화면은 `media_stage2.py`)
-  - 제목 줄 오른쪽 끝에 AI 고르기(`media-s2-ai-pick`, Gemini / OpenAI)와 `AI로 다듬기` 버튼(`media-s2-btn-refine`). 키가 하나도 없으면 버튼이 꺼지고 "secrets.toml에 GEMINI_API_KEY 또는 OPENAI_API_KEY를 넣어 주세요"가 보임
+- **AI로 다듬기 동작함** (화면 제목 "AI로 다듬기 + 확인", 번호 2-4는 화면에서 뺌) (`media_stage2_ai.py` + 화면은 `media_stage2.py`)
+  - 제목 줄 오른쪽 끝에 `AI로 다듬기` 버튼(`media-s2-btn-refine`). **AI는 OpenAI만 씀** (Gemini 선택 삭제, PM 결정 2026-10-25). `OPENAI_API_KEY`가 없으면 버튼이 꺼지고 "secrets.toml에 OPENAI_API_KEY를 넣어 주세요"가 보임
   - 재료(`media_s2_ai_material()`, 여기서만 리포트를 읽음): `media_s2_draft()` 값 + 리포트 `ad_claims.forbidden`(BAN-n), `marketing_rules`의 LNG-002·004·006, `seori_profile.strength`(SEORI-1), `competitor_profiles[*].weakness`(RIVAL-n), `sqp.listing.main_image_issue`(LISTING-1) + 1단계 `MEDIA_AB_RULES`(AMZ-n). 리포트가 없으면 아마존 규칙만 쓰고 "리포트 규칙 없이 다듬었어요"를 보여 줌
-  - 지시문 `MEDIA_S2_AI_SYSTEM`, 보내는 글 `media_s2_ai_message()`, 호출 `media_s2_ai_call()` (requests로 직접 호출, 새 라이브러리 없음, 모델은 `MEDIA_S2_GEMINI_MODEL`·`MEDIA_S2_OPENAI_MODEL`)
+  - 지시문 `MEDIA_S2_AI_SYSTEM`, 보내는 글 `media_s2_ai_message()`, 호출 `media_s2_ai_call()` (requests로 직접 호출, 새 라이브러리 없음, 모델은 `MEDIA_S2_OPENAI_MODEL`, 키 이름은 `MEDIA_S2_AI_KEY`)
   - 받은 답 확인 `media_s2_ai_validate()`: JSON이 깨지면 한 번만 다시 요청, `{slot}` 정확히 1개·고정 요소·`media_handoff_check()`를 통과해야 칸을 바꿈, 금지 단어가 남으면 경고, 근거 ID가 보낸 목록에 없으면 "근거 확인 필요"
   - 통과하면 프롬프트 A·B 칸을 다듬은 문장으로 바꾸고 "바꾼 곳" 표·찍지 말 것·넣을 것을 보여 줌. 결과는 `st.session_state["media-s2-ai-result"]`에 보관하고, 칸이 그 결과 그대로일 때만 `changes`·`avoid`·`include`를 3단계로 넘김 (되돌리거나 직접 고치면 빈 목록)
   - 키가 없어도 리포트 금지 표현 검사는 프롬프트 A·B에 항상 돌아감 (괄호 안 한국어 설명과 한국어 설명 문장은 검사 단어에서 뺌)
   - 호출 실패(키 오류, 사용량 초과, 시간 초과)는 경고만 띄우고 프롬프트는 그대로 둠
+  - 2026-10-25 실제 OpenAI(`gpt-6.1-sol`) 호출 확인: 리포트 규칙을 써서 약 25초에 답, 바꾼 곳 4개 모두 근거 ID 확인 통과
 - `media_stage2_judge.py`: 이전에 만든 A/B 결과·판정 코드 보관 (흐름에서 빠져 화면에 연결하지 않음, 다시 필요하면 `media_s2_judge_render()`를 연결)
 - `data/media_ab_result_dummy_202610.json`: 판정 코드가 쓰는 A/B 결과 더미 (보관)

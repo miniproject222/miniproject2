@@ -24,6 +24,7 @@
 | 파일 | 내용 |
 |---|---|
 | `media_stage3.py` | 하위 탭 ④ 사진·영상 초안 제작. 진입 함수 `media_stage3_render()` (이름은 바꾸지 않음) |
+| `media_stage3_image.py` | Higgsfield 이미지 생성 API (요청 보내기, 상태 확인, 내려받기 · 화면 코드 없음) |
 | `media_stage3_export.py` | 하위 탭 ⑤ 외주 정리. 진입 함수 `media_stage3_export_render()` (이름은 바꾸지 않음) |
 | `media_stage3_style.css` | 디자인 (class는 `media-s3-`로 시작). `media_page.py`가 3번 탭을 열 때 읽어 넣습니다 |
 | `media_stage3_prompt.md` | 프롬프트 기록 |
@@ -62,7 +63,10 @@
 
 ### ④ 사진·영상 초안 제작 (`media_stage3.py`)
 - 화면 맨 위에서 받은 프롬프트 A·B를 확인하고, 안쪽 하위 탭 2개(`st.tabs(key="media-s3-sub")`)로 나눕니다.
-- **사진 초안 제작**: 사진 A·B 칸마다 다듬은 프롬프트와 `사진 A 만들기`·`사진 B 만들기` 버튼 (이미지 AI 연결 전이라 꺼져 있음), 지금은 그 프롬프트로 다른 곳에서 만든 사진을 올림
+- **사진 초안 제작**: 사진 A·B 칸마다 다듬은 프롬프트와 `사진 A 만들기`·`사진 B 만들기` 버튼. **Higgsfield 이미지 생성 API(Soul v2 Standard)로 만듦** (`media_stage3_image.py`, 키는 secrets의 `HF_KEY` = "키ID:키시크릿")
+  - 누르면 요청을 보내고 3초마다 상태를 확인(`st.fragment`), 완성되면 바로 내려받아 칸 안에 보여 주고 `photo_A_higgsfield.png`처럼 보관 (`media-s3-ai-photos`). 최대 5분 기다림
+  - 실패(키 오류 401, 잔액 부족 403, 대기열 가득 429, 시간 초과 등)는 경고만 보여 주고 다시 누를 수 있음. 누를 때마다 Higgsfield 크레딧 차감
+  - `HF_KEY`가 없으면 버튼이 꺼지고, 다른 곳에서 만든 사진을 올림. 올린 사진(`media-s3-photo-uploads`) + 만든 사진이 함께 `media-s3-assets-photos`로 ⑤에 넘어감
 - **영상 초안 제작**: 순서대로 진행
   1. **스토리보드 만들기**: 문제 → 해결 → 증거 → 신뢰 → 마무리 틀의 장면 표 (장면, 길이, 화면, 움직임, 자막, 피할 것). `스토리보드 만들기` 버튼(AI 연결 전이라 꺼져 있음), 지금은 예시 틀(`MEDIA_S3_STORYBOARD_SAMPLE`)을 직접 고침 → **`스토리보드 확정`** 버튼
   2. **영상 초안 만들기**: 스토리보드를 확정해야 열림. 확정한 장면을 이어 붙인 **영상 프롬프트**(`media_s3_video_prompt()`, 2단계의 찍지 말 것 포함)와 `영상 초안 만들기` 버튼 (영상 생성 도구 연결 전이라 꺼져 있음), 지금은 만든 영상을 올림. 확정 뒤 표를 고치면 다시 확정하라고 알림
@@ -82,5 +86,5 @@
 
 ## 정해야 할 것
 
-- 이미지 생성 AI, 영상 생성 도구 (정해지면 `requirements.txt`·`secrets.toml`에 넣을 줄을 PM에게 알림)
+- ~~이미지 생성 AI~~ → Higgsfield로 정함 (2026-10-25, PM). 영상 생성 도구 (정해지면 `requirements.txt`·`secrets.toml`에 넣을 줄을 PM에게 알림)
 - 1단계의 '촬영 브리프 (외주용)'(`media_ab.py`)와 ⑤ 외주 정리를 한 곳으로 합칠지 (1단계 담당과 협의)
