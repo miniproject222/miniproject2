@@ -3,7 +3,9 @@
 # 하위 탭 2개로 나눠 사진 초안 A·B(프롬프트 A·B로 생성)와 영상 초안(스토리보드 확정 → 영상 프롬프트로 생성)을 만듭니다. '⑤로 넘기기' 버튼을 누르면 ⑤ 외주 정리(media_stage3_export.py)가 받아 묶습니다.
 # 화면은 media_stage3_render() 안에서만 그립니다.
 # 이름 규칙: 함수 media_s3_..., 위젯 key·session_state 키·CSS class media-s3-...
+import base64
 import hashlib
+import html
 import time
 from pathlib import Path
 
@@ -41,6 +43,8 @@ MEDIA_S3_GROUP = "media-s3-group"               # 지금 가설 묶음 {"id", "h
 MEDIA_S3_FILE_GROUP = "media-s3-file-group"     # 작업 공간 파일 이름 → 만든 가설 묶음 id
 MEDIA_S3_HISTORY = "media-s3-history"           # 만든 결과 기록 목록
 MEDIA_S3_PICK = "media-s3-pick"                 # ⑤로 보내려고 고른 기록(file) 목록 ('만든 결과 보기'의 체크)
+MEDIA_S3_NOTES = "media-s3-notes"               # 위쪽 알림(예시 프롬프트 등) → 각 탭 아래 안내 줄에 붙임
+MEDIA_S3_PHOTO_IDX = "media-s3-photo-idx"       # 사진 넘겨 보기에서 지금 보는 사진 번호
 # 영상 스토리보드 틀: 문제 → 해결 → 증거 → 신뢰 → 마무리 (AI가 리포트 값으로 채울 자리, 지금은 예시)
 MEDIA_S3_STORYBOARD_SAMPLE = [
     {"장면": "1 문제", "길이(초)": 3, "화면": "여름밤 독일식 침실, 이불을 걷어 내는 손", "움직임": "이불을 천천히 걷어 냄",
@@ -123,6 +127,12 @@ def media_s3_video_prompt(src: dict, storyboard: list) -> str:
                       *(["Avoid: " + ", ".join(src["avoid"])] if src["avoid"] else [])])
 
 
+def media_s3_notice(text: str) -> str:
+    """탭 아래 안내 줄: 알림이 있으면 주황색으로 앞에 붙이고, 없으면 기본 안내만."""
+    notes = st.session_state.get(MEDIA_S3_NOTES) or []
+    return " · ".join(f":orange[{n}]" for n in notes) + (" · " if notes else "") + text
+
+
 def media_s3_ai_help(ready: bool, what: str, key: str = "OPENAI_API_KEY") -> str | None:
     return None if ready else f"secrets.toml에 {key}를 넣으면 {what}를 AI로 만들 수 있어요. 지금은 만든 파일을 작업 공간에 올려 주세요."
 
@@ -139,55 +149,129 @@ def _media_s3_remove_file(key: str, name: str, uploader: str) -> None:
     st.session_state[f"{uploader}-ver"] = st.session_state.get(f"{uploader}-ver", 0) + 1
 
 
-def media_s3_workspace(kind: str, key: str, uploader: str, types: list, cols: int):
-    """작업 공간: AI로 만들거나 올린 파일을 한곳에 모아 미리 보기·내려받기·지우기. 여기 있는 파일이 ⑤ 외주 정리로 갑니다."""
-    with st.container(border=True, key=f"{uploader}-space"):
-        st.markdown(f"**{kind} 작업 공간** · 여기 있는 {kind}이 ⑤ 외주 정리로 가요")
-        files = st.file_uploader(f"직접 만든 {kind} 올리기", type=types, accept_multiple_files=True,
-                                 key=f"{uploader}-{st.session_state.get(f'{uploader}-ver', 0)}")
-        kept = media_s3_keep_files(files, key)
-        if not kept:
-            st.caption(f"아직 {kind}이 없어요. 위에서 AI로 만들거나 여기에 올려 주세요.")
-            return
-        grid = st.columns(cols)
-        for i, (name, content) in enumerate(kept):
-            with grid[i % cols]:
-                with st.container(border=True):
-                    try:   # 깨진 파일 하나 때문에 탭 전체가 멈추지 않게
-                        if kind == "사진":
-                            st.image(content, width="stretch")
-                        else:
-                            st.video(content)
-                    except Exception:
-                        st.caption("미리 보기를 할 수 없는 파일이에요")
-                    st.caption(("🤖 AI · " if "_ai." in name else "📁 올림 · ") + name)
-                    with st.container(horizontal=True):
-                        st.download_button("내려받기", content, file_name=name, key=f"{uploader}-dl-{name}", type="primary")
-                        st.button("지우기", key=f"{uploader}-rm-{name}", type="tertiary",
-                                  on_click=_media_s3_remove_file, args=(key, name, uploader))
+def _media_s3_photo_move(step: int, count: int) -> None:
+    """사진 넘기기 ← → 버튼 콜백 (끝에서 넘기면 처음으로)."""
+    st.session_state[MEDIA_S3_PHOTO_IDX] = (st.session_state.get(MEDIA_S3_PHOTO_IDX, 0) + step) % count
+
+
+def media_s3_photo_list() -> list:
+    """넘겨 보기 순서: AI 사진 A, B 먼저, 그다음 직접 올린 사진 (올린 순서대로)."""
+    kept = media_s3_current(MEDIA_S3_PHOTOS)
+    return sorted(kept, key=lambda f: (0, f[0]) if f[0].startswith("photo_") and "_ai." in f[0] else (1, ""))
+
+
+def _media_s3_photo_jump(name: str) -> None:
+    """방금 만들거나 올린 사진을 넘겨 보기에서 바로 보이게 합니다."""
+    names = [n for n, _ in media_s3_photo_list()]
+    if name in names:
+        st.session_state[MEDIA_S3_PHOTO_IDX] = names.index(name)
+
+
+def media_s3_photo_label(name: str, names: list) -> str:
+    """넘겨 보기에서 부르는 이름: AI로 만든 photo_A_ai.png → '사진 A', 직접 올린 것 → '올림 1', '올림 2' …"""
+    if name.startswith("photo_") and "_ai." in name:
+        return "사진 " + name[len("photo_"):name.index("_ai.")]
+    uploaded = [n for n in names if not (n.startswith("photo_") and "_ai." in n)]
+    return f"올림 {uploaded.index(name) + 1}"
+
+
+def media_s3_photo_frame(name: str, content: bytes) -> str:
+    """사진을 3:2 틀에 꽉 채워 넣는 HTML (어느 사진인지는 아래 '사진 A / 사진 B' 고르기에 표시)."""
+    mime = {"jpg": "jpeg", "jpeg": "jpeg", "webp": "webp"}.get(name.rsplit(".", 1)[-1].lower(), "png")
+    return (f'<div class="media-s3-frame"><img alt="{name}" '
+            f'src="data:image/{mime};base64,{base64.b64encode(content).decode()}"></div>')
+
+
+def _media_s3_photo_view() -> None:
+    """아래 '사진 A / 사진 B …' 고르기 콜백: 고른 사진으로 넘깁니다."""
+    picked = st.session_state.get("media-s3-photo-view")
+    labels = st.session_state.get("media-s3-photo-view-labels", [])
+    if picked in labels:
+        st.session_state[MEDIA_S3_PHOTO_IDX] = labels.index(picked)
+
+
+def media_s3_photo_carousel():
+    """작업 공간 사진을 한 장씩 넘겨 봅니다. 사진이 카드 전체를 채우고 ← → 버튼은 사진 위 양옆에,
+    아래 '사진 A / 사진 B'로 바로 골라 볼 수 있습니다. 여기 사진이 기본으로 ⑤에 갑니다."""
+    kept = media_s3_photo_list()
+    if not kept:
+        st.markdown('<div class="media-s3-frame media-s3-frame-empty">아직 사진이 없어요.<br>'
+                    '왼쪽에서 AI로 만들거나 직접 올려 주세요.</div>', unsafe_allow_html=True)
+        return
+    names = [n for n, _ in kept]
+    labels = [media_s3_photo_label(n, names) for n in names]
+    idx = st.session_state.get(MEDIA_S3_PHOTO_IDX, 0) % len(kept)
+    st.session_state[MEDIA_S3_PHOTO_IDX] = idx
+    name, content = kept[idx]
+    with st.container(key="media-s3-carousel"):
+        st.markdown(media_s3_photo_frame(name, content), unsafe_allow_html=True)
+        st.button("←", key="media-s3-prev", on_click=_media_s3_photo_move, args=(-1, len(kept)),
+                  disabled=len(kept) < 2, help="이전 사진")
+        st.button("→", key="media-s3-next", on_click=_media_s3_photo_move, args=(1, len(kept)),
+                  disabled=len(kept) < 2, help="다음 사진")
+    st.session_state["media-s3-photo-view-labels"] = labels
+    st.session_state["media-s3-photo-view"] = labels[idx]   # ← →로 넘겨도 아래 고르기가 같이 바뀌게
+    with st.container(horizontal=True, vertical_alignment="center", key="media-s3-carousel-info"):
+        st.segmented_control("볼 사진", labels, key="media-s3-photo-view", on_change=_media_s3_photo_view,
+                             label_visibility="collapsed")
+        st.space("stretch")
+        with st.container(horizontal=True, gap="small", width="content", key="media-s3-photo-tools"):
+            st.download_button("", content, file_name=name, key=f"media-s3-photo-files-dl-{name}", type="tertiary",
+                               icon=":material/download:", help=f"{name} 내려받기")
+            st.button("", key=f"media-s3-photo-files-rm-{name}", type="tertiary", icon=":material/delete:",
+                      help=f"{name} 지우기", on_click=_media_s3_remove_file,
+                      args=(MEDIA_S3_PHOTOS, name, "media-s3-photo-files"))
 
 
 def media_s3_photo_section(src: dict):
-    """④-1 사진 초안 제작: 프롬프트 A·B로 OpenAI 이미지 AI가 '이렇게 찍어 주세요' 견본을 만들고, 작업 공간에 모읍니다."""
+    """④-1 사진 초안 제작: 왼쪽은 사진 A·B 만들기(나란히)·직접 올리기·⑤로 넘기기, 오른쪽은 만든 사진 넘겨 보기.
+    100% 화면 전체를 빈 곳 없이 씁니다: 사진 높이는 화면 높이를 따라가고(폭은 3:2로 맞춤), 왼쪽은 남는 폭을 모두 쓰며
+    프롬프트 칸은 화면이 높을수록 길게 보입니다 (크기 계산은 media_stage3_style.css의 --media-s3-h)."""
     ready = media_s3_ai_ready("OPENAI_API_KEY")
-    st.markdown("**사진 만들기** (OpenAI)")
-    c1, c2 = st.columns(2)
-    for col, name in ((c1, "A"), (c2, "B")):
-        with col:
-            with st.container(border=True):
-                st.markdown(f"**사진 {name}** · 프롬프트 {name}")
-                st.code(src[f"prompt_{name.lower()}"], language=None, wrap_lines=True)
-                if st.button(f"사진 {name} 만들기", key=f"media-s3-btn-photo-{name}", type="primary", disabled=not ready,
-                             help=media_s3_ai_help(ready, "사진") or "OpenAI 이미지 AI로 만들어요. 다시 누르면 새 사진으로 바꿔요"):
+    with st.container(horizontal=True, gap="medium", key="media-s3-photo-row"):
+        left = st.container(key="media-s3-photo-left")
+        right = st.container(width="content", key="media-s3-photo-right")
+    with left:
+        for col, name in zip(st.columns(2), ("A", "B")):
+            prompt = src[f"prompt_{name.lower()}"]
+            with col, st.container(border=True, key=f"media-s3-photo-card-{name}"):
+                with st.container(horizontal=True, vertical_alignment="center"):
+                    st.markdown(f"**사진 {name}**")
+                    with st.popover("프롬프트 보기"):
+                        st.code(prompt, language=None, wrap_lines=True)
+                    clicked = st.button(f"사진 {name} 만들기", key=f"media-s3-btn-photo-{name}", type="primary",
+                                        disabled=not ready, help=media_s3_ai_help(ready, "사진")
+                                        or "OpenAI 이미지 AI로 만들어요. 다시 누르면 새 사진으로 바꿔요")
+                st.markdown(f'<div class="media-s3-prompt">{html.escape(prompt)}</div>', unsafe_allow_html=True)
+                slot = html.escape(src[f"slot_{name.lower()}"])
+                st.markdown(f'<div class="media-s3-slot" title="{slot}"><b>{name}만 다른 점</b> · {slot}'
+                            f'<span>{html.escape(src["variable"])}</span></div>', unsafe_allow_html=True)
+                if clicked:
                     with st.spinner(f"사진 {name}를 만드는 중이에요 (10~30초)"):
                         try:
-                            media_s3_put_file(MEDIA_S3_PHOTOS, f"photo_{name}_ai.png",
-                                              media_s3_make_image(src[f"prompt_{name.lower()}"]),
-                                              prompt=src[f"prompt_{name.lower()}"])
-                            st.toast(f"사진 {name}를 작업 공간에 넣었어요", icon="🖼️")
+                            media_s3_put_file(MEDIA_S3_PHOTOS, f"photo_{name}_ai.png", media_s3_make_image(prompt),
+                                              prompt=prompt)
+                            _media_s3_photo_jump(f"photo_{name}_ai.png")
+                            st.toast(f"사진 {name}를 만들었어요", icon="🖼️")
                         except MediaS3AIError as err:
                             st.warning(str(err))
-    media_s3_workspace("사진", MEDIA_S3_PHOTOS, "media-s3-photo-files", ["png", "jpg", "jpeg", "webp"], cols=3)
+        # 올리기 · ⑤로 넘기기를 한 줄에 (아래 줄을 따로 두지 않아 화면 높이를 아낌)
+        with st.container(horizontal=True, vertical_alignment="center", key="media-s3-photo-actions"):
+            with st.popover("📁 직접 만든 사진 올리기"):
+                files = st.file_uploader("직접 만든 사진 올리기", type=["png", "jpg", "jpeg", "webp"],
+                                         accept_multiple_files=True, label_visibility="collapsed",
+                                         key=f"media-s3-photo-files-{st.session_state.get('media-s3-photo-files-ver', 0)}")
+            media_s3_handoff_step("photo")
+        st.caption(media_s3_notice("AI 사진은 아마존 메인 이미지로 쓰지 않아요 (외주 촬영 레퍼런스·서브 이미지·광고 초안용)"),
+                   help=MEDIA_S3_MEDIA_NOTE)
+        before = {n for n, _ in media_s3_current(MEDIA_S3_PHOTOS)}
+        media_s3_keep_files(files, MEDIA_S3_PHOTOS)
+        added = [n for n, _ in media_s3_current(MEDIA_S3_PHOTOS) if n not in before]
+        if added:
+            _media_s3_photo_jump(added[-1])
+    with right:
+        with st.container(border=True, key="media-s3-carousel-card"):
+            media_s3_photo_carousel()
 
 
 def _media_s3_confirm_storyboard() -> None:
@@ -197,15 +281,19 @@ def _media_s3_confirm_storyboard() -> None:
 
 
 def media_s3_storyboard_section(src: dict):
-    """④-2 영상 초안 제작의 1단계: 문제 → 해결 → 증거 → 신뢰 → 마무리 틀로 스토리보드를 만들고 확정합니다."""
-    st.markdown("**1단계 · 스토리보드 만들기**")
+    """④-2 영상 초안 제작 왼쪽 칸: 문제 → 해결 → 증거 → 신뢰 → 마무리 틀로 스토리보드를 만들고 확정합니다.
+    제목 줄에 '스토리보드 만들기'·'스토리보드 확정'을 같이 두고, 표 높이는 화면 높이를 따라갑니다 (스크롤 없이 한 화면)."""
     report = store_get("report") or {}
     claims = report.get("ad_claims") or {}
-    if claims.get("allowed_scenes"):
-        st.caption(f"리포트 허용 장면: {claims['allowed_scenes']}")
     ready = media_s3_ai_ready("OPENAI_API_KEY")
-    if st.button("스토리보드 만들기", key="media-s3-btn-storyboard", type="primary", disabled=not ready,
-                 help=media_s3_ai_help(ready, "스토리보드") or "리포트 값(허용 장면·쓸 수 있는 문구·금지 표현)으로 장면을 채워요"):
+    done = st.session_state.get(MEDIA_S3_STORYBOARD_DONE)
+    with st.container(horizontal=True, vertical_alignment="center", key="media-s3-sb-head"):
+        title = st.empty()   # 제목·배지는 표를 그린 뒤 채움 (고친 표 기준으로 확정됨/다시 확정 필요/금지 표현)
+        st.space("stretch")
+        make = st.button("스토리보드 만들기", key="media-s3-btn-storyboard", type="primary", disabled=not ready,
+                         help=media_s3_ai_help(ready, "스토리보드") or "리포트 값(허용 장면·쓸 수 있는 문구·금지 표현)으로 장면을 채워요")
+        confirm = st.empty()   # '스토리보드 확정'은 표를 그린 뒤에 채움 (고친 표를 확정하려고)
+    if make:
         with st.spinner("스토리보드를 만드는 중이에요 (10~20초)"):
             try:
                 st.session_state[MEDIA_S3_STORYBOARD] = media_s3_make_storyboard(src, report)
@@ -219,13 +307,21 @@ def media_s3_storyboard_section(src: dict):
     if list(edited) != rows or not st.session_state.get(MEDIA_S3_STORYBOARD):
         media_s3_store_json(MEDIA_S3_STORYBOARD, list(edited))   # 고친 표를 폴더에도 저장
     st.session_state[MEDIA_S3_STORYBOARD] = list(edited)
+    confirm.button("스토리보드 확정", key="media-s3-btn-storyboard-done", type="primary",
+                   on_click=_media_s3_confirm_storyboard, help="이 표로 오른쪽 영상 프롬프트를 만들어요")
     hits = media_s3_forbidden_hits(st.session_state[MEDIA_S3_STORYBOARD], report)
+    badge, tip = "", []
     if hits:
-        st.warning("스토리보드에 금지 표현이 있어요: " + ", ".join(hits))
-    done = st.session_state.get(MEDIA_S3_STORYBOARD_DONE)
-    st.button("스토리보드 확정", key="media-s3-btn-storyboard-done", type="primary", on_click=_media_s3_confirm_storyboard)
-    if done is not None and done != st.session_state[MEDIA_S3_STORYBOARD]:
-        st.caption("확정한 뒤 표가 바뀌었어요. 영상 프롬프트에 반영하려면 다시 확정해 주세요.")
+        badge = " :red-badge[금지 표현 있음]"
+        tip.append("금지 표현: " + ", ".join(hits))
+    if done is not None and done == st.session_state[MEDIA_S3_STORYBOARD]:
+        badge += " :green-badge[확정됨]"
+    elif done is not None:
+        badge += " :orange-badge[다시 확정 필요]"
+        tip.append("확정한 뒤 표가 바뀌었어요. 영상 프롬프트에 반영하려면 다시 확정해 주세요")
+    if claims.get("allowed_scenes"):
+        tip.append(f"리포트 허용 장면: {claims['allowed_scenes']}")
+    title.markdown("**① 스토리보드**" + badge, help="  \n".join(tip) or None)
 
 
 @st.fragment(run_every=3)
@@ -236,12 +332,13 @@ def media_s3_hf_login_section():
     if status == "done":
         if st.session_state.pop("media-s3-hf-logged-in", None) is False:
             st.rerun()   # 로그인 칸을 보던 중 방금 로그인됨 → 영상 만들기 버튼을 켜려고 화면 전체를 다시 그림
-        c1, c2 = st.columns([4, 1])
-        c1.caption("✅ Higgsfield 계정으로 로그인돼 있어요 (구독 크레딧으로 만들어요)")
-        if c2.button("계정 바꾸기", key="media-s3-hf-logout", type="primary",
-                     help="이 컴퓨터의 로그인을 지우고 다른 계정으로 다시 로그인해요"):
-            media_s3_hf_logout()
-            st.rerun()
+        with st.container(horizontal=True, vertical_alignment="center"):
+            st.caption("✅ Higgsfield 로그인됨 (구독 크레딧)")
+            st.space("stretch")
+            if st.button("계정 바꾸기", key="media-s3-hf-logout", type="tertiary",
+                         help="이 컴퓨터의 로그인을 지우고 다른 계정으로 다시 로그인해요"):
+                media_s3_hf_logout()
+                st.rerun()
         return
     st.session_state["media-s3-hf-logged-in"] = False   # 로그인 전 (로그인되면 위에서 화면을 다시 그림)
     with st.container(border=True, key="media-s3-hf-login"):
@@ -263,20 +360,21 @@ def media_s3_hf_login_section():
 
 
 def media_s3_video_section(src: dict):
-    """④-2 영상 초안 제작의 2단계: 확정한 스토리보드로 만든 영상 프롬프트로 짧은 초안 영상을 만듭니다."""
-    st.markdown("**2단계 · 영상 초안 만들기** (Higgsfield)")
+    """④-2 영상 초안 제작 오른쪽 카드: 확정한 스토리보드로 만든 영상 프롬프트로 짧은 초안 영상을 만듭니다.
+    만든 영상은 '만든 결과 보기'에서 봅니다 (이 탭에는 따로 보여 주지 않음)."""
+    st.markdown("**② 영상 초안 만들기** · Higgsfield")
     storyboard = st.session_state.get(MEDIA_S3_STORYBOARD_DONE)
     if storyboard is None:
-        st.info("먼저 위에서 스토리보드를 확정해 주세요. 확정한 장면으로 영상 프롬프트를 만들어요.")
+        st.markdown('<div class="media-s3-vprompt media-s3-vprompt-empty">왼쪽에서 스토리보드를 확정하면<br>'
+                    '그 장면으로 영상 프롬프트를 만들어요.</div>', unsafe_allow_html=True)
         return
     media_s3_hf_login_section()
     route = media_s3_video_ready()   # "mcp"(계정 로그인, 구독 크레딧) / "api"(HF_KEY) / ""
     ready = bool(route)
     prompt = media_s3_video_prompt(src, storyboard)
-    with st.container(border=True):
-        st.markdown("**영상 프롬프트** (확정한 스토리보드에서 자동으로 만듦)")
-        st.code(prompt, language=None, wrap_lines=True)
-        if st.button("영상 초안 만들기", key="media-s3-btn-video", type="primary",
+    st.markdown(f'<div class="media-s3-vprompt">{html.escape(prompt)}</div>', unsafe_allow_html=True)
+    with st.container():
+        if st.button("영상 초안 만들기", key="media-s3-btn-video", type="primary", width="stretch",
                      disabled=not ready or bool(st.session_state.get(MEDIA_S3_VIDEO_JOB)),
                      help=("위 'Higgsfield 로그인 창 열기'로 로그인하면 구독 크레딧으로 만들 수 있어요." if not ready else
                            "Higgsfield 계정(구독 크레딧)으로 만들어요. 완성까지 1~5분" if route == "mcp" else
@@ -297,28 +395,12 @@ def media_s3_video_section(src: dict):
                         media_s3_put_file(MEDIA_S3_VIDEOS, "video_draft_ai.mp4",
                                           media_s3_make_video(prompt, on_status=lambda t: status.caption(f"진행: {t}")),
                                           prompt=prompt)
-                        st.toast("영상 초안을 작업 공간에 넣었어요", icon="🎬")
+                        st.toast("영상 초안이 완성됐어요. '만든 결과 보기'에서 볼 수 있어요", icon="🎬")
                     except MediaS3AIError as err:
                         st.warning(str(err))
                     finally:
                         status.empty()
     media_s3_video_job_step()
-    media_s3_latest_video()
-
-
-def media_s3_latest_video():
-    """방금 만든 영상(가장 최근 AI 영상)을 영상 만들기 바로 아래에 크게 보여 줍니다. 완성되면 자동 재생."""
-    made = [(n, c) for n, c in media_s3_current(MEDIA_S3_VIDEOS) if "_ai." in n]
-    if not made:
-        return
-    name, content = made[-1]
-    fresh = st.session_state.pop("media-s3-video-fresh", False)   # 방금 완성됐으면 자동 재생
-    with st.container(border=True, key="media-s3-latest-video"):
-        st.markdown(f"**🎬 방금 만든 영상** · {name}")
-        try:
-            st.video(content, autoplay=fresh, muted=fresh)   # 브라우저는 소리 없이만 자동 재생을 허용
-        except Exception:
-            st.caption("영상을 재생할 수 없어요. 아래 작업 공간에서 내려받아 확인해 주세요.")
 
 
 def _media_s3_clear_job() -> None:
@@ -348,9 +430,8 @@ def media_s3_video_job_step():
         st.session_state[MEDIA_S3_VIDEO_LINKS] = links
         media_s3_store_json(MEDIA_S3_VIDEO_LINKS, links)
         _media_s3_clear_job()
-        st.session_state["media-s3-video-fresh"] = True
-        st.toast("영상 초안이 완성됐어요. 바로 아래에서 재생돼요", icon="🎬")
-        st.rerun()   # 작업 공간을 다시 그려 영상이 바로 보이게
+        st.toast("영상 초안이 완성됐어요. '만든 결과 보기'에서 볼 수 있어요", icon="🎬")
+        st.rerun()   # 넘기기 줄의 보낼 개수 등을 다시 그림
     elif status == "ip_detected":
         st.warning("Higgsfield가 저작권 확인을 기다리고 있어요. Higgsfield 사이트 기록(History)에서 이 영상을 열어 확인을 눌러 주세요. "
                    "확인하면 여기에 자동으로 들어와요.")
@@ -361,8 +442,8 @@ def media_s3_video_job_step():
         _media_s3_clear_job()
         st.warning(f"영상이 만들어지지 않았어요 ({status}). 프롬프트를 바꿔 다시 눌러 주세요.")
     else:
-        st.info(f"🎬 영상을 만드는 중이에요 ({status or '대기'}). 보통 3~5분 걸려요. 다른 탭에 다녀와도 계속 만들어지고, "
-                "완성되면 아래 작업 공간에 자동으로 들어가요.")
+        st.info(f"🎬 만드는 중 ({status or '대기'}) · 보통 3~5분. 다른 탭에 다녀와도 계속 만들어지고, "
+                "완성되면 '만든 결과 보기'에 들어가요.")
 
 
 def media_s3_set_pick(files: list) -> None:
@@ -407,8 +488,9 @@ def _media_s3_handoff() -> None:
     st.session_state["media-s3-handoff-toast"] = True
 
 
-def media_s3_handoff_step() -> None:
-    """넘기기 줄: 버튼을 눌러야만 ⑤ 외주 정리로 넘어갑니다. 넘기기 전 / 넘김 완료 / 바뀌어서 다시 넘겨야 함을 보여 줍니다."""
+def media_s3_handoff_step(where: str) -> None:
+    """넘기기 줄: 버튼을 눌러야만 ⑤ 외주 정리로 넘어갑니다. 넘기기 전 / 넘김 완료 / 바뀌어서 다시 넘겨야 함을 보여 줍니다.
+    하위 탭마다 하나씩 그립니다(where = photo / video / history). 사진 탭은 짧게 줄여 왼쪽 칸에 넣습니다."""
     if st.session_state.pop("media-s3-handoff-toast", False):
         st.toast("사진·영상 초안을 ⑤ 외주 정리로 넘겼어요", icon="✅")
     saved, now = media_handoff_assets(), media_s3_assets_value()
@@ -419,12 +501,18 @@ def media_s3_handoff_step() -> None:
         note = ":orange-badge[다시 넘기기 필요] 넘긴 뒤 스토리보드나 고른 파일이 바뀌었어요. ⑤는 아직 이전 값을 받아요"
     else:
         note = "사진·영상 초안을 다 만들면 '⑤로 넘기기'를 눌러 주세요"
-    note += f" · 보낼 것: 사진 {len(now['photos'])} · 영상 {len(now['videos'])} ('만든 결과 보기'에서 고르기)"
+    count = f"보낼 것: 사진 {len(now['photos'])} · 영상 {len(now['videos'])}"
+    if where in ("photo", "video"):   # 짧게: 이름표 + 보낼 개수 (자세한 설명은 버튼에 마우스를 올리면)
+        note = note.split("]")[0] + "] " + count if "badge[" in note else count
+    else:
+        note += f" · {count} ('만든 결과 보기'에서 고르기)"
     ready = bool(now["storyboard"])
-    with st.container(horizontal=True, vertical_alignment="center", key="media-s3-handoff-row"):
+    suffix = "" if where == "photo" else f"-{where}"
+    with st.container(horizontal=True, vertical_alignment="center", key=f"media-s3-handoff-row{suffix}",
+                      horizontal_alignment="right" if where in ("photo", "video") else "left"):
         st.markdown(note)
         if not sent:
-            st.button("다시 넘기기" if not saved["sample"] else "⑤로 넘기기", key="media-s3-btn-handoff",
+            st.button("다시 넘기기" if not saved["sample"] else "⑤로 넘기기", key=f"media-s3-btn-handoff{suffix}",
                       type="primary", disabled=not ready, on_click=_media_s3_handoff,
                       help=None if ready else "영상 초안 제작 탭에서 스토리보드를 먼저 확정해 주세요")
 
@@ -497,26 +585,50 @@ def media_s3_history_section():
                                 st.code(e["prompt"], language=None, wrap_lines=True)
 
 
+def media_s3_video_tab(src: dict):
+    """④-2 영상 초안 제작: 사진 초안 제작과 같은 배치. 왼쪽은 스토리보드 카드·직접 올리기·⑤로 넘기기,
+    오른쪽은 사진 넘겨 보기와 같은 크기의 영상 만들기 카드. 100% 화면에서 스크롤 없이 한 화면 (--media-s3-h)."""
+    with st.container(horizontal=True, gap="medium", key="media-s3-video-row"):
+        left = st.container(key="media-s3-video-left")
+        right = st.container(width="content", key="media-s3-video-right")
+    with left:
+        with st.container(border=True, key="media-s3-sb-card"):
+            media_s3_storyboard_section(src)
+        with st.container(horizontal=True, vertical_alignment="center", key="media-s3-video-actions"):
+            with st.popover("📁 직접 만든 영상 올리기"):
+                files = st.file_uploader("직접 만든 영상 올리기", type=["mp4", "mov"], accept_multiple_files=True,
+                                         label_visibility="collapsed",
+                                         key=f"media-s3-video-files-{st.session_state.get('media-s3-video-files-ver', 0)}")
+            media_s3_handoff_step("video")
+        with st.container(key="media-s3-video-note"):   # 한 줄로만 (넘치면 …), 낮은 화면에서도 스크롤 없게
+            st.caption(media_s3_notice("AI 영상은 아마존 메인 이미지로 쓰지 않아요 · 만든 영상은 '만든 결과 보기'에서 봐요"),
+                       help=MEDIA_S3_MEDIA_NOTE)
+        media_s3_keep_files(files, MEDIA_S3_VIDEOS)
+    with right:
+        with st.container(border=True, key="media-s3-video-card"):
+            media_s3_video_section(src)
+
+
 def media_stage3_render():
     """3단계 ④ 하위 탭(이름은 MEDIA_S3_TAB_LABEL, 탭 이름이 제목 역할). 반드시 media_render() 안에서 부릅니다."""
     media_s3_store_load()   # 탭을 옮기거나 새로고침해도 작업물이 남게 폴더에서 다시 읽음
     src = media_s3_input()
     st.session_state[MEDIA_S3_GROUP] = media_s3_group(src)   # 지금 가설 묶음 (결과를 가설별로 나누는 기준)
     media_s3_history_migrate()
-    st.caption("2단계에서 다듬은 프롬프트로 사진 초안을, 스토리보드로 영상 초안을 만들어요. " + MEDIA_S3_MEDIA_NOTE)
+    # 알림은 줄을 따로 쓰지 않고 각 탭 아래 짧은 안내 줄에 붙임 (한 화면에 스크롤 없이 보이게)
+    notes = []
     if src.get("sample"):
-        st.caption("2단계에서 프롬프트를 아직 넘기지 않아 예시 프롬프트로 보여 줘요.")
+        notes.append("2단계 프롬프트를 아직 안 넘겨 예시로 보여 줘요")
     if not media_handoff_check(src, src["prompt_a"], src["prompt_b"])["ok"]:
-        st.warning("받은 프롬프트 A·B가 빈칸 말고도 달라요. 2단계에서 다시 확인해 주세요.")
+        notes.append("받은 프롬프트 A·B가 빈칸 말고도 달라요. 2단계에서 확인해 주세요")
+    st.session_state[MEDIA_S3_NOTES] = notes
 
     # ④ 안의 하위 탭: 사진 초안 제작 / 영상 초안 제작 (영상은 스토리보드 확정 → 영상 초안 순서)
     photo_tab, video_tab, history_tab = st.tabs(["사진 초안 제작", "영상 초안 제작", "만든 결과 보기"], key="media-s3-sub")
     with photo_tab:
         media_s3_photo_section(src)
     with video_tab:
-        media_s3_storyboard_section(src)
-        media_s3_video_section(src)
-        media_s3_workspace("영상", MEDIA_S3_VIDEOS, "media-s3-video-files", ["mp4", "mov"], cols=2)
+        media_s3_video_tab(src)
     with history_tab:
         media_s3_history_section()
-    media_s3_handoff_step()
+        media_s3_handoff_step("history")
