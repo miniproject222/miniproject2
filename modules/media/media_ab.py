@@ -56,7 +56,7 @@ def media_ab_plan_step():
             st.button("① 으로 가서 확정하기", key="media-btn-ab-go-confirm", type="secondary",
                       on_click=media_variable_go_step)
     _, price, defaults = media_variable_plan()   # 가격·기본값 안내는 리포트 값 그대로
-    hypothesis_text, _ = media_variable_hypothesis()   # 2번 탭 가설 (없으면 기준 가설)
+    hypothesis_text = media_variable_hypothesis() or "-"   # ①에서 불러온 2번 탭 가설
     # plan에 없는 값(노출·클릭 점유율, 지금 이미지의 문제점, 데이터 출처)만 리포트에서 따로 읽습니다
     sqp = media_variable_report_sqp()
     listing = sqp.get("listing") if isinstance(sqp.get("listing"), dict) else {}
@@ -72,10 +72,9 @@ def media_ab_plan_step():
         with st.container(border=True):
             st.markdown("**B · 제안 (실험군)**")
             st.markdown(f"{plan['b']}  \n"
-                        '<span class="media-desc">저가 제품과의 품질 차이(두께·원단)가 검색 결과에서 바로 보이게</span>',
-                        unsafe_allow_html=True)
+                        f'<span class="media-desc">독립 변수: {plan["variable"]}</span>', unsafe_allow_html=True)
     st.markdown(f'<div class="media-desc">고정 요소: 흰 배경 실제 사진, 제목, 가격 {price}, 쿠폰 없음 · '
-                '대안(제목 앞에 OEKO-TEX·두께)은 이 테스트가 끝난 뒤 따로 진행</div>', unsafe_allow_html=True)
+                '다른 후보 변수는 이 테스트가 끝난 뒤 따로 진행</div>', unsafe_allow_html=True)
     if defaults:   # 하위 탭 ①과 같은 안내
         st.caption(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
 
@@ -97,5 +96,5 @@ def media_ab_plan_step():
             st.download_button("브리프 다운로드 (.txt)", brief, file_name="media_ab_brief.txt", key="media-btn-ab-brief")
     with c2:
         with st.expander("🤖 AI 각도 레퍼런스 프롬프트 (메인 이미지로 쓰지 않음)", expanded=False):
-            # 확정한 B안의 레퍼런스 프롬프트 (후보 목록 파일에 없으면 기본 문장)
-            st.code(media_variable_ref_prompt(plan["b"]) or MEDIA_AB_REF_PROMPT, language=None)
+            # 확정한 B안의 레퍼런스 프롬프트 (확정 값 → 지금 후보 묶음 → 기본 문장 순)
+            st.code(plan.get("b_ref") or media_variable_ref_prompt(plan["b"]) or MEDIA_AB_REF_PROMPT, language=None)

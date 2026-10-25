@@ -1,49 +1,39 @@
 # 3. 매체 제작 > 가설에서 변수 도출
-# 2번 탭이 저장한 가설(store "hypothesis")을 받아 If/Because/Then으로 나누고,
-# 가설에 맞는 후보 변수를 규칙으로 걸러, 사용자가 표에서 A/B로 실험할 변수 하나와 그 변수의 B안을 고릅니다.
+# '가설 불러오기'를 누르면 2번 탭이 저장한 가설(store "hypothesis")을 다시 읽고, 그 가설로 후보 변수 묶음을 만들어
+# (AI 또는 규칙, media_variable_ai.py) 사용자가 표에서 A/B로 실험할 변수 하나와 그 변수의 B안을 고릅니다.
+# 어떤 가설이 와도 화면이 그려지고, 메인 이미지 변수가 없으면 2·3단계로 넘기는 확정만 막습니다.
 # 3번 탭의 하위 탭 ①(가설에서 변수 도출)에서 부릅니다.
 # 고른 A/B 설계(plan)는 1번 리포트 값으로 채워 화면에 보여 주고, 사용자가 확정하면 2단계로 넘깁니다 (media_handoff.py).
-# 바깥 값을 읽는 곳은 세 함수뿐입니다: 가설 media_variable_saved_hypothesis(), 리포트 media_variable_report_sqp(),
-# 후보 목록 media_variable_candidate_set() (나중에 DB·2번 탭·AI 등으로 출처가 바뀌면 이 함수들만 고칩니다)
-import json
-import time
+# 바깥 값을 읽는 곳은 두 함수뿐입니다: 가설 media_variable_saved(), 리포트 media_variable_report_sqp()
 from functools import partial
-from pathlib import Path
 
 import streamlit as st
 
 from common.common_store import store_get
 from modules.media.media_handoff import MEDIA_HANDOFF_PLAN, media_handoff_plan, media_handoff_set_plan
+from modules.media.media_variable_ai import MEDIA_VARIABLE_AI_RULE_SOURCE, media_variable_generate
 
 MEDIA_VARIABLE_TAB_LABEL = "가설에서 변수 도출"   # 하위 탭 ① 이름 (media_page.py와 다른 하위 탭의 '① 으로 가서 확정하기' 버튼이 씀)
-MEDIA_VARIABLE_LOAD_SECONDS = 1.2   # '가설 불러오기' 연출 시간 (실제 불러오기는 즉시 끝남)
+# '가설 불러오기'로 읽어 둔 값 (session_state). 다시 불러오기 전까지는 2번 탭에서 가설을 바꿔도 이 값을 씀
+MEDIA_VARIABLE_HYPO_KEY = "media-variable-hypo"   # 불러온 가설 (media_variable_saved()의 모양)
+MEDIA_VARIABLE_GEN_KEY = "media-variable-gen"     # 그 가설의 후보 묶음 {"text", "set", "source", "error"}
 
-# 담당자가 정한 기준 가설 (후보 목록 파일 data/media_variable_candidates.json의 첫 묶음과 같은 문장),
-# ② 탭에 아직 저장된 가설이 없으면 이 문장을 대신 씁니다.
-MEDIA_VARIABLE_HYPOTHESIS = (
-    "만약 메인 이미지를 펼친 패드의 냉감 원단 질감과 두께가 보이는 각도로 바꾸면, "
-    "저가 제품과의 품질 차이가 바로 보여서, 'kühlende matratzenauflage' 검색에서 "
-    "클릭 점유율 ÷ 노출 점유율이 0.63배에서 0.8배 이상으로 오를 것이다."
-)
 # 가설 콜아웃 각 줄 앞에 붙는 배지 (Streamlit 마크다운 배지 문법)
 MEDIA_VARIABLE_BADGES = [":blue-badge[If]", ":violet-badge[Because]", ":green-badge[Then]"]
 # KPI 이름: 가설 문장(2번 탭과 같은 원문)은 그대로 두고, 화면에 보일 때만 쉬운 이름으로 바꿉니다
 MEDIA_VARIABLE_KPI_RAW = "클릭 점유율 ÷ 노출 점유율"
 MEDIA_VARIABLE_KPI = MEDIA_HANDOFF_PLAN["kpi"]   # "노출 대비 클릭률"
-# 같은 가설로 볼 핵심 표시: 2번 탭 문장은 아직 형식이 자주 바뀌므로 문장 전체가 아니라
-# '독립 변수(메인 이미지)'와 'KPI'가 함께 들어 있는지로 판단합니다. KPI는 원래 이름이나 쉬운 이름 중 하나면 됨
-MEDIA_VARIABLE_HYPO_IF = "메인 이미지"
+# 가설이 1번 리포트 검색어 클릭 분석(sqp)의 KPI를 말하는지 볼 표시 (원래 이름이나 쉬운 이름 중 하나)
 MEDIA_VARIABLE_HYPO_KPIS = [MEDIA_VARIABLE_KPI_RAW, MEDIA_VARIABLE_KPI]
 # 목표 KPI 칩의 짧은 출처 표시 (리포트 검색어 클릭 분석은 가상 SQP, 전체 출처는 칩의 ⓘ 툴팁)
 MEDIA_VARIABLE_SQP_LABEL = "가상 데이터"
 
-# 후보 목록 파일: 가설마다 후보 묶음 하나 {"hypothesis", "note", "variables"}. 가설이 바뀌면 그 가설의 묶음만 추가합니다.
-# 표의 한 줄 = 사용자가 고를 수 있는 변수 하나. 판정(통과/제외)은 파일에 쓰지 않고 media_variable_judge()가 규칙으로 계산합니다.
+# 후보 묶음 모양 (media_variable_ai.py가 만듦): {"kpi", "note", "variables"}
+# 표의 한 줄 = 사용자가 고를 수 있는 변수 하나. 판정(통과/제외)은 묶음에 쓰지 않고 media_variable_judge()가 규칙으로 계산합니다.
 # 변수 칸: name(표 이름 = 독립 변수), kind(main_image·title·price 등), if_match(가설의 If와 맞는지),
 #          fallback(제외되면 대신 쓸 곳), reason(If와 안 맞는 이유), b_options(이 변수로 만들 B안 목록)
 # B안 칸: label(고르기 버튼 이름), b, ref_prompt / 메인 이미지 규칙을 어긴 안만: rule_break, fallback
 # 목록 순서 = 화면에 보일 우선순위
-MEDIA_VARIABLE_CANDIDATE_FILE = Path(__file__).resolve().parent / "data" / "media_variable_candidates.json"
 MEDIA_VARIABLE_STAGE_KIND = "main_image"   # 2·3단계(프롬프트 → 매체 제작)가 이어받을 수 있는 변수 종류
 MEDIA_VARIABLE_PASS = "✅ 통과"     # 고를 수 있는 변수의 판정 값
 MEDIA_VARIABLE_SHOW = 3   # 변수 표에 보여 줄 줄 수 (가설·후보 목록이 바뀌어도 이 수만큼만)
@@ -56,50 +46,60 @@ MEDIA_VARIABLE_B_KEY = "media-variable-b"
 MEDIA_VARIABLE_ROW_PX = 47   # 변수 표 줄 높이 (오른쪽 '고르기 버튼 + A·B 표'와 높이를 맞춤, media_style.css 참고)
 
 
-def media_variable_saved_hypothesis() -> str:
-    """2번 가설 탭이 저장한 가설 문장 그대로 (저장 전이면 빈 문자열)."""
-    saved = store_get("hypothesis")
-    return str(saved.get("text") or "").strip() if isinstance(saved, dict) else ""
-
-
-def media_variable_hypothesis() -> tuple[str, str]:
-    """이 탭에서 쓸 가설 문장과 상태.
-    상태: "same"(2번 탭 가설에 맞는 후보 목록이 있음 → 그 문장) / "other"(메인 이미지 A/B 가설이 아님 → 기준 가설로 진행)
-          / "none"(2번 탭 저장 전 → 기준 가설). 어느 경우든 후보 목록이 있어 다음 단계가 멈추지 않습니다."""
-    text = media_variable_saved_hypothesis()
-    if not text:
-        return MEDIA_VARIABLE_HYPOTHESIS, "none"
-    if media_variable_candidate_set(text):
-        return text, "same"
-    return MEDIA_VARIABLE_HYPOTHESIS, "other"
-
-
-def media_variable_hypo_match(a: str, b: str) -> bool:
-    """두 가설이 같은 A/B 가설인지: 문장이 같거나, 둘 다 핵심 표시(메인 이미지 + KPI)를 담고 있으면 같다고 봅니다."""
-    if media_variable_kpi_name(a.strip()) == media_variable_kpi_name(b.strip()):
-        return True
-    def marked(t: str) -> bool:
-        return MEDIA_VARIABLE_HYPO_IF in t and any(k in t for k in MEDIA_VARIABLE_HYPO_KPIS)
-    return marked(a) and marked(b)
-
-
-def media_variable_candidate_set(text: str) -> dict:
-    """가설 문장에 맞는 후보 묶음. 파일이 없거나 깨졌거나 맞는 가설이 없으면 빈 dict.
-    문장이 똑같은 묶음을 먼저 찾고, 없으면 핵심 표시가 같은 묶음을 씁니다 (media_variable_hypo_match()).
-    파일을 고치면 앱을 다시 띄우지 않아도 반영되게 매번 읽습니다."""
-    try:
-        sets = json.loads(MEDIA_VARIABLE_CANDIDATE_FILE.read_text(encoding="utf-8")).get("sets", [])
-    except (OSError, ValueError, AttributeError):
+def media_variable_saved(fresh: bool = False) -> dict:
+    """2번 가설 탭이 저장한 가설 {"text", "if", "because", "then", "problem"} (저장 전이면 빈 dict).
+    새 모양("selected" 칸)을 먼저 읽고, 없으면 예전 평평한 키(text, if_text …)를 읽습니다.
+    fresh면 이번 접속에 기억해 둔 값 대신 Supabase에서 다시 읽습니다 ('가설 불러오기' 버튼)."""
+    saved = store_get("hypothesis", fresh=fresh)
+    if not isinstance(saved, dict):
         return {}
-    sets = [s for s in sets if isinstance(s, dict)] if isinstance(sets, list) else []
-    key = media_variable_kpi_name(text.strip())
-    for cset in sets:
-        if media_variable_kpi_name(str(cset.get("hypothesis", "")).strip()) == key:
-            return cset
-    for cset in sets:
-        if media_variable_hypo_match(str(cset.get("hypothesis", "")), text):
-            return cset
-    return {}
+    sel = saved.get("selected") if isinstance(saved.get("selected"), dict) else {}
+    text = str(sel.get("sentence") or saved.get("text") or saved.get("hypothesis") or "").strip()
+    if not text:
+        return {}
+    problem = sel.get("problem") if isinstance(sel.get("problem"), dict) else \
+        {k: saved.get(f) for k, f in (("title", "problem_title"), ("type", "type"), ("target", "target"),
+                                      ("metric", "metric")) if saved.get(f)}
+    return {"text": text, "problem": problem,
+            **{k: str(sel.get(k) or saved.get(f"{k}_text") or "").strip() for k in ("if", "because", "then")}}
+
+
+def media_variable_loaded() -> dict:
+    """'가설 불러오기'로 읽어 둔 가설 (아직 안 불렀거나 2번 탭 저장 전이면 빈 dict)."""
+    return st.session_state.get(MEDIA_VARIABLE_HYPO_KEY) or {}
+
+
+def media_variable_hypothesis() -> str:
+    """이 탭에서 쓸 가설 문장: 불러온 가설 → (아직 안 불렀으면) 2번 탭이 저장한 가설 → 빈 문자열."""
+    return (media_variable_loaded() or media_variable_saved()).get("text", "")
+
+
+def media_variable_load() -> None:
+    """2번 탭 가설을 Supabase에서 다시 읽고, 가설 문장이 바뀌었으면 후보 묶음을 새로 만듭니다 (같은 가설이면 AI를 다시 부르지 않음)."""
+    hypo = media_variable_saved(fresh=True)
+    st.session_state[MEDIA_VARIABLE_HYPO_KEY] = hypo
+    if not hypo:
+        st.session_state.pop(MEDIA_VARIABLE_GEN_KEY, None)
+        return
+    if (st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}).get("text") == hypo["text"]:
+        return
+    listing = media_variable_report_sqp().get("listing")
+    cset, source, error = media_variable_generate(hypo, listing if isinstance(listing, dict) else {})
+    st.session_state[MEDIA_VARIABLE_GEN_KEY] = {"text": hypo["text"], "set": cset, "source": source, "error": error}
+
+
+def media_variable_candidate_set() -> dict:
+    """불러온 가설의 후보 묶음 (아직 안 불렀으면 빈 dict)."""
+    gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
+    return gen.get("set") or {} if gen.get("text") == media_variable_loaded().get("text") else {}
+
+
+def media_variable_uses_sqp(hypo: dict) -> bool:
+    """가설이 1번 리포트 검색어 클릭 분석(sqp)의 KPI를 말하는지 → 그때만 지금·목표 KPI 숫자를 sqp에서 가져옵니다.
+    고른 문제의 검색어가 sqp 검색어와 같거나, 가설 문장에 그 KPI 이름이 들어 있으면 맞다고 봅니다."""
+    query = media_variable_report_sqp().get("query")
+    return bool(query and (hypo.get("problem") or {}).get("query") == query) or \
+        any(k in hypo.get("text", "") for k in MEDIA_VARIABLE_HYPO_KPIS)
 
 
 def media_variable_kpi_name(text: str) -> str:
@@ -120,11 +120,15 @@ def media_variable_split(text: str) -> list[str] | None:
     return None
 
 
-def media_variable_callout(text: str) -> None:
+def media_variable_callout(hypo: dict) -> None:
     """가설 콜아웃(st.info). If / Because / Then을 배지 붙은 줄로 나누고, Then(KPI)은 굵게 표시합니다.
-    나눌 수 없는 문장은 한 덩어리로 보여 줍니다."""
-    text = media_variable_kpi_name(text)
-    parts = media_variable_split(text)
+    2번 탭이 나눠 저장한 If/Because/Then이 있으면 그대로 쓰고, 없으면 문장을 나눕니다. 나눌 수 없는 문장은 한 덩어리로 보여 줍니다."""
+    text = media_variable_kpi_name(hypo["text"])
+    if hypo.get("if") and hypo.get("because") and hypo.get("then"):
+        parts = [media_variable_kpi_name(p) for p in
+                 (f"만약 {hypo['if'].removeprefix('만약').strip()},", hypo["because"], hypo["then"].rstrip(".") + ".")]
+    else:
+        parts = media_variable_split(text)
     if parts:
         parts[2] = f"**{parts[2]}**"
         body = "  \n".join(f"{badge} {part}" for badge, part in zip(MEDIA_VARIABLE_BADGES, parts))
@@ -167,8 +171,7 @@ def media_variable_candidates() -> dict:
     passed = 고를 수 있는 변수(MEDIA_VARIABLE_PICK_MAX개까지), dropped = 제외 변수, variable = 사용자가 표에서 고른 변수,
     options / broken = 그 변수의 B로 쓸 수 있는 안 / 규칙 위반으로 못 쓰는 안, picked = 사용자가 고른 B안 (+ "variable" 칸).
     아직 고르지 않았으면 2단계로 확정해 둔 값 → 첫 통과 변수·첫 B안 순으로 고릅니다. 고를 변수가 없으면 variable·picked는 빈 dict."""
-    text, _ = media_variable_hypothesis()
-    cset = media_variable_candidate_set(text)
+    cset = media_variable_candidate_set()
     passed, dropped = [], []
     for v in cset.get("variables", []):
         if not isinstance(v, dict) or not v.get("name"):
@@ -203,21 +206,32 @@ def media_variable_report_sqp() -> dict:
 def media_variable_plan() -> tuple[dict, str, list[str]]:
     """(A/B 설계 plan, 가격 문구, 기본값을 쓴 항목 이름 목록).
     plan은 media_handoff.py의 기본값(MEDIA_HANDOFF_PLAN)에서 시작해, 사용자가 고른 후보(독립 변수·B)와
-    1번 리포트 값(검색어·A·KPI)으로 덮어씁니다."""
+    1번 리포트 값(검색어·A·KPI)으로 덮어씁니다.
+    가설을 불러왔는데 고를 메인 이미지 변수가 없으면 variable은 표 첫 줄, b는 빈 문자열입니다 (확정 버튼이 꺼짐).
+    가설이 리포트 검색어 클릭 분석의 KPI가 아니면 KPI 이름은 후보 묶음·문제의 지표로, 지금·목표 숫자는 None입니다."""
     sqp = media_variable_report_sqp()
     listing = sqp.get("listing") if isinstance(sqp.get("listing"), dict) else {}
     plan, defaults = dict(MEDIA_HANDOFF_PLAN), []
-    picked = media_variable_candidates()["picked"]
+    hypo = media_variable_loaded()
+    cands = media_variable_candidates()
+    picked = cands["picked"]
     if picked:
         plan["variable"] = picked.get("variable") or plan["variable"]
         plan["b"] = picked["b"]
         plan["b_ref"] = picked.get("ref_prompt", "")   # B안의 영어 레퍼런스 프롬프트 (2단계가 프롬프트 B로 씀)
+    elif hypo:
+        rows = media_variable_rows(cands)
+        plan.update(variable=rows[0]["name"] if rows else "", b="", b_ref="")
+    sqp_kpi = not hypo or media_variable_uses_sqp(hypo)
+    if not sqp_kpi:
+        plan.update(kpi=cands["set"].get("kpi") or (hypo.get("problem") or {}).get("metric") or "가설의 Then 지표",
+                    kpi_now=None, kpi_goal=None)
     # (plan 키, 리포트 값, 맞는 자료형, 화면에 보일 이름)
     for key, value, kind, label in [
         ("query", sqp.get("query"), str, "검색어"),
         ("a", listing.get("main_image"), str, "A · 대조군"),
-        ("kpi_now", sqp.get("ratio"), (int, float), "지금 KPI"),
-        ("kpi_goal", sqp.get("kpi_goal"), (int, float), "목표 KPI"),
+        *([("kpi_now", sqp.get("ratio"), (int, float), "지금 KPI"),
+           ("kpi_goal", sqp.get("kpi_goal"), (int, float), "목표 KPI")] if sqp_kpi else []),
     ]:
         if isinstance(value, kind) and value != "":
             plan[key] = value
@@ -232,10 +246,13 @@ def media_variable_plan() -> tuple[dict, str, list[str]]:
 
 
 def media_variable_confirm_state(plan: dict) -> str:
-    """2단계로 확정해 둔 값과 plan 비교: "none"(확정 전) / "same"(확정됨) / "changed"(확정 뒤 고른 값이 바뀜)."""
+    """2단계로 확정해 둔 값과 plan 비교: "none"(확정 전) / "same"(확정됨) / "changed"(확정 뒤 고른 값이 바뀜).
+    이번 접속에서 아직 가설을 불러오지 않았으면 고르는 중인 값이 없으므로 확정한 값 그대로("same")로 봅니다."""
     saved = media_handoff_plan()
     if saved["sample"]:
         return "none"
+    if not media_variable_candidate_set():
+        return "same"
     return "same" if all(saved.get(k) == v for k, v in plan.items()) else "changed"
 
 
@@ -250,8 +267,8 @@ def media_variable_confirmed_plan() -> tuple[dict | None, str]:
 
 
 def media_variable_ref_prompt(b: str) -> str:
-    """지금 가설의 후보 목록에서 B 문장이 같은 B안의 AI 레퍼런스 프롬프트 (없으면 빈 문자열)."""
-    for v in media_variable_candidates()["set"].get("variables", []):
+    """지금 가설의 후보 묶음에서 B 문장이 같은 B안의 AI 레퍼런스 프롬프트 (없으면 빈 문자열)."""
+    for v in media_variable_candidate_set().get("variables", []):
         for o in (v.get("b_options") or []) if isinstance(v, dict) else []:
             if isinstance(o, dict) and o.get("b") == b:
                 return o.get("ref_prompt") or ""
@@ -263,15 +280,33 @@ def media_variable_go_step() -> None:
     st.session_state["media-step"] = MEDIA_VARIABLE_TAB_LABEL
 
 
+def media_variable_has_goal(plan: dict) -> bool:
+    """plan에 지금·목표 KPI 숫자가 있는지 (리포트 검색어 클릭 분석 KPI 가설일 때만 있음)."""
+    return all(isinstance(plan.get(k), (int, float)) for k in ("kpi_now", "kpi_goal"))
+
+
+def media_variable_kpi_text(plan: dict) -> str:
+    """요약 카드·칩에 보일 KPI 한 줄. 숫자가 없으면 지표 이름과 '목표는 가설의 Then'만 보여 줍니다."""
+    if media_variable_has_goal(plan):
+        return f"{plan['kpi']} {plan['kpi_now']:g}배 → **{plan['kpi_goal']:g}배 이상**"
+    return f"{plan['kpi']} · 목표는 가설의 Then"
+
+
 def media_variable_kpi_chip() -> None:
     """하위 탭 바 오른쪽 빈자리에 띄우는 목표 KPI 칩 (하위 탭 ②~④, media_page.py에서 부름).
-    단계를 옮겨 다녀도 목표값이 계속 보이게 합니다. 검색어·점유율·출처는 칩의 ⓘ 툴팁에 둡니다 (media_style.css)."""
-    plan, _, defaults = media_variable_plan()
+    단계를 옮겨 다녀도 목표값이 계속 보이게 합니다. 검색어·점유율·출처는 칩의 ⓘ 툴팁에 둡니다 (media_style.css).
+    확정한 값이 있으면 그 값(②부터 보이는 값)으로, 없으면 ①에서 고르는 중인 값으로 그립니다."""
+    current, _, defaults = media_variable_plan()
+    plan = media_variable_confirmed_plan()[0] or current
     sqp = media_variable_report_sqp()
-    tip = [f"이번 A/B 테스트의 목표예요. B안이 {plan['kpi']}을 지금 {plan['kpi_now']:g}배에서 "
-           f"{plan['kpi_goal']:g}배 이상으로 올리면 성공이에요.",
-           f"**검색어**: {plan['query']}"]
-    if sqp.get("imp_share") is not None and sqp.get("click_share") is not None:
+    if media_variable_has_goal(plan):
+        tip = [f"이번 A/B 테스트의 목표예요. B안이 {plan['kpi']}을 지금 {plan['kpi_now']:g}배에서 "
+               f"{plan['kpi_goal']:g}배 이상으로 올리면 성공이에요.",
+               f"**검색어**: {plan['query']}"]
+    else:   # 리포트 검색어 클릭 분석 KPI가 아닌 가설: 목표 숫자는 가설의 Then에 있음
+        tip = [f"이번 A/B 테스트의 목표예요. B안이 {plan['kpi']}을 가설의 Then만큼 올리면 성공이에요.",
+               f"**가설**: {media_variable_hypothesis()}"]
+    if media_variable_has_goal(plan) and sqp.get("imp_share") is not None and sqp.get("click_share") is not None:
         tip.append(f"**지금**: 노출 점유율 {sqp['imp_share']}% · 클릭 점유율 {sqp['click_share']}% "
                    f"→ {plan['kpi']} {plan['kpi_now']:g}배")
     if sqp.get("source"):   # 리포트의 출처 문장은 여러 지표의 실제/가상 구분이라 길어서 항목별로 나눠 보여 줌
@@ -283,27 +318,25 @@ def media_variable_kpi_chip() -> None:
         tip.append(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
     with st.container(key="media-kpi-chip"):
         # 앞 배지로 칩이 무엇인지 알려 줌 (하위 탭 ① 요약 카드의 :green-badge[KPI]와 같은 색)
-        st.markdown(f":green-badge[🎯 A/B 목표 KPI] {plan['kpi']} {plan['kpi_now']:g}배 → **{plan['kpi_goal']:g}배 이상** · "
-                    f":gray[{MEDIA_VARIABLE_SQP_LABEL}]", help="\n\n".join(tip))
+        label = f" · :gray[{MEDIA_VARIABLE_SQP_LABEL}]" if media_variable_has_goal(plan) else ""
+        st.markdown(f":green-badge[🎯 A/B 목표 KPI] {media_variable_kpi_text(plan)}{label}", help="\n\n".join(tip))
 
 
-def media_variable_hypothesis_step(plan: dict, picked: dict, text: str, status: str):
+def media_variable_hypothesis_step(plan: dict, picked: dict, hypo: dict):
     """2번 가설 탭에서 가져온 가설 콜아웃 + 핵심 요약 카드 (media_variable_step()의 윗부분)."""
     # 넓은 화면: 왼쪽(하위 탭 바 아래 빈자리)에 핵심 요약, 오른쪽(탭 바와 같은 줄)에 가설 콜아웃 (media_style.css)
-    variable = f"{plan['variable']} ({media_variable_label(picked)})" if picked else plan["variable"]
+    variable = f"{plan['variable']} ({media_variable_label(picked)})" if picked else (plan["variable"] or "없음")
     with st.container(horizontal=True, key="media-hypo-top"):
         with st.container(key="media-hypo-summary"):
             st.markdown(f":violet-badge[독립 변수] {variable}  \n"
-                        f":green-badge[KPI] {plan['kpi']} {plan['kpi_now']:g}배 → **{plan['kpi_goal']:g}배 이상**")
+                        f":green-badge[KPI] {media_variable_kpi_text(plan)}")
         with st.container(key="media-hypo-callout"):
-            media_variable_callout(text)
-    # status == "none"(2번 탭 저장 전)이면 기준 가설을 그대로 보여 줍니다. '가설 불러오기' 연출과 맞도록 따로 안내하지 않습니다.
-    if status == "other":   # 2번 탭이 고른 가설은 메인 이미지 A/B 가설이 아님 → 막지 않고 기준 가설로 진행, 원문은 ⓘ에
-        st.markdown(":orange-badge[기준 가설로 진행] 2번 탭에서 고른 가설은 메인 이미지 A/B 가설이 아니라서, "
-                    "위 기준 가설로 변수를 도출해요",
-                    help=f"**2번 탭에서 고른 가설**\n\n{media_variable_saved_hypothesis()}\n\n"
-                         f"'{MEDIA_VARIABLE_HYPO_IF}'와 KPI '{MEDIA_VARIABLE_KPI_RAW}'(또는 '{MEDIA_VARIABLE_KPI}')가 "
-                         "함께 들어 있는 가설을 2번 탭에서 고르면 그 가설로 바뀌어요.")
+            media_variable_callout(hypo)
+    gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
+    if gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE:   # AI를 못 써서 규칙으로 만든 후보: 이유는 ⓘ에
+        st.markdown(":gray-badge[규칙으로 만든 후보] AI를 쓰지 못해 가설의 If를 그대로 후보 변수와 B안으로 썼어요",
+                    help=f"**이유**: {gen.get('error') or '-'}\n\n"
+                         "같은 가설은 다시 만들지 않아요. 키를 넣은 뒤 새로고침하고 다시 불러오면 AI 후보로 바뀌어요.")
 
 
 def media_variable_rows(cands: dict) -> list[dict]:
@@ -342,6 +375,8 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
         hidden = cands["dropped"][max(0, MEDIA_VARIABLE_SHOW - len(passed)):]
         st.markdown("**후보 변수 걸러내기**", help=(
             "가설에서 바꿀 수 있는 변수를 한 줄에 하나씩 보여 줘요. 통과한 줄을 눌러 A/B로 실험할 변수를 골라요.\n\n"
+            f"**후보를 만든 곳**: {(st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}).get('source') or '-'} "
+            "(판정은 아래 기준으로 코드가 다시 계산)\n\n"
             "**통과 기준**: 가설의 If와 맞고, 2·3단계가 이어받을 수 있는 메인 이미지 변수이며, "
             "아마존 메인 이미지 규칙 안에서 Manage Your Experiments로 돌릴 B안이 있어야 해요."
             + ("\n\n**표에 안 보이는 제외 변수**: " + ", ".join(f"{v['name']} ({v['verdict']})" for v in hidden)
@@ -375,8 +410,9 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             "A는 그대로 두고 B만 위 버튼으로 골라요.\n\n"
             f"**통제 변수 (고정)**: 같은 제품·색상, 흰 배경, 같은 조명과 보정, 제품 85% 이상 · 제목, 가격 {price}, 쿠폰 없음, "
             "불릿, A+ 콘텐츠, 서브 이미지, 광고 입찰\n\n"
-            f"**종속 변수 (메인 KPI)**: {plan['kpi']} = {MEDIA_VARIABLE_KPI_RAW} (시장 대비 CTR)\n\n"
-            f"**안전장치**: CVR(단위 세션 비율)이 A보다 {plan['cvr_tolerance']:g}%p 넘게 떨어지면 B 실패"
+            + (f"**종속 변수 (메인 KPI)**: {plan['kpi']} = {MEDIA_VARIABLE_KPI_RAW} (시장 대비 CTR)\n\n"
+               if media_variable_has_goal(plan) else f"**종속 변수 (메인 KPI)**: {plan['kpi']} (목표는 가설의 Then)\n\n")
+            + f"**안전장치**: CVR(단위 세션 비율)이 A보다 {plan['cvr_tolerance']:g}%p 넘게 떨어지면 B 실패"
             + (f"\n\n**B로 못 쓰는 안 (메인 이미지 규칙 위반)**\n{broken}" if broken else "")
             + (f"\n\n{note}" if note else "")))
         if options:   # 고른 변수의 B안 중 하나 (required=True: 고른 것을 다시 눌러도 빈 선택이 되지 않음)
@@ -385,6 +421,10 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
                                  default=media_variable_label(picked), required=True, key=pick_key,
                                  on_change=partial(_media_variable_pick_b, pick_key, variable["name"]),
                                  label_visibility="collapsed")
+        if not passed:   # 메인 이미지 변수가 없는 가설: 표는 보여 주고 확정만 막음 (확정 줄에도 같은 안내)
+            st.info("이 가설에는 메인 이미지로 실험할 변수가 없어요. 2·3단계(프롬프트 → 사진·영상)는 메인 이미지 "
+                    "변수만 이어받아서 이 가설은 확정할 수 없어요.", icon="🚫")
+            return
         # key="media-variable-picked": media_style.css가 구분 칸('A · 대조군')을 한 줄로 유지
         with st.container(key="media-variable-picked"):
             st.markdown("| 구분 | 내용 |\n| --- | --- |\n"
@@ -411,6 +451,9 @@ def media_variable_confirm_step(plan: dict):
     confirmed = state == "same"
     if st.session_state.pop("media-variable-confirmed-toast", False):
         st.toast("단일 변수를 확정했어요. 다음 단계들이 이 값을 받아요", icon="✅")
+    if not plan["b"]:   # 고를 메인 이미지 변수가 없음 → 확정 버튼 없이 안내만
+        st.markdown(":gray-badge[확정 불가] 메인 이미지 변수가 있는 가설을 2번 탭에서 고르고 다시 불러와 주세요")
+        return
     if confirmed:
         note = ":green-badge[✅ 확정됨] 다음 단계(A/B 소재 준비부터)가 이 값을 받아요"
     elif state == "changed":   # 확정한 뒤 고른 후보나 리포트 값이 바뀜
@@ -426,7 +469,7 @@ def media_variable_confirm_step(plan: dict):
 
 
 def _media_variable_start_load() -> None:
-    """'가설 불러오기' 버튼 콜백. 다음 화면 그리기에서 불러오는 연출(스피너)을 보여 주도록 표시만 해 둡니다."""
+    """'가설 불러오기' 버튼 콜백. 다음 화면 그리기에서 스피너를 띄우고 불러오도록 표시만 해 둡니다 (AI가 오래 걸릴 수 있어서)."""
     st.session_state["media-hypo-loading"] = True
 
 
@@ -439,25 +482,30 @@ def media_variable_step():
         st.button("↻ 다시 불러오기" if loaded else "📥 가설 불러오기", key="media-btn-hypo-load",
                   type="secondary" if loaded else "primary", on_click=_media_variable_start_load)
 
-    # 버튼을 누른 직후 한 번만: 2번 탭에서 가져오는 것처럼 잠깐 스피너를 보여 준 뒤 가설을 표시
+    # 버튼을 누른 직후 한 번만: 2번 탭 가설을 Supabase에서 다시 읽고 후보 묶음을 만듦 (AI를 부르면 몇 초 걸림)
     if loading:
-        with st.spinner("2번 가설 탭에서 가설을 불러오는 중…"):
-            time.sleep(MEDIA_VARIABLE_LOAD_SECONDS)
+        with st.spinner("2번 가설 탭에서 가설을 불러와 후보 변수를 만드는 중…"):
+            media_variable_load()
         st.session_state["media-hypo-loaded"] = True
-        st.toast("가설을 불러왔어요", icon="📥")
+        if media_variable_loaded():
+            st.toast("가설을 불러왔어요", icon="📥")
 
-    if not loaded:
+    hypo = media_variable_loaded()
+    if not loaded or not hypo:
         with st.container(border=True, key="media-hypo-empty"):
-            st.markdown("**아직 불러온 가설이 없어요**")
-            st.caption("오른쪽 위 '가설 불러오기'를 누르면 2번 가설 탭의 가설을 가져와 A/B로 바꿀 변수를 도출해요.")
+            if loaded:   # 불러왔지만 2번 탭에 저장된 가설이 없음
+                st.markdown("**2번 탭에서 선택한 가설이 없어요**")
+                st.caption("2. 가설 수립 탭에서 가설 하나를 '선택하기'로 고른 뒤, 오른쪽 위 '다시 불러오기'를 눌러 주세요.")
+            else:
+                st.markdown("**아직 불러온 가설이 없어요**")
+                st.caption("오른쪽 위 '가설 불러오기'를 누르면 2번 가설 탭의 가설을 가져와 A/B로 바꿀 변수를 도출해요.")
         return
 
     # key="media-hypo-box": media_style.css의 나타나는 애니메이션(.st-key-media-hypo-box)
-    text, status = media_variable_hypothesis()
     plan, price, defaults = media_variable_plan()
     cands = media_variable_candidates()
     with st.container(key="media-hypo-box"):
-        media_variable_hypothesis_step(plan, cands["picked"], text, status)
+        media_variable_hypothesis_step(plan, cands["picked"], hypo)
         # key="media-hypo-divider": media_style.css가 구분선 위아래 기본 여백(2em)을 줄여 윗줄 바로 아래에 붙임
         with st.container(key="media-hypo-divider"):
             st.divider()
