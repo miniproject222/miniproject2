@@ -136,43 +136,72 @@ def report_build_summary(data, worst):
     return " / ".join(parts) or "표시할 데이터가 없습니다."
 
 
+REPORT_STORE_VERSION = "report-v2 (2026-10-25)"   # 다른 탭과 맞춘 데이터 모양. 키를 바꾸면 report_handoff.md와 함께 고침
+REPORT_PROFILE_KEYS = ("brand", "product", "type", "price", "currency", "sqm_price", "channels", "qmax", "certs", "tests",
+                       "strength", "weakness", "amazon_price", "price_change_90d", "rating", "reviews", "in_stock", "amazon_fees")
+
+
+def report_store_profile(profile):
+    """서리 프로필 중 다른 탭이 쓸 칸만 (분석용 세부 표는 ① 화면에만, 광고 문구는 ad_claims에 따로)."""
+    out = {k: profile[k] for k in REPORT_PROFILE_KEYS if k in profile}
+    bt = profile.get("body_temp") or {}
+    out["body_temp_rule"] = bt.get("rule", "")   # 광고 표현 규칙 한 줄 (자세한 연구는 경쟁사 DB '체감 vs 실제 체온')
+    return out
+
+
+def report_store_ranking(cs):
+    """냉감패드 실적 순위 (냉감 전용 + 1년 판매 신호) - 상품 특징 문구·쿠폰 같은 세부값은 빼고 순위에 필요한 칸만."""
+    if not cs:
+        return []
+    order = [r["brand"] for r in cs["rows"] if r.get("type") == "냉감 전용"]   # rows는 판매 신호 많은 순
+    return [{"rank": order.index(r["brand"]) + 1 if r["brand"] in order else None,   # 냉감 전용끼리 순위 (제외 상품은 None)
+             "brand": r["brand"], "type": r.get("type", ""), "sales_signal_365": (r.get("rank_drops") or {}).get("365"),
+             "summer_rank_median": r.get("rank_root_summer_median"), "reviews": r.get("reviews_now"),
+             "monthly_sold": r.get("badge", "-")} for r in cs["rows"]]
+
+
+def report_store_home_ab(upload):
+    """홈 탭이 읽는 ab_test 모양: 직접 올린 A/B 결과가 있을 때만."""
+    if not upload:
+        return None
+    r = upload["result"]
+    return {"name": f"메인 이미지 A/B ({upload['file']})", "a": {"ctr": r["ctr_a"], "cvr": r["cvr_a"]},
+            "b": {"ctr": r["ctr_b"], "cvr": r["cvr_b"]}, "summary": upload["verdict"]}
+
+
 def report_save_store(data, summary, worst, utm_rows, utm_worst):
-    """홈·가설·광고 소재·광고 타이밍 탭이 읽을 결과를 저장합니다. 내용이 바뀔 때만 다시 저장합니다.
-    매출 값(yesterday_sales 등)은 실제 매출 데이터(GA4)가 없어서 넣지 않습니다."""
+    """홈·가설·광고 소재·광고 타이밍 탭이 읽을 결과를 저장합니다 (store "report" = Supabase common_store). 내용이 바뀔 때만 다시 저장.
+    지금 다른 탭이 읽는 키: 가설 problems·sqp·summary / 광고 소재 sqp / 홈 problems·ab_test.
+    매출 값(yesterday_sales·sales_delta·sales_7d·kpi)은 실제 매출 데이터(GA4)가 없어 넣지 않습니다."""
+    ra = data["review_analysis"] or {}
     payload = {
-        # 공통 (홈: problems / 가설: key_problems·problems·opportunities)
-        "summary": summary,
-        "key_problems": data["key_problems"],          # 핵심 문제 Top 3 + 가설용 질문(question)
-        "problems": data["problems"],                  # 핵심 문제 Top 3가 맨 앞 + 나머지 (가설 탭은 problems[0] 사용)
+        "version": REPORT_STORE_VERSION,
+        "as_of": data["keepa_status"].split(" · ")[0],   # 데이터 기준 (Keepa 마지막 조회)
+        # ── 지금 읽히는 키 (모양 바꾸지 않음) ──
+        "summary": summary,                            # 홈·가설: 핵심 문제 한 줄
+        "problems": data["problems"],                  # 홈·가설: 문제 목록 (맨 앞이 가장 중요, 가설 탭 계약 필드 포함)
+        "sqp": data["sqp_store"],                      # 가설·광고 소재: 검색어 클릭 분석 (가상 SQP) / 없으면 None
+        "ab_test": report_store_home_ab(data["ab_upload"]),   # 홈: A/B 결과 (직접 올린 파일이 있을 때만)
+        # ── 다른 탭에서 쓰도록 준비한 키 ──
+        "key_problems": data["key_problems"],          # 가설: 핵심 문제 Top 3 + 가설 질문(question)
         "opportunities": [{"title": f["title"], "level": f["level"], "detail": f["detail"]}
                           for f in data["external"] if f["kind"] == "기회"],
-        # 가설·광고 소재: 서리·경쟁사 프로필 (경쟁사 약점 → 우리 홍보 포인트), 표현 규칙
-        "seori_profile": data["seori_profile"],
-        "competitor_profiles": data["competitor_profiles"],
-        "marketing_rules": data["marketing_rules"],
-        # 광고 타이밍: 경쟁사 품절·가격 변화 (Keepa 마지막 조회)
-        "competitor_signals": data["competitor_signals"],
-        "competitors": data["competitors"],            # 간단 비교표 (열 6개)
-        # GA4·A/B (연결·결과가 있을 때만 값이 들어감)
-        "funnel_worst": worst["name"] if worst else "",
-        "utm": utm_rows,
-        "utm_worst": utm_worst["channel"] if utm_worst else "",
-        "ab_tests": [{"name": t["name"], "winner": t["result"]["winner"], "lift": round(t["result"]["lift"], 1),
-                      "p_value": round(t["result"]["p"], 4), "significant": t["result"]["significant"]}
-                     for t in data["ab_tests"]],
-        # 가설·광고 소재: 검색어 클릭 분석 (문제 1 수치, 우리 상품, 경쟁 제품, 문제 2) / 없으면 None
-        "sqp": data["sqp_store"],
-        # 리뷰 분석 (내부 요인 '리뷰' 문제의 근거·목표) / 해결안 A/B 아침 분석 (③ 탭 결과)
-        "review_analysis": data["review_analysis"],
-        "cooling_sales": data["cooling_sales"],     # 냉감패드 실적만 (하위 카테고리·여름 순위·판매 신호)
-        "ab_daily": data["ab_daily"],               # [보류] ③ 탭 결과 아침 분석 (지금은 None)
-        "ab_upload": data["ab_upload"],             # 직접 올린 A/B 결과 파일 분석
-        # ③ 광고 소재: 나중에 광고에 넣을 서리 문구 (독일어·한국어, 필수 표기, 금지 표현)
-        "ad_claims": data["ad_claims"],
-        "data_rules": data["data_rules"],            # 지표별 비교 기준·출처·날짜·구분(실제/가정/가상)·신선도
-        "data_source": ("검색어 성과 가상 SQP · DWD · " if data["sqp_store"] else "")
-                       + "경쟁사 DB·독일 DB·Keepa·Open-Meteo" + (" · GA4" if data["ga4"] else ""),
+        "seori_profile": report_store_profile(data["seori_profile"]),   # 광고 소재: 서리 제품·가격·인증·시험
+        "ad_claims": data["ad_claims"],                # 광고 소재: 광고 문구(독일어·한국어·필수 표기)·금지 표현
+        "marketing_rules": data["marketing_rules"],    # 광고 소재: 독일 광고 표현 규칙
+        "competitor_profiles": data["competitor_profiles"],   # 가설·광고 소재: 경쟁사 강점·약점·Keepa 값·상세페이지 문구
+        "competitor_signals": data["competitor_signals"],     # 광고 타이밍: 품절·현재가·가격 변화·쿠폰·구매 배지
+        "competitor_ranking": report_store_ranking(data["cooling_sales"]),   # 냉감패드 실적 순위 (냉감 전용 + 1년 판매 신호)
+        "review_analysis": {k: ra[k] for k in ("seori", "leader", "five_star_needed", "findings", "metric", "target", "rule")
+                            if k in ra} or None,      # 가설: 리뷰 문제 근거·목표
+        "data_rules": data["data_rules"],              # 공통: 지표별 비교 기준·출처·기준일·구분(실제/가정/가상)
+        "ab_upload": data["ab_upload"],                # ① 탭 자체 보관용: 올린 A/B 결과 파일 (새로고침 후에도 유지, 다른 탭은 ab_test 사용)
+        # GA4 연결 후 추가할 키: funnel_worst, utm, utm_worst, kpi, yesterday_sales, sales_delta, sales_7d
+        # [보류] ③ 탭 결과 아침 A/B 분석(ab_daily)은 ③ 탭 저장 기능이 생기면 추가
     }
+    if utm_rows:   # GA4가 연결됐을 때만
+        payload.update({"funnel_worst": worst["name"] if worst else "", "utm": utm_rows,
+                        "utm_worst": utm_worst["channel"] if utm_worst else ""})
     if st.session_state.get("report-stored-payload") != payload:
         store_set("report", payload)
         st.session_state["report-stored-payload"] = payload
@@ -183,7 +212,9 @@ def report_problem_html(p):
             f'<span class="report-level report-level-{REPORT_LEVEL_CLASS[p["level"]]}">{p["rank"]}순위 · {p["type"]}</span>'
             f'<span class="report-tag">{p["group"]}</span><b>{p["title"]}</b>'
             f'<div class="report-desc">근거: {p["detail"]}</div>'
-            f'<div class="report-desc">→ 가설 탭 질문: <b>{p["question"]}</b></div></div>')
+            + (f'<div class="report-desc">심각도 {p["severity"]["score"]:.2f} = {p["severity"]["basis"]} (같은 위험도 안의 순서)</div>'
+               if p.get("severity") else "")
+            + f'<div class="report-desc">→ 가설 탭 질문: <b>{p["question"]}</b></div></div>')
 
 
 def report_row_html(badge, tag, title, detail, extra=""):
@@ -197,10 +228,11 @@ def report_row_html(badge, tag, title, detail, extra=""):
 def report_show_key_problems(data):
     """문제 분석 결과: 핵심 문제 1·2순위를 한 박스에 세로로. 전체(3순위)·PDF는 오른쪽 PDF 아이콘."""
     with st.container(border=True, key="report-card-result"):
-        st.markdown(':material/flag: **문제 분석 결과** <span class="report-desc">핵심 문제 1·2순위 → ② 가설 탭에서 사용</span>',
+        st.markdown(':material/flag: **문제 분석 결과** <span class="report-desc">내부·외부 요인 중 위험도 → 심각도 순 1·2순위 (배지에 마우스를 올리면 점수) → ② 가설 탭에서 사용</span>',
                     unsafe_allow_html=True)
         st.markdown("".join(
-            report_row_html(f'<span class="report-level report-level-{REPORT_LEVEL_CLASS[p["level"]]}">{p["rank"]}순위 · {p["type"]}</span>',
+            report_row_html(f'<span class="report-level report-level-{REPORT_LEVEL_CLASS[p["level"]]}" '
+                            f'title="심각도 {p["severity"]["score"]:.2f} = {p["severity"]["basis"]}">{p["rank"]}순위 · {p["type"]}</span>',
                             p["group"], p["title"], f'근거: {p["detail"]}',
                             f'<div class="report-row-q">→ 가설 탭 질문: <b>{p["question"]}</b></div>')
             for p in data["key_problems"][:2]), unsafe_allow_html=True)
@@ -353,8 +385,8 @@ def report_show_competitors(data):
                      column_config={"냉감패드 제품": st.column_config.TextColumn(width="medium")})
         st.markdown('<div class="report-desc">순위 기준: 냉감 전용 상품의 1년 판매 신호(Keepa 순위가 좋아진 횟수 = 판매 횟수 추정), 양면(2-in-1)·비냉감 혼재 상품 제외 · '
                     '현재 순위는 비수기(10월) 값이라 순서가 다를 수 있음 · '
-                    f'서리 = 독일 냉감패드 실적 3위 {REPORT_SEORI_PROXY}라고 가정해 판매 순위·가격·평점·리뷰·㎡당 가격은 {REPORT_SEORI_PROXY}의 Keepa 실적을 표시 '
-                    '(제품명·냉감 방식·Q-max·강점·약점은 서리 기획) · ㎡당 가격: Keepa 현재가 기준</div>',
+                    f'서리 = 독일 냉감패드 실적 3위 {REPORT_SEORI_PROXY}라고 가정해 판매 순위·평점·리뷰는 {REPORT_SEORI_PROXY}의 Keepa 실적을 표시, '
+                    '가격은 서리 판매가 €64.99 (가정, 검색어 분석과 같은 값) · 제품명·냉감 방식·Q-max·강점·약점은 서리 기획 · ㎡당 가격: 현재가 기준</div>',
                     unsafe_allow_html=True)
         with st.expander("냉감패드 항목별 비교 (서리 목표 vs 상위 2개사 최고)", expanded=False):
             st.dataframe([{"항목": c["item"], "가중치": f"{c['weight']:.0%}", "서리 (목표)": c["seori"],

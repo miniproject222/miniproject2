@@ -86,7 +86,7 @@ def report_review_analysis(rivals, snapshot_items, keepa_time):
         "rank_corr": round(rho, 2) if rho is not None else None,
         "findings": findings,
         # 가설 탭에서 그대로 쓰는 지표·목표
-        "metric": "Amazon 리뷰 수·평점 (Keepa)",
+        "metric": "Amazon 리뷰 수",   # 가설 문장에 그대로 들어가는 지표 이름 (출처는 limits·data_rules에)
         "target": f"평점 {REPORT_REVIEW_RATING_GOALS[0]} 이상 + 리뷰 {leader['reviews']}건 이상 (냉감패드 실적 1위 수준)",
         "rule": "리뷰 대가 할인·사은품, '별 5개' 요청, 가짜·구매 리뷰는 금지 (독일 DB REV-106, UWG 부속서 23b·23c) → Amazon Vine·구매 후 정식 리뷰 요청만",
         "limits": f"Keepa {keepa_time} 값 · 리뷰 원문은 미조회 · 평점 계산은 단순 평균 근사",

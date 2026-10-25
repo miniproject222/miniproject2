@@ -14,7 +14,8 @@ from modules.report.report_competitor import (
     REPORT_SEORI_PROXY, report_seori_assumption,
     report_competitor_checklist, report_competitor_criteria, report_competitor_load, report_competitor_merge,
     report_competitor_slim, report_competitor_tests, report_external_factors, report_internal_factors,
-    report_hypothesis_problems, report_key_problems, report_marketing_rules, report_position_kpis, report_team_handoff,
+    report_hypothesis_problems, report_key_problems, report_marketing_rules, report_merge_key_problems, report_position_kpis,
+    report_team_handoff,
 )
 # [보류] ③ 탭 결과 아침 자동 분석 (아래 report_load_data의 [보류] 주석과 함께 풀기)
 # from modules.report.report_ab import report_ab_daily
@@ -149,7 +150,8 @@ def report_load_data():
     data["cooling_sales"] = report_cooling_sales()   # 냉감패드 실적만 (하위 카테고리·여름 순위)
     report_add_keepa_detail(data, rivals)
     data["review_analysis"] = report_review_analysis(rivals, snapshot["items"] if snapshot else None, keepa_time)
-    data["position_key_problems"] = report_key_problems(data["internal"], data["external"])
+    position_all = report_key_problems(data["internal"], data["external"])   # 내부·외부 위협을 섞어 심각도 순
+    data["position_key_problems"] = position_all[:3]
     data["key_problems"] = data["position_key_problems"]
     data["problems"] = report_hypothesis_problems(data["key_problems"], data["internal"], data["external"], rivals)
     ra = data["review_analysis"]
@@ -163,8 +165,11 @@ def report_load_data():
     data["sqp_store"] = None
     if data["sqp"]:
         sqp_problems, sqp_key_problems, data["sqp_store"] = report_sqp_handoff(data["sqp"], rivals)
-        data["key_problems"] = sqp_key_problems
-        data["problems"] = sqp_problems + data["problems"]
+        # ① 결과 Top 3 = 검색어 문제 + 경쟁 포지션(내부·외부)을 섞어 심각도 순. 다른 탭 problems도 같은 순서로 맞춤
+        data["key_problems"] = report_merge_key_problems(sqp_key_problems, position_all)
+        merged = sqp_problems + data["problems"]
+        first = [next(p for p in merged if p["title"] == k["title"]) for k in data["key_problems"]]
+        data["problems"] = first + [p for p in merged if p not in first]
     saved = store_get("report")
     # [보류] 해결안 A/B: ③ 탭이 UTM·GA4·A/B 실행 결과를 store("media")에 저장하면, 매일 아침(한국 08:00 이후 첫 접속)
     # 한 번 읽어 분석하고 전날 분석과 비교해 보여 주는 기능. ③ 탭에서 저장 기능을 아직 만들지 않아 꺼 둠.
