@@ -1,7 +1,7 @@
 # 3. 매체 제작 > 가설에서 변수 도출
 # '가설 불러오기'를 누르면 2번 탭이 저장한 가설(store "hypothesis")을 다시 읽고, 그 가설로 후보 변수 묶음을 만들어
-# (AI 또는 규칙, media_variable_ai.py) 사용자가 표에서 A/B로 실험할 변수 하나와 그 변수의 B안을 고릅니다.
-# 표의 어떤 변수든 고를 수 있고, 메인 이미지로 진행할 수 없는 변수를 고르면 경고를 보여 주고 2·3단계로 넘기는 확정만 막습니다.
+# (AI 또는 규칙, media_variable_ai.py) 사용자가 변수 블럭에서 A/B로 실험할 변수 하나와 그 변수의 B안을 고릅니다.
+# 어떤 변수 블럭이든 고를 수 있고, 메인 이미지로 진행할 수 없는 변수를 고르면 경고를 보여 주고 2·3단계로 넘기는 확정만 막습니다.
 # 3번 탭의 하위 탭 ①(가설에서 변수 도출)에서 부릅니다.
 # 고른 A/B 설계(plan)는 1번 리포트 값으로 채워 화면에 보여 주고, 사용자가 확정하면 2단계로 넘깁니다 (media_handoff.py).
 # 바깥 값을 읽는 곳은 두 함수뿐입니다: 가설 media_variable_saved(), 리포트 media_variable_report_sqp()
@@ -36,9 +36,9 @@ MEDIA_VARIABLE_HYPO_KPIS = [MEDIA_VARIABLE_KPI_RAW, MEDIA_VARIABLE_KPI]
 MEDIA_VARIABLE_SQP_LABEL = "가상 데이터"
 
 # 후보 묶음 모양 (media_variable_ai.py가 만듦): {"kpi", "note", "variables"}
-# 표의 한 줄 = 사용자가 고를 수 있는 변수 하나 (어느 줄이든 고를 수 있음).
+# 블럭 하나 = 사용자가 고를 수 있는 변수 하나 (어느 블럭이든 고를 수 있음).
 # 판정(이미지로 진행 / 진행 불가)은 묶음에 쓰지 않고 media_variable_judge()가 규칙으로 계산합니다.
-# 변수 칸: name(표 이름 = 독립 변수), kind(main_image·title·price 등), if_match(가설의 If와 맞는지),
+# 변수 칸: name(블럭 이름 = 독립 변수), kind(main_image·title·price 등), if_match(가설의 If와 맞는지),
 #          fallback(제외되면 대신 쓸 곳), reason(If와 안 맞는 이유), b_options(이 변수로 만들 B안 목록)
 # B안 칸: label(고르기 버튼 이름), b, ref_prompt / 메인 이미지 규칙을 어긴 안만: rule_break, fallback
 # 목록 순서 = 화면에 보일 우선순위
@@ -54,13 +54,13 @@ MEDIA_VARIABLE_BLOCK_MSG = {
     MEDIA_VARIABLE_NO_B: ("이 변수로 만들 메인 이미지 B안이 없어요. B안이 있는 메인 이미지 변수를 골라 주세요.",
                           "이 변수로 만들 B안이 없어요 · B안이 있는 메인 이미지 변수를 골라 주세요"),
 }
-MEDIA_VARIABLE_SHOW = 3   # 변수 표에 보여 줄 줄 수 (가설·후보 목록이 바뀌어도 이 수만큼만)
-MEDIA_VARIABLE_VAR_KEY = "media-variable-var"       # 사용자가 표에서 고른 변수 이름 (session_state)
-MEDIA_VARIABLE_TABLE_KEY = "media-variable-table"   # 변수 표 (st.dataframe) key 앞부분 (뒤에 붙는 번호를 바꿔 선택을 되돌림)
+# 판정 배지 색 (Streamlit 마크다운 배지 :색-badge[...])
+MEDIA_VARIABLE_VERDICT_BADGE = {MEDIA_VARIABLE_PASS: "green", MEDIA_VARIABLE_NOT_IMAGE: "orange", MEDIA_VARIABLE_NO_B: "orange"}
+MEDIA_VARIABLE_SHOW = 3   # 변수 블럭을 보여 줄 수 (가설·후보 목록이 바뀌어도 이 수만큼만)
+MEDIA_VARIABLE_VAR_KEY = "media-variable-var"       # 사용자가 블럭에서 고른 변수 이름 (session_state)
 MEDIA_VARIABLE_PICK_KEY = "media-variable-pick"     # B안 고르기 버튼 (st.segmented_control) key 앞부분 (뒤에 변수 번호)
 # 사용자가 고른 B안 {변수 이름: 버튼 이름} (session_state). 버튼 값은 다른 하위 탭에 가면 Streamlit이 지우므로 따로 둠
 MEDIA_VARIABLE_B_KEY = "media-variable-b"
-MEDIA_VARIABLE_ROW_PX = 47   # 변수 표 줄 높이 (오른쪽 '고르기 버튼 + A·B 표'와 높이를 맞춤, media_style.css 참고)
 
 
 def media_variable_saved(fresh: bool = False) -> dict:
@@ -244,8 +244,8 @@ def media_variable_label(c: dict) -> str:
 
 def media_variable_candidates() -> dict:
     """지금 가설의 변수 판정 결과 {"set", "rows", "hidden", "variable", "options", "broken", "picked"}.
-    rows = 표에 보일 변수(진행 가능 → 진행 불가 순으로 MEDIA_VARIABLE_SHOW줄, 줄마다 "ok"·"verdict"·"why"),
-    hidden = 표에 못 들어간 변수, variable = 사용자가 표에서 고른 변수(어느 줄이든),
+    rows = 블럭으로 보일 변수(진행 가능 → 진행 불가 순으로 MEDIA_VARIABLE_SHOW개, 변수마다 "ok"·"verdict"·"why"),
+    hidden = 블럭에 못 들어간 변수, variable = 사용자가 블럭에서 고른 변수(어느 블럭이든),
     options / broken = 그 변수의 B로 쓸 수 있는 안 / 규칙 위반으로 못 쓰는 안,
     picked = 사용자가 고른 B안 (+ "variable" 칸, 진행할 수 없는 변수면 빈 dict).
     아직 고르지 않았으면 2단계로 확정해 둔 값 → 진행 가능한 첫 줄 → 첫 줄 순으로 고릅니다. 후보가 없으면 variable은 빈 dict."""
@@ -413,54 +413,50 @@ def media_variable_hypothesis_step(plan: dict, cands: dict, hypo: dict):
                          "같은 가설은 다시 만들지 않아요. 키를 넣은 뒤 새로고침하고 다시 불러오면 AI 후보로 바뀌어요.")
 
 
-def _media_variable_table_key() -> str:
-    """변수 표 key. 뒤 번호를 올리면 새 표가 되어 선택이 고른 변수로 되돌아갑니다."""
-    return f"{MEDIA_VARIABLE_TABLE_KEY}-{st.session_state.get('media-variable-table-ver', 0)}"
+def _media_variable_select(name: str) -> None:
+    """변수 블럭을 누를 때 콜백. 어떤 블럭이든 그 변수로 바꿉니다 (진행할 수 없는 변수는 오른쪽 경고 + 확정만 막음).
+    고른 블럭을 다시 눌러도 선택이 풀리지 않습니다."""
+    st.session_state[MEDIA_VARIABLE_VAR_KEY] = name
 
 
-def _media_variable_select(rows: list[dict]) -> None:
-    """변수 표에서 줄을 고를 때 콜백. 어떤 줄이든 그 변수로 바꿉니다 (진행할 수 없는 변수는 오른쪽 경고 + 확정만 막음).
-    고른 줄을 다시 눌러 선택이 풀리면 빈 선택 대신 표 선택을 고른 변수로 되돌립니다."""
-    state = st.session_state.get(_media_variable_table_key())
-    picked_rows = state.selection.rows if state else []
-    if picked_rows and picked_rows[0] < len(rows):
-        st.session_state[MEDIA_VARIABLE_VAR_KEY] = rows[picked_rows[0]]["name"]
-        return
-    st.session_state["media-variable-table-ver"] = st.session_state.get("media-variable-table-ver", 0) + 1
+def media_variable_cards(rows: list[dict], variable: dict) -> None:
+    """후보 변수 블럭 목록: 블럭 하나 = 변수 하나 (윗줄 '라디오 표시 + 이름 + 판정 배지', 아랫줄 이유).
+    블럭 전체를 덮는 투명 버튼(key media-variable-choose-<번호>)을 눌러 고르고,
+    고른 블럭은 key가 media-variable-card-on-<번호>로 바뀌어 media_style.css가 테두리를 진하게 그립니다."""
+    # key="media-variable-candidates": 블럭 사이 간격을 media_style.css에서 정함
+    with st.container(key="media-variable-candidates"):
+        for i, v in enumerate(rows):
+            on = v is variable
+            with st.container(key=f"media-variable-card-{'on-' if on else ''}{i}"):
+                mark = ":material/radio_button_checked:" if on else ":material/radio_button_unchecked:"
+                st.markdown(f"{mark} **{v['name']}** "
+                            f":{MEDIA_VARIABLE_VERDICT_BADGE[v['verdict']]}-badge[{v['verdict']}]")
+                st.caption(v["why"])
+                st.button(f"{v['name']} 고르기", key=f"media-variable-choose-{i}",
+                          on_click=_media_variable_select, args=(v["name"],))
 
 
 def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cands: dict):
-    """후보 변수 걸러내기(표에서 변수 하나 고르기) → 고른 변수를 A/B로 나누기 (media_variable_step()의 아랫부분).
+    """후보 변수 걸러내기(블럭에서 변수 하나 고르기) → 고른 변수를 A/B로 나누기 (media_variable_step()의 아랫부분).
     선정 표의 값은 plan에서 가져옵니다."""
     rows, variable, options, picked = cands["rows"], cands["variable"], cands["options"], cands["picked"]
-    # 왼쪽(변수 표)을 조금 넓혀 긴 문장이 한 줄에 들어가게 함 → 오른쪽(B안 고르기 버튼 + A·B 표)과 높이를 맞춤
+    # 왼쪽(변수 블럭)을 조금 넓혀 이유가 한 줄에 들어가게 함 → 오른쪽(B안 고르기 버튼 + A·B 표)과 높이를 맞춤
     c1, c2 = st.columns([1.2, 1], gap="medium")
     with c1:
         # 판정 기준은 제목 옆 ⓘ에 마우스를 올리면 보임 (설명 줄이 빠져 오른쪽 선정 표와 위쪽 끝이 맞음)
         hidden = cands["hidden"]
         st.markdown("**후보 변수 걸러내기**", help=(
-            "가설에서 바꿀 수 있는 변수를 한 줄에 하나씩 보여 줘요. 어느 줄이든 눌러 A/B로 실험할 변수를 골라요.\n\n"
+            "가설에서 바꿀 수 있는 변수를 블럭 하나에 하나씩 보여 줘요. 어느 블럭이든 눌러 A/B로 실험할 변수를 골라요.\n\n"
             f"**후보를 만든 곳**: {(st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}).get('source') or '-'} "
             "(판정은 아래 기준으로 코드가 다시 계산)\n\n"
             f"**{MEDIA_VARIABLE_PASS}**: 2·3단계가 이어받을 수 있는 메인 이미지 변수이고, "
             "아마존 메인 이미지 규칙 안에서 Manage Your Experiments로 돌릴 B안이 있어요.\n\n"
             f"**{MEDIA_VARIABLE_NOT_IMAGE} · {MEDIA_VARIABLE_NO_B}**: 골라도 되지만 다음 단계로 확정할 수는 없어요 "
-            "(지금은 메인 이미지 문제만 해결 가능, 기능 업데이트 예정). 가설의 If와 다른 변수는 이유 칸에 적어요."
-            + ("\n\n**표에 안 보이는 변수**: " + ", ".join(f"{v['name']} ({v['verdict']})" for v in hidden)
+            "(지금은 메인 이미지 문제만 해결 가능, 기능 업데이트 예정). 가설의 If와 다른 변수는 블럭 아랫줄 이유에 적어요."
+            + ("\n\n**화면에 안 보이는 변수**: " + ", ".join(f"{v['name']} ({v['verdict']})" for v in hidden)
                if hidden else "")))
         if rows:
-            sel = [rows.index(variable)] if variable in rows else []
-            # 줄 높이를 MEDIA_VARIABLE_ROW_PX로 고정 → 헤더 + 3줄의 높이가 오른쪽과 같아짐
-            # (key="media-variable-candidates": 이 표만 찾을 수 있게 감쌈)
-            with st.container(key="media-variable-candidates"):
-                st.dataframe([{"변수": v["name"], "판정": v["verdict"], "이유": v["why"]} for v in rows],
-                           hide_index=True, key=_media_variable_table_key(),
-                           on_select=partial(_media_variable_select, rows), selection_mode="single-row",
-                           selection_default={"selection": {"rows": sel, "columns": []}},
-                           row_height=MEDIA_VARIABLE_ROW_PX, height=MEDIA_VARIABLE_ROW_PX * (len(rows) + 1) + 2,
-                           column_config={"변수": st.column_config.TextColumn(width=190),
-                                          "판정": st.column_config.TextColumn(width=125),
-                                          "이유": st.column_config.TextColumn(width="large")})
+            media_variable_cards(rows, variable)
         else:
             st.caption("이 가설의 후보 목록이 아직 없어요.")
     with c2:
@@ -471,7 +467,7 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
         broken = "\n".join(f"- {o['label']}: {o['rule_break']} → {o.get('fallback') or '서브 이미지'}"
                            for o in cands["broken"])
         st.markdown("**선정한 단일 변수**", help=(
-            "왼쪽 표에서 고른 변수를 A(지금 그대로)와 B(바꾼 안)로 나눠요.\n\n"
+            "왼쪽 블럭에서 고른 변수를 A(지금 그대로)와 B(바꾼 안)로 나눠요.\n\n"
             "**A는 고정**: 지금 아마존에 올라가 있는 메인 이미지(1번 리포트 값)라 바꾸지 않아요. "
             "지금보다 나아지는지 비교해야 가설(KPI가 지금 값에서 목표로 오르는지)을 확인할 수 있어서, "
             "A는 그대로 두고 B만 위 버튼으로 골라요.\n\n"

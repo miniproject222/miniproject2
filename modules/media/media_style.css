@@ -45,6 +45,11 @@
   color: var(--color-card) !important;
 }
 
+/* 꺼진 버튼(배경이 옅은 회색)은 흰 글자가 안 보이므로 흐린 글자색 (예: 진행 불가일 때 '이 변수로 확정') */
+.st-key-media-root .stButton button:disabled p {
+  color: var(--color-sub) !important;
+}
+
 /* 하위 탭 (media_page.py의 st.tabs key="media-step") - 둥근 알약형 단계 선택 바 */
 .st-key-media-step [role="tablist"] {
   display: inline-flex;
@@ -386,6 +391,67 @@
 /* [요약 | 콜아웃] 줄 바로 아래 구분선 (media_variable.py key="media-hypo-divider") - 기본 hr 여백 2em 제거 */
 .st-key-media-hypo-divider hr {
   margin: 0 0 4px;
+}
+
+/* 후보 변수 블럭 (media_variable.py media_variable_cards) - 요약 카드와 같은 흰 카드, 블럭 사이 8px
+   블럭 key: media-variable-card-<번호> / 고른 블럭은 media-variable-card-on-<번호> */
+.st-key-media-variable-candidates {
+  gap: 8px !important;
+}
+
+[class*="st-key-media-variable-card-"] {
+  position: relative;
+  gap: 2px !important;
+  padding: 8px 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  transition: border-color 0.15s;
+}
+
+[class*="st-key-media-variable-card-"]:hover {
+  border-color: var(--color-sub);
+}
+
+/* 고른 블럭: 테두리를 진하게 (2px로 늘어난 만큼 안쪽 여백을 줄여 블럭 크기는 그대로) */
+[class*="st-key-media-variable-card-on-"],
+[class*="st-key-media-variable-card-on-"]:hover {
+  padding: 7px 13px;
+  border: 2px solid var(--color-primary);
+}
+
+/* 키보드로 고를 때도 어느 블럭인지 보이게 */
+[class*="st-key-media-variable-card-"]:has(button:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+[class*="st-key-media-variable-card-"] p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+[class*="st-key-media-variable-card-"] [data-testid="stCaptionContainer"] p {
+  font-size: 12.5px;
+  color: var(--color-sub);
+}
+
+/* 블럭 전체를 덮는 투명 '고르기' 버튼 (key media-variable-choose-<번호>) - 블럭 어디를 눌러도 고름 */
+/* Streamlit이 버튼 칸 폭을 글자만큼(fit-content)으로 두므로 폭·높이를 블럭에 맞춤 */
+[class*="st-key-media-variable-choose-"] {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100%;
+  z-index: 1;
+}
+
+[class*="st-key-media-variable-choose-"] .stButton,
+[class*="st-key-media-variable-choose-"] button {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 /* 선정한 단일 변수 표 (media_variable.py key="media-variable-picked") - 구분 칸('A · 대조군')은 한 줄 */
