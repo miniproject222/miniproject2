@@ -241,10 +241,10 @@
   white-space: nowrap;
 }
 
-/* 탭 바 오른쪽에 칩이 다 들어가는 화면(탭 바 560px + 칩 약 370px)에서만: 칩을 하위 탭 바와 같은 줄
+/* 탭 바 오른쪽에 칩이 다 들어가는 화면(탭 바 560px + 칩 약 450px)에서만: 칩을 하위 탭 바와 같은 줄
    오른쪽 끝으로 올리고, 흐름에서 빼서 아래 내용은 그대로 둠. 그보다 좁으면 탭 바 아래 줄 오른쪽에 그대로 둠
-   (top 값과 1200px은 실제 화면에서 잰 값. 탭 바 높이나 탭 패널 위 여백, 칩 문구가 바뀌면 맞춰야 함) */
-@media (min-width: 1200px) {
+   (top 값과 1280px은 실제 화면에서 잰 값. 탭 바 높이나 탭 패널 위 여백, 칩 문구가 바뀌면 맞춰야 함) */
+@media (min-width: 1280px) {
   .st-key-media-root [data-testid="stTabPanel"] {
     position: relative;
   }
@@ -254,5 +254,11 @@
     top: -41px;
     right: 0;
     z-index: 1;
+    width: auto !important;   /* Streamlit 기본 width 100%면 칸이 탭 바까지 덮어 하위 탭 클릭이 막힘 */
+    pointer-events: none;     /* 혹시 칸이 넓어져도 클릭은 칩(ⓘ)만 받음 */
+  }
+
+  .st-key-media-kpi-chip {
+    pointer-events: auto;
   }
 }

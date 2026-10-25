@@ -206,7 +206,9 @@ def media_variable_kpi_chip() -> None:
     단계를 옮겨 다녀도 목표값이 계속 보이게 합니다. 검색어·점유율·출처는 칩의 ⓘ 툴팁에 둡니다 (media_style.css)."""
     plan, _, defaults = media_variable_plan()
     sqp = media_variable_report_sqp()
-    tip = [f"**검색어**: {plan['query']}"]
+    tip = [f"이번 A/B 테스트의 목표예요. B안이 {plan['kpi']}을 지금 {plan['kpi_now']:g}배에서 "
+           f"{plan['kpi_goal']:g}배 이상으로 올리면 성공이에요.",
+           f"**검색어**: {plan['query']}"]
     if sqp.get("imp_share") is not None and sqp.get("click_share") is not None:
         tip.append(f"**지금**: 노출 점유율 {sqp['imp_share']}% · 클릭 점유율 {sqp['click_share']}% "
                    f"→ {plan['kpi']} {plan['kpi_now']:g}배")
@@ -218,7 +220,8 @@ def media_variable_kpi_chip() -> None:
     if defaults:
         tip.append(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
     with st.container(key="media-kpi-chip"):
-        st.markdown(f"🎯 {plan['kpi']} {plan['kpi_now']:g}배 → **{plan['kpi_goal']:g}배 이상** · "
+        # 앞 배지로 칩이 무엇인지 알려 줌 (하위 탭 ① 요약 카드의 :green-badge[KPI]와 같은 색)
+        st.markdown(f":green-badge[🎯 A/B 목표 KPI] {plan['kpi']} {plan['kpi_now']:g}배 → **{plan['kpi_goal']:g}배 이상** · "
                     f":gray[{MEDIA_VARIABLE_SQP_LABEL}]", help="\n\n".join(tip))
 
 
