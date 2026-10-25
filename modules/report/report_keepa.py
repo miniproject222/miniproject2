@@ -20,6 +20,7 @@ REPORT_KEEPA_DETAIL_FILE = REPORT_DATA_DIR / "report_keepa_detail_202610.json"  
 REPORT_KEEPA_DOMAIN = 3            # Amazon.de
 REPORT_KEEPA_STATS_DAYS = 90       # 평균 가격 비교 기간
 REPORT_KEEPA_TOKENS_PER_PRODUCT = 2   # 예상치: 상품 1토큰 + 평점·리뷰 최대 1토큰
+REPORT_KEEPA_AUTO_DAILY_MAX = 10      # 아침 자동 갱신 하루 최대 토큰 (넘으면 자동 갱신 안 함)
 # Keepa 가격 배열 순서: 0 Amazon 직판, 1 신품(마켓플레이스), 3 판매 순위, 16 평점(x10), 17 리뷰 수, 18 바이박스(배송비 포함)
 REPORT_KEEPA_PRICE_ORDER = (18, 1, 0)
 # 검색어 클릭 분석 기간 (report_sqp.py): 이 기간의 주별 할인·품절을 가격 이력에서 찾아 스냅샷에 같이 저장합니다
@@ -92,11 +93,16 @@ def report_keepa_fetch_and_save(pin):
         raise RuntimeError("PIN이 맞지 않습니다.")
 
     asins = [p["asin"] for p in report_keepa_products(report_keepa_top_brands())]
+    return report_keepa_save(report_keepa_request(asins), asins, "경쟁사 상품 조회 (화면 버튼)")
+
+
+def report_keepa_request(asins):
+    """Keepa 상품 조회 1회 (가격·평점·리뷰 + 순위·리뷰·구매 배지 기록). 응답 본문을 돌려줍니다."""
     # 오류 문구에 요청 주소(키 포함)가 들어가지 않도록, 원래 오류 대신 짧은 메시지로 바꿉니다
     try:
         resp = requests.get("https://api.keepa.com/product", timeout=30, params={
             "key": report_keepa_secret("KEEPA_API_KEY"), "domain": REPORT_KEEPA_DOMAIN,
-            "asin": ",".join(asins), "stats": REPORT_KEEPA_STATS_DAYS, "rating": 1,
+            "asin": ",".join(asins), "stats": REPORT_KEEPA_STATS_DAYS, "rating": 1, "history": 1,
         })
     except requests.RequestException as err:
         raise RuntimeError(f"Keepa 연결 오류 ({type(err).__name__})") from None
@@ -105,21 +111,78 @@ def report_keepa_fetch_and_save(pin):
     body = resp.json()
     if body.get("error"):
         raise RuntimeError(body["error"].get("message", "Keepa 오류"))
+    return body
 
+
+def report_keepa_save(body, asins, what, auto_day=None):
+    """조회 결과를 스냅샷(합치기)·상세(구매 배지·판매 신호·리뷰·순위)·사용량에 저장하고, 사용한 토큰 수를 돌려줍니다."""
     used = int(body.get("tokensConsumed") or report_keepa_estimate())
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     brands = {p["asin"]: p["db_brand"] for p in report_keepa_products()}
-    items = {}
+    snapshot = report_keepa_snapshot() or {"items": {}}
+    detail = report_keepa_detail() or {"items": {}}
     for p in body.get("products") or []:
-        items[p["asin"]] = report_keepa_parse(p)
-        items[p["asin"]]["events"] = report_keepa_events(p, brands.get(p["asin"], p["asin"]))
-    snapshot = {"fetched_at": now, "tokens_left": body.get("tokensLeft"), "items": items}
+        snapshot["items"][p["asin"]] = {**report_keepa_parse(p), "events": report_keepa_events(p, brands.get(p["asin"], p["asin"]))}
+        if p["asin"] in detail.get("items", {}):
+            report_keepa_detail_update(detail["items"][p["asin"]], p)
+    snapshot.update({"fetched_at": now, "tokens_left": body.get("tokensLeft")})
+    if auto_day:
+        snapshot["auto_day"] = auto_day   # 아침 자동 갱신을 한 날 (하루 1번)
     REPORT_KEEPA_SNAPSHOT_FILE.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if detail.get("items"):
+        REPORT_KEEPA_DETAIL_FILE.write_text(json.dumps(detail, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     usage = report_keepa_usage()
     usage["used"] += used
-    usage["log"].append({"date": now, "tokens": used, "what": f"경쟁사 상품 {len(asins)}개 조회 (화면 버튼)"})
+    usage["log"].append({"date": now, "tokens": used, "what": f"{what}: 상품 {len(asins)}개"})
     REPORT_KEEPA_USAGE_FILE.write_text(json.dumps(usage, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return used
+
+
+def report_keepa_detail_update(item, product):
+    """상세 항목의 '지금 값'만 새로 고침: 현재 순위, 1년 판매 신호, 월 구매 배지, 리뷰·평점, 현재가.
+    여름 순위·작년 가격 같은 기준값은 그대로 둡니다 (같은 사이즈 비교 가격 basis가 있으면 가격도 그대로)."""
+    def t(km):
+        return (datetime(2011, 1, 1) + timedelta(minutes=int(km))).date()
+
+    stats = product.get("stats") or {}
+    root = (product.get("salesRanks") or {}).get(str(product.get("salesRankReference"))) or []
+    if len(root) >= 2 and root[-1] > 0:
+        item["rank_root_now"] = root[-1]
+    item["rank_drops"] = {k: stats.get(f"salesRankDrops{k}") for k in ("30", "90", "180", "365")}
+    ms = product.get("monthlySoldHistory") or []
+    item["monthly_sold"] = [{"from": str(t(ms[i])), "badge": ms[i + 1]} for i in range(0, len(ms) - 1, 2) if ms[i + 1] > 0]
+    parsed = report_keepa_parse(product)
+    if parsed["reviews"] is not None:
+        item["reviews_now"] = parsed["reviews"]
+    if parsed["rating"]:
+        item["rating_now"] = parsed["rating"]
+    if parsed["price"] and not (item.get("price") or {}).get("basis"):
+        item.setdefault("price", {})["now"] = parsed["price"]
+    item["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+
+def report_keepa_auto_daily():
+    """아침 자동 갱신: secrets의 KEEPA_AUTO_DAILY가 on일 때만, 하루 1번(한국 08:00 이후 첫 접속) 경쟁사 3곳을 조회.
+    (켜는 것 = 사용자의 자동 조회 승인) 결과 문구를 돌려줍니다. 화면이 멈추지 않도록 오류는 문구로만 돌려줍니다."""
+    if str(report_keepa_secret("KEEPA_AUTO_DAILY")).strip().lower() not in ("on", "true", "1", "yes"):
+        return "아침 자동 갱신 꺼짐 (secrets의 KEEPA_AUTO_DAILY = \"on\"으로 켬)"
+    from modules.report.report_ab import report_ab_day   # 아침 기준일 (08:00 전이면 전날)
+    day = report_ab_day()
+    snap = report_keepa_snapshot() or {}
+    if snap.get("auto_day") == day:
+        return f"아침 자동 갱신 완료 ({snap.get('fetched_at', day)})"
+    usage = report_keepa_usage()
+    est = report_keepa_estimate()
+    if not report_keepa_secret("KEEPA_API_KEY"):
+        return "아침 자동 갱신 불가: Keepa 키 없음"
+    if est > REPORT_KEEPA_AUTO_DAILY_MAX or est > usage["budget"] - usage["used"]:
+        return f"아침 자동 갱신 안 함: 예상 {est}토큰 (하루 최대 {REPORT_KEEPA_AUTO_DAILY_MAX}, 남은 한도 {usage['budget'] - usage['used']})"
+    asins = [p["asin"] for p in report_keepa_products(report_keepa_top_brands())]
+    try:
+        used = report_keepa_save(report_keepa_request(asins), asins, "아침 자동 갱신", auto_day=day)
+    except RuntimeError as err:
+        return f"아침 자동 갱신 실패: {err}"
+    return f"아침 자동 갱신 완료 ({used}토큰)"
 
 
 def report_keepa_events(product, brand):

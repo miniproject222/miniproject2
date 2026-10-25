@@ -16,11 +16,12 @@ from modules.report.report_competitor import (
     report_competitor_slim, report_competitor_tests, report_external_factors, report_internal_factors,
     report_hypothesis_problems, report_key_problems, report_marketing_rules, report_position_kpis, report_team_handoff,
 )
-from modules.report.report_ab import report_ab_daily
+# [보류] ③ 탭 결과 아침 자동 분석 (아래 report_load_data의 [보류] 주석과 함께 풀기)
+# from modules.report.report_ab import report_ab_daily
 from modules.report.report_review import report_cooling_sales, report_review_analysis
 from common.common_store import store_get
 from modules.report.report_ga4 import report_ga4_fetch, report_ga4_ready
-from modules.report.report_keepa import report_keepa_detail, report_keepa_products, report_keepa_snapshot, report_keepa_usage
+from modules.report.report_keepa import report_keepa_auto_daily, report_keepa_detail, report_keepa_products, report_keepa_snapshot, report_keepa_usage
 from modules.report.report_sqp import report_sqp_analyze, report_sqp_handoff
 
 REPORT_AB_FILE = Path(__file__).resolve().parent / "data" / "report_ab_tests.json"
@@ -75,7 +76,7 @@ def report_add_keepa_detail(data, rivals):
         fba = sorted(f["fba_eur"] for f in fees)[len(fees) // 2]
         net = price / 1.19 - price * ref / 100 - fba     # 부가세 19% 제외 - 판매 수수료 - FBA 배송비 (원가·광고비 전)
         seori["amazon_fees"] = {"price": price, "vat_pct": 19, "referral_pct": ref, "fba_eur": fba, "net_before_cost": round(net, 2),
-                                "basis": "경쟁사 3곳 Keepa 수수료 중앙값 (Herlag는 FBA 정보 없음) · 원가·광고비 전 추정"}
+                                "basis": "Keepa 상세 조회 상품의 판매 수수료·FBA 배송비 중앙값 · 원가·광고비 전 추정"}
 
 
 def report_data_rules(keepa_time):
@@ -87,8 +88,8 @@ def report_data_rules(keepa_time):
     fresh = "-" if age is None else (f"{age}일 전" + (" → 새로 조회 권장" if age > REPORT_KEEPA_FRESH_DAYS else ""))
     k = str(keepa_time)[:10] or "-"
     return [
-        {"지표": "판매 순위", "비교 기준": "냉감 변형만 있는 상품의 2026년 6~8월 판매 순위 중앙값 (비수기 값 사용 안 함)",
-         "출처": "Keepa 상세", "기준일": k, "신선도": fresh, "구분": "실제 (상품 3개)"},
+        {"지표": "판매 순위", "비교 기준": "냉감 전용 상품의 1년 판매 신호(Keepa 순위가 좋아진 횟수), 보조로 2026년 6~8월 순위 중앙값 · 양면(2-in-1)·비냉감 혼재 제외",
+         "출처": "Keepa 상세", "기준일": k, "신선도": fresh, "구분": "실제 (냉감 전용 5개 상품)"},
         {"지표": "가격 변화", "비교 기준": "작년 같은 날 가격 대비 ±10% 이상만 인하·인상 (90일 평균은 계절이 섞여 보조로만)",
          "출처": "Keepa", "기준일": k, "신선도": fresh, "구분": "실제"},
         {"지표": "리뷰", "비교 기준": "현재 리뷰 수 + 최근 1년 증가", "출처": "Keepa", "기준일": k, "신선도": fresh, "구분": "실제"},
@@ -105,6 +106,8 @@ def report_data_rules(keepa_time):
 
 def report_load_data():
     """화면에 필요한 실제 데이터를 한 번에 돌려줍니다."""
+    # 아침 자동 갱신 (구매 배지·판매 신호·가격·리뷰·재고): 켜져 있고 오늘 아직 안 했을 때만 Keepa 1회 조회, 그 뒤 아래 분석이 새 값으로 계산됨
+    keepa_auto = report_keepa_auto_daily()
     snapshot = report_keepa_snapshot()
     usage = report_keepa_usage()
     keepa_time = snapshot["fetched_at"] if snapshot else ""
@@ -120,6 +123,7 @@ def report_load_data():
     data = {
         "period": date.today().strftime("%Y-%m"),
         "keepa_status": f"{last} · 토큰 사용 {usage['used']}/{usage['budget']}",
+        "keepa_auto": keepa_auto,                                # 아침 자동 갱신 상태 문구
         "data_rules": report_data_rules(keepa_time),              # 지표별 비교 기준·출처·날짜·구분·신선도
         "seori_proxy": REPORT_SEORI_PROXY,                       # 서리 판매 실적에 쓰는 가정 브랜드
         "competitors_full": rivals,                               # 화면 경쟁사 비교표
@@ -161,9 +165,12 @@ def report_load_data():
         sqp_problems, sqp_key_problems, data["sqp_store"] = report_sqp_handoff(data["sqp"], rivals)
         data["key_problems"] = sqp_key_problems
         data["problems"] = sqp_problems + data["problems"]
-    # 해결안 A/B: ③ 탭 결과를 매일 아침 한 번 분석 (store "report"의 ab_daily)
     saved = store_get("report")
-    data["ab_daily"] = report_ab_daily(saved, report_utm_rows)
+    # [보류] 해결안 A/B: ③ 탭이 UTM·GA4·A/B 실행 결과를 store("media")에 저장하면, 매일 아침(한국 08:00 이후 첫 접속)
+    # 한 번 읽어 분석하고 전날 분석과 비교해 보여 주는 기능. ③ 탭에서 저장 기능을 아직 만들지 않아 꺼 둠.
+    # ③ 탭 준비 후: 아래 줄과 위의 import 주석을 풀고, data["ab_daily"] = None 줄을 지우면 됨 (저장 형식: report_handoff.md)
+    # data["ab_daily"] = report_ab_daily(saved, report_utm_rows)
+    data["ab_daily"] = None
     # 직접 올린 A/B 결과 파일 (바로 분석): 이번 접속에서 올린 값 > 저장된 값
     data["ab_upload"] = st.session_state.get("report-ab-upload") or ((saved or {}).get("ab_upload") if isinstance(saved, dict) else None)
     if report_ga4_ready():

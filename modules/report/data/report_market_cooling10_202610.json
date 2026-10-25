@@ -1,5 +1,5 @@
 {
-  "note": "냉감패드(침구류) 경쟁 10개사 ㎡당 가격. Keepa Amazon.de 'kühlende matratzenauflage' 검색 2페이지 + 이전 조회(2026-10-24). 전동·토퍼·젤·이불·반려동물 제외, 서리(가정: Herlag)는 제외. 브랜드별 대표 상품 1개, ㎡당 가격 = 현재가 ÷ (가로×세로/10,000). GlacialPad는 Amazon에 없어 경쟁사 DB 자사몰 가격.",
+  "note": "냉감패드(침구류) 경쟁 10개사 ㎡당 가격. Keepa Amazon.de 'kühlende matratzenauflage' 검색 2페이지 + 이전 조회(2026-10-24). 전동·토퍼·젤·이불·반려동물 제외, 서리(가정: SleepCOOL)는 제외. 브랜드별 대표 상품 1개, ㎡당 가격 = 현재가 ÷ (가로×세로/10,000). GlacialPad는 Amazon에 없어 경쟁사 DB 자사몰 가격. · 2026-10-25: 서리 = SleepCOOL로 바뀌어 SleepCOOL 제외, Herlag 포함 · Novilla는 90x200 변형 가격 €35.99로 비교 (160x200 €25.66은 사이즈 한정 할인)",
   "fetched_at": "2026-10-24",
   "companies": [
     {
@@ -28,11 +28,11 @@
     },
     {
       "brand": "Novilla",
-      "asin": "B0DQ8BDT9Z",
-      "size": "160x200",
-      "price": 25.66,
+      "asin": "B0DQ84R8QG",
+      "size": "90x200",
+      "price": 35.99,
       "rank": 412593,
-      "source": "Keepa"
+      "source": "Keepa (90x200 변형, 상품군 순위 공유)"
     },
     {
       "brand": "Ehrenkind",
@@ -67,20 +67,20 @@
       "source": "Keepa"
     },
     {
-      "brand": "SleepCOOL",
-      "asin": "B078HLXBS4",
-      "size": "90x200",
-      "price": 89.9,
-      "rank": null,
-      "source": "Keepa (순위 없음)"
-    },
-    {
       "brand": "GlacialPad",
       "asin": "",
       "size": "90x200",
       "price": 139.0,
       "rank": null,
       "source": "경쟁사 DB (자사몰)"
+    },
+    {
+      "brand": "Herlag",
+      "asin": "B0F2FN34BS",
+      "size": "90x200",
+      "price": 34.9,
+      "rank": 299729,
+      "source": "Keepa"
     }
   ]
 }

@@ -4,13 +4,13 @@
   "tokens_left": 1192,
   "items": {
     "B0DQ8BDT9Z": {
-      "title": "Novilla Cooling Matratzenauflage 160x200cm",
+      "title": "Novilla Cooling Matratzenauflage 160x200cm, Gewebe mit Kühlfaktor, Atmungsaktiv und Hautfreundliches, Dreilagiges Air-Layer-Gewebe, 3 cm Stützende Faserpolsterung, 30 cm Elastische Kante, Oeko-TEX",
       "price": 25.66,
-      "avg90": 29.41,
-      "change": -0.1275,
+      "avg90": 29.34,
+      "change": -0.12542603953646903,
       "rating": 3.6,
       "reviews": 310,
-      "rank": 412593,
+      "rank": 441010,
       "in_stock": true
     },
     "B07121YZM5": {
@@ -36,11 +36,11 @@
     "B0D7HQFXCY": {
       "title": "PARADIES kühlende Matratzenauflage 90x200 cm Cool Dream Pad",
       "price": 149.0,
-      "avg90": null,
-      "change": 0.02,
+      "avg90": 146.03,
+      "change": 0.020338286653427406,
       "rating": 4.1,
       "reviews": 5,
-      "rank": 1082154,
+      "rank": 1073573,
       "in_stock": true
     },
     "B0C6KTY7BX": {
@@ -81,6 +81,26 @@
       "rating": 3.8,
       "reviews": 20,
       "rank": 299729,
+      "in_stock": true
+    },
+    "B0H626BRN9": {
+      "title": "Ehrenkind® Matratzenauflage 90x200 cm, kühlend mit Outlast® & Tencel™",
+      "price": 84.9,
+      "avg90": 84.9,
+      "change": 0.0,
+      "rating": 4.8,
+      "reviews": 10,
+      "rank": 543595,
+      "in_stock": true
+    },
+    "B078HLXBS4": {
+      "title": "Kühlende Klimaregulierende Matratzenauflage 90x200cm COOL.XPERIENCE - Klimaregulierend, Weniger Schwitzen, Weniger Frieren, Besser Schlafen, Angenehmes Schlafklima",
+      "price": 89.9,
+      "avg90": 89.9,
+      "change": 0.0,
+      "rating": 3.8,
+      "reviews": 31,
+      "rank": 741150,
       "in_stock": true
     }
   }
