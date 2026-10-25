@@ -18,6 +18,8 @@ from modules.weather.weather_data import (
     weather_recommended_amazon_share,
     weather_sample_regions,
     weather_short_date,
+    weather_stock_checked,
+    weather_stock_text,
     weather_weekday,
     weather_wmo_emoji,
     weather_wmo_text,
@@ -160,6 +162,16 @@ def _weather_channel_card(plan):
             f'<b>{weather_eur(r["week"])}</b>{diff_html}</div>'
         )
     asin = "".join(f'<span class="weather-pill">{escape(c["competitor"])} ASIN 타겟 ON</span>' for c in plan["soldout"])
+    if not plan["soldout"]:   # 품절이 없으면 빈칸 대신 지금 비중의 이유를 안내
+        rec = f'{plan["recommended_share"] * 100:.0f}%'
+        reason = f"재고 낮음 반영 비중 {rec}" if plan["low"] else f"기본 비중 {rec}"
+        msg = f"품절 경쟁사 없음 · {reason}로 운영"
+        if plan["share_manual"]:
+            msg = f"품절 경쟁사 없음 · 추천 {reason} (지금은 직접 설정 {plan['amazon_share'] * 100:.0f}%)"
+        checked = weather_stock_checked(plan["competitors"])
+        if checked:
+            msg += f" (Keepa {checked} 확인)"
+        asin = f'<span class="weather-note">{escape(msg)}</span>'
     with st.container(border=True, key="weather-card-channel"):
         _weather_html(
             '<div class="weather-card-title">채널별 추천 액션<span class="weather-chip">7일 합계</span></div>'
@@ -225,25 +237,26 @@ def _weather_forecast_section(plan):
 def _weather_stock_card(plan, is_sample_stock):
     badge = {"soldout": (T["down_bg"], T["down_text"]), "low": (P["peach"], T["text"]),
              "normal": (T["up_bg"], T["up_text"])}
-    counts = {k: sum(c["status"] == k for c in plan["competitors"]) for k in ("soldout", "low", "normal")}
-    summary = "".join(
-        f'<div><b>{counts[k]}</b><span>{WEATHER_STOCK_LABEL[k]}</span></div>' for k in ("soldout", "low", "normal")
-    )
+    # Keepa 실제 값은 품절/정상만 알 수 있어 '재고 낮음' 칸은 샘플에서만 보여 줌
+    keys = ("soldout", "low", "normal") if is_sample_stock else ("soldout", "normal")
+    counts = {k: sum(c["status"] == k for c in plan["competitors"]) for k in keys}
+    summary = "".join(f'<div><b>{counts[k]}</b><span>{WEATHER_STOCK_LABEL[k]}</span></div>' for k in keys)
     rows = []
     for c in plan["competitors"]:
         bg, fg = badge.get(c["status"], (T["line"], T["text"]))
-        label = WEATHER_STOCK_LABEL.get(c["status"], c["status"])
-        if c["status"] != "normal" and c["days"]:
-            label += f" {c['days']}일째"
         rows.append(
             f'<div class="weather-row"><span><b>{escape(c["competitor"])}</b><br><small>{escape(c["product"])}</small></span>'
-            f'<span class="weather-badge" style="background:{bg};color:{fg}">{label}</span></div>'
+            f'<span class="weather-badge" style="background:{bg};color:{fg}">{escape(weather_stock_text(c))}</span></div>'
         )
-    sample = '<span class="weather-chip">샘플</span>' if is_sample_stock else ""
+    if is_sample_stock:
+        chip = '<span class="weather-chip">샘플</span>'
+    else:
+        chip = f'<span class="weather-chip">Keepa · {escape(weather_stock_checked(plan["competitors"]))} 기준</span>'
     with st.container(border=True, key="weather-card-stock"):
         _weather_html(
-            f'<div class="weather-card-title">경쟁사 재고 시그널{sample}</div>'
-            f'<div class="weather-stock-summary">{summary}</div>{"".join(rows)}'
+            f'<div class="weather-card-title">경쟁사 재고 시그널{chip}</div>'
+            f'<div class="weather-stock-summary" style="grid-template-columns:repeat({len(keys)}, 1fr)">{summary}</div>'
+            f'{"".join(rows)}'
         )
 
 
@@ -315,4 +328,7 @@ def weather_render():
             _weather_reco_card(plan, is_sample_weather, is_sample_stock)
 
         source = "폭염 시나리오 샘플 데이터 (실제 예보 아님)" if is_sample_weather else "Weather data by Open-Meteo.com"
-        st.caption(f"날씨: {source} · 기준 {plan['regions'][0]['updated'].replace('T', ' ')} · 권역 기온은 3개 도시 평균")
+        stock = ("샘플 데이터" if is_sample_stock
+                 else f"경쟁사 DB 상위 경쟁사 + Keepa 마지막 조회값 ({weather_stock_checked(competitors)}, report 탭에서 갱신)")
+        st.caption(f"날씨: {source} · 기준 {plan['regions'][0]['updated'].replace('T', ' ')} · 권역 기온은 3개 도시 평균"
+                   f" · 경쟁사 재고: {stock}")

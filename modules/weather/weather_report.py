@@ -17,8 +17,10 @@ import ui_theme as ui  # noqa: E402
 from modules.weather.weather_data import (  # noqa: E402
     WEATHER_HOT_C,
     WEATHER_STOCK_LABEL,
+    weather_checked_label,
     weather_eur,
     weather_short_date,
+    weather_stock_checked,
 )
 
 WEATHER_FONT_DIR = Path(__file__).resolve().parents[2] / "common" / "fonts"
@@ -131,7 +133,9 @@ def _weather_recommendations(plan):
     amazon = (f"아마존은 전국 단위로 {weather_eur(plan['amazon'])}(전체의 {plan['amazon_share'] * 100:.0f}%)를 집행합니다.")
     if plan["soldout"]:
         c = plan["soldout"][0]
-        amazon += (f" {c['competitor']} {c['product']}가 {c['days']}일째 품절이므로 해당 ASIN({c['asin']}) "
+        state = (f"{c['days']}일째 품절" if c.get("days")
+                 else f"품절 상태({weather_checked_label(c['checked'])} Keepa 확인)" if c.get("checked") else "품절")
+        amazon += (f" {c['competitor']} {c['product']}가 {state}이므로 해당 ASIN({c['asin']}) "
                    "타겟 광고를 함께 운영합니다.")
     elif plan["low"] and not plan["share_manual"]:
         c = plan["low"][0]
@@ -242,9 +246,10 @@ def _weather_draw(plan, is_sample_weather, is_sample_stock):
     s.section(4, "경쟁사 재고 현황" + (" (샘플 데이터)" if is_sample_stock else ""))
     action = {"soldout": "ASIN 타겟 광고 운영", "low": "-" if plan["share_manual"] else "아마존 비중 +5%p",
               "normal": "-"}
-    s.table(["경쟁사", "상품", "ASIN", "상태", "지속", "대응"],
+    s.table(["경쟁사", "상품", "ASIN", "상태", "지속" if is_sample_stock else "확인 시점", "대응"],
             [[c["competitor"], c["product"], c["asin"], WEATHER_STOCK_LABEL.get(c["status"], c["status"]),
-              f"{c['days']}일" if c["days"] else "-", action.get(c["status"], "-")] for c in plan["competitors"]],
+              f"{c['days']}일" if c.get("days") else weather_checked_label(c["checked"]) if c.get("checked") else "-",
+              action.get(c["status"], "-")] for c in plan["competitors"]],
             [0.13, 0.17, 0.18, 0.13, 0.1, 0.29], ["center", "left", "center", "center", "center", "left"])
 
     # ── 5. 산정 기준
@@ -265,7 +270,8 @@ def _weather_draw(plan, is_sample_weather, is_sample_stock):
     # ── 바닥글
     s.hline(0.045, C_LINE)
     src = "날씨: 폭염 시나리오 샘플 (실제 예보 아님)" if is_sample_weather else "날씨: Open-Meteo.com 예보"
-    src += " · 경쟁사 재고: " + ("샘플 데이터" if is_sample_stock else "경쟁사 재고 DB")
+    src += " · 경쟁사 재고: " + ("샘플 데이터" if is_sample_stock
+                                 else f"경쟁사 DB + Keepa ({weather_stock_checked(plan['competitors'])} 조회)")
     s.text(L, 0.03, src, 7.5, color=C_MUTED)
     s.text(R, 0.03, f"출력 {now:%Y-%m-%d %H:%M} (독일 시간)", 7.5, color=C_MUTED, ha="right")
     return s

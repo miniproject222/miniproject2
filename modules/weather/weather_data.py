@@ -1,5 +1,9 @@
 # 4. 날씨 광고 타이밍 - 데이터 불러오기와 추천 계산 (화면 코드 없음)
+import csv
+import json
+import re
 from datetime import date, timedelta
+from pathlib import Path
 
 import requests
 import streamlit as st
@@ -142,22 +146,80 @@ def weather_sample_regions():
 
 
 # ─────────────────────────────────────────────
-# 2. 경쟁사 재고 (DB 연결 전에는 샘플)
+# 2. 경쟁사 재고 (경쟁사 DB + Keepa 마지막 조회값, 읽기만)
 # ─────────────────────────────────────────────
-# DB를 넣으면 이 함수 안만 바꾸면 됩니다. 화면과 보고서는 아래 모양만 사용합니다.
-#   [{"competitor": "경쟁사 B", "product": "쿨링매트 L", "asin": "B0XXXXXXX",
-#     "status": "soldout" | "low" | "normal", "days": 2}]   # days = 그 상태가 이어진 일수
-# 예: rows = db_read("weather_competitor_stock")  (from common.common_db import db_read)
+# - 경쟁사 DB: 루트 data/의 공용 CSV에서 구분이 "독일 N위"인 경쟁사 (report 대시보드와 같은 상위 경쟁사)
+# - 재고: report 탭이 Keepa로 조회해 저장한 스냅샷의 in_stock (weather는 Keepa를 직접 부르지 않아 토큰을 쓰지 않음)
+#   스냅샷은 report 탭의 조회 버튼이나 아침 자동 갱신(하루 1번) 때 바뀝니다.
+# - Keepa 값으로는 품절/정상만 알 수 있어 "재고 낮음"과 "품절 N일째"는 샘플에만 있습니다.
+# 화면과 보고서는 아래 모양만 사용합니다.
+#   [{"competitor": "Novilla", "product": "...", "asin": "B0...", "status": "soldout" | "low" | "normal",
+#     "days": 2 또는 None, "checked": "2026-10-24 08:10" (Keepa 조회 시점, 샘플은 "")}]
+WEATHER_ROOT = Path(__file__).resolve().parents[2]
+WEATHER_COMPETITOR_DB = WEATHER_ROOT / "data" / "common_competitor_seori_202610.csv"
+WEATHER_KEEPA_SNAPSHOT = WEATHER_ROOT / "modules" / "report" / "data" / "report_keepa_snapshot.json"
+
 WEATHER_SAMPLE_COMPETITORS = [
-    {"competitor": "경쟁사 B", "product": "쿨링매트 L", "asin": "B0SAMPLE01", "status": "soldout", "days": 2},
-    {"competitor": "경쟁사 A", "product": "쿨링패드", "asin": "B0SAMPLE02", "status": "low", "days": 1},
-    {"competitor": "경쟁사 C", "product": "토퍼", "asin": "B0SAMPLE03", "status": "normal", "days": 0},
+    {"competitor": "경쟁사 B", "product": "쿨링매트 L", "asin": "B0SAMPLE01", "status": "soldout", "days": 2, "checked": ""},
+    {"competitor": "경쟁사 A", "product": "쿨링패드", "asin": "B0SAMPLE02", "status": "low", "days": 1, "checked": ""},
+    {"competitor": "경쟁사 C", "product": "토퍼", "asin": "B0SAMPLE03", "status": "normal", "days": 0, "checked": ""},
 ]
 
 
+def _weather_read_competitors():
+    """경쟁사 DB의 "독일 N위" 경쟁사 중 Keepa 스냅샷에 있는 상품만, 순위 순서로 돌려줍니다."""
+    snapshot = json.loads(WEATHER_KEEPA_SNAPSHOT.read_text(encoding="utf-8"))
+    items = snapshot.get("items") or {}
+    checked = str(snapshot.get("fetched_at") or "")
+    out = []
+    with WEATHER_COMPETITOR_DB.open(encoding="utf-8-sig", newline="") as f:
+        for r in csv.DictReader(f):
+            rank = re.match(r"독일 (\d+)위", r.get("구분") or "")
+            asin = (r.get("ASIN (Keepa 자동 갱신용)") or "").strip()
+            if r.get("원본시트") != "경쟁사DB" or not rank or asin not in items:
+                continue
+            out.append({
+                "competitor": r["기업/브랜드"], "product": r["제품명"], "asin": asin, "rank": int(rank.group(1)),
+                "status": "normal" if items[asin].get("in_stock") else "soldout",
+                "days": None, "checked": checked,
+            })
+    return sorted(out, key=lambda c: c["rank"])
+
+
 def weather_get_competitors():
-    """(목록, 샘플 여부)를 돌려줍니다."""
-    return WEATHER_SAMPLE_COMPETITORS, True
+    """(목록, 샘플 여부)를 돌려줍니다. 파일을 못 읽거나 맞는 경쟁사가 없으면 샘플을 씁니다."""
+    try:
+        rows = _weather_read_competitors()
+    except (OSError, ValueError, KeyError, csv.Error):
+        rows = []
+    return (rows, False) if rows else (WEATHER_SAMPLE_COMPETITORS, True)
+
+
+def weather_checked_label(checked):
+    """Keepa 조회 시점을 짧게: '2026-10-24 08:10' → '10/24 08:10'."""
+    day, _, time = str(checked).partition(" ")
+    try:
+        d = date.fromisoformat(day)
+    except ValueError:
+        return str(checked)
+    return f"{d.month}/{d.day}" + (f" {time}" if time else "")
+
+
+def weather_stock_checked(competitors):
+    """실제 데이터의 Keepa 조회 시점 (짧은 형식). 샘플이면 ''."""
+    return next((weather_checked_label(c["checked"]) for c in competitors if c.get("checked")), "")
+
+
+def weather_stock_text(c):
+    """상태 문구: '품절 2일째'(샘플) / '품절 (10/24 확인)'(Keepa) / '정상'."""
+    label = WEATHER_STOCK_LABEL.get(c["status"], c["status"])
+    if c["status"] == "normal":
+        return label
+    if c.get("days"):
+        return f"{label} {c['days']}일째"
+    if c.get("checked"):
+        return f"{label} ({weather_checked_label(c['checked'])} 확인)"
+    return label
 
 
 # ─────────────────────────────────────────────
@@ -250,7 +312,7 @@ def weather_build_plan(regions, competitors, budget, amazon_share=None):
 
     hot_regions = sorted((r for r in scored if r["hot_days"]), key=lambda r: -r["week"])
     triggers = [f"{r['name']} {r['streak']}일 연속 {WEATHER_HOT_C}°C 이상 예보" for r in scored if r["streak"] >= 3]
-    triggers += [f"{c['competitor']} {c['product']} 품절 {c['days']}일째" for c in soldout]
+    triggers += [f"{c['competitor']} {c['product']} {weather_stock_text(c)}" for c in soldout]
 
     return {
         "budget": budget,
@@ -342,7 +404,7 @@ def weather_reco_items(plan):
     for c in plan["soldout"]:
         items.append({
             "tag": f"아마존 · {c['competitor']}",
-            "text": f"{c['product']} 품절 {c['days']}일째. ASIN 타겟 광고를 켜고 아마존에 {weather_eur(plan['amazon'])}를 배정하세요.",
+            "text": f"{c['product']} {weather_stock_text(c)}. ASIN 타겟 광고를 켜고 아마존에 {weather_eur(plan['amazon'])}를 배정하세요.",
             "tone": "stock",
         })
     for c in plan["low"]:
