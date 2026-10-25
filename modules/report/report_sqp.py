@@ -15,6 +15,7 @@ REPORT_SQP_DIR = Path(__file__).resolve().parent / "data"
 REPORT_SQP_FILE = REPORT_SQP_DIR / "report_sqp_weekly_dummy_202608.json"
 REPORT_SQP_ADS_FILE = REPORT_SQP_DIR / "report_ads_keywords_dummy_202608.csv"
 REPORT_SQP_LISTING_FILE = REPORT_SQP_DIR / "report_listing_dummy_202608.json"
+REPORT_SQP_KPI_GOAL = 0.8   # 클릭 ÷ 노출 배수 목표 (③ 탭 KPI 목표와 같은 값)
 REPORT_SQP_EVENTS_FILE = REPORT_SQP_DIR / "report_sqp_events_202608.json"
 REPORT_SQP_TEMP_FILE = REPORT_SQP_DIR / "report_temp_dwd_202608.csv"
 
@@ -26,7 +27,7 @@ REPORT_SQP_INTENT_GAP = 10.0      # 클릭된 상품 중앙 가격이 우리보�
 REPORT_SQP_HEAT_TEMP = 28.0       # 폭염일: 5개 도시 평균 최고기온
 REPORT_SQP_HEAT_DAYS = 3          # 폭염일이 이만큼 있는 주를 '폭염 주'로 표시
 REPORT_SQP_ROLES = {              # 경쟁 제품 역할 (Keepa 조회값이 있는 브랜드)
-    "Mara Vital": "같은 자리 경쟁자", "RIBECO Germany": "같은 자리 경쟁자",   # 냉감패드 실적 1·2위 (2026 여름 순위, Keepa 상세)
+    "Novilla": "같은 자리 경쟁자", "Mara Vital": "같은 자리 경쟁자",   # 냉감패드 실적 1·2위 (냉감 전용 + 1년 판매 신호, Keepa 상세)
 }
 REPORT_SQP_TYPE_DIRECTION = {
     "소재 개선": "메인 이미지·제목 A/B (③ 광고 소재)",
@@ -157,6 +158,9 @@ def report_sqp_analyze(rivals, snapshot_items):
         return None
     raw = report_sqp_read_json(REPORT_SQP_FILE)
     listing = report_sqp_read_json(REPORT_SQP_LISTING_FILE)
+    # 우리 상품 가격·평점·리뷰는 ① 탭 다른 표와 같은 값 (가격 = 서리 가정, 평점·리뷰 = SleepCOOL 실적)
+    k = next((r.get("keepa") for r in rivals if r["kind"] == "자사"), None) or {}
+    listing = {**listing, **{f: k[f] for f in ("price", "rating", "reviews") if k.get(f) is not None}}
     by_query = report_sqp_weeks_by_query(raw)
     temps = report_sqp_temps()
     events, event_source = report_sqp_events(snapshot_items)
@@ -294,7 +298,7 @@ def report_sqp_kpis(sqp):
 
 
 def report_sqp_context(x, by_query, kb):
-    """문제 종류별 현지 근거 한 줄. 맞는 근거가 없으면 빈칸 (제외 검토는 가설 대상이 아니라 억지로 붙이지 않음)."""
+    """문제 종류별 현지 근거 한 줄. 맞는 근거가 없으면 빈칸 (억지로 다른 근거를 붙이지 않음)."""
     ctx = kb.get("CLI-005") if x["type"] == "노출 확대" else by_query.get(x["query"].lower())
     if not ctx:
         return ""
@@ -308,7 +312,8 @@ def report_sqp_handoff(sqp, rivals):
     # 가설 탭 '현지 특성'(local_context): 문제 종류에 맞는 독일 DB 근거
     # 소재 개선·제외 검토 → 그 검색어 자체의 의미(KEY-1xx), 노출 확대(더운 날 입찰) → 열대야(CLI-005)
     kb = report_knowledge({"CLI-005"} | {f"KEY-10{i}" for i in range(1, 9)})
-    by_query = {r["소분류"].lower(): r for k, r in kb.items() if k.startswith("KEY-")}
+    # 소분류에 표현이 여러 개면 쉼표로 묶여 있음 (예: KEY-105 "Kühltopper, kühlender Topper") → 하나씩 매칭
+    by_query = {term.strip().lower(): r for k, r in kb.items() if k.startswith("KEY-") for term in r["소분류"].split(",")}
     eur = [r for r in rivals if r["kind"] != "자사" and r["currency"] == "EUR"]
     weak = [f"{r['brand'].split()[0]} {r['weakness'].split(',')[0].strip()}" for r in eur[:3] if r["weakness"]]
     review = " / ".join(weak) + " (경쟁사 DB 약점, 실제 리뷰 원문 아님)" if weak else ""
@@ -332,15 +337,18 @@ def report_sqp_handoff(sqp, rivals):
                       f"가설 없이 광고 제외 키워드로 처리 (가상 SQP)")
             question = "이 검색어를 광고 제외 키워드로 돌리면 광고비가 얼마나 줄까?"
         level = "높음" if rank == 1 else "중간"
+        # 심각도 점수용 차이 크기 (0~1): 소재 개선 = 목표 배수 대비 부족분, 노출 확대 = 목표 노출 점유율 대비 부족분
+        gap = (max(0.0, 1 - t["ratio"] / REPORT_SQP_KPI_GOAL) if x["type"] == "소재 개선"
+               else max(0.0, 1 - t["imp_share"] / x["extra"]["goal"]) if x["type"] == "노출 확대" else None)
         key_problems.append({"rank": rank, "type": "내부", "level": level, "group": x["type"], "title": title,
-                             "detail": detail, "question": question})
+                             "detail": detail, "question": question, "gap": gap})
         problems.append({
             "title": title, "type": "내부", "level": level, "group": "검색 클릭", "detail": detail,
             "target": f"amazon.de '{x['query']}' 검색 결과",
             "metric": "클릭 점유율 ÷ 노출 점유율",
             "local_context": report_sqp_context(x, by_query, kb),
             "competitor_review": review,
-            "sqp_type": x["type"], "query": x["query"],
+            "sqp_type": x["type"], "query": x["query"], "gap": gap,
         })
 
     t = main["total"]
@@ -359,7 +367,7 @@ def report_sqp_handoff(sqp, rivals):
         "our_price": listing["price"], "median_click_price": main["median_price"], "price_gap": round(main["price_gap"], 2),
         "listing": {k: listing[k] for k in ("title", "price", "rating", "reviews", "main_image", "main_image_issue", "certs")},
         "competitors": [c for c in sqp["competitors"] if c["source"] == "Keepa 실제"],
-        "kpi_goal": 0.8,
+        "kpi_goal": REPORT_SQP_KPI_GOAL,
         "problem2": ({"query": sub["query"], "imp_share": round(sub["total"]["imp_share"] * 100, 1),
                       "ratio": round(sub["total"]["ratio"], 2), "goal_imp_share": round(sub["extra"]["goal"] * 100, 1),
                       "extra_clicks": round(sub["extra"]["clicks"]), "month": sub["extra"]["month"],

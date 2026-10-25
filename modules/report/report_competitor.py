@@ -21,7 +21,18 @@ REPORT_PRICE_ALERT = 0.10         # Keepa 90일 평균 대비 이만큼 오르�
 REPORT_SEASON_MONTHS = (6, 7, 8)  # 냉감패드 성수기 (독일 DB CAL-002, 추론)
 REPORT_SCORE_COLS = ["Novilla", "RIBECO", "Traumnacht", "Paradies", "potow", "웰크론(세사)", "GlacialPad", "Mara Vital", "Herlag", "SEORI (목표)"]
 REPORT_LEVEL_ORDER = {"높음": 0, "중간": 1, "낮음": 2}
-REPORT_SEORI_PROXY = "Herlag"   # 가정: 서리 = 독일 냉감패드 실적 3위 Herlag (2026 여름 순위 기준, Traumnacht는 비냉감 실적 혼재로 제외). 서리의 판매 실적(Keepa)은 이 브랜드 값을 씀
+# 같은 위험도 안의 순서 = 심각도 점수 (데이터 신뢰도 × 시급성 × 차이 크기). 분류(group)별 데이터 구분·시급성
+REPORT_SEVERITY_BASIS = {
+    "신뢰": ("실제", "현재"), "판매": ("실제", "현재"), "채널": ("실제", "현재"), "경쟁사": ("실제", "현재"),
+    "날씨": ("실제", "현재"), "플랫폼": ("실제", "현재"), "가격": ("가정", "현재"), "경쟁력": ("가정", "현재"),
+    "제품·물류": ("가정", "현재"), "시험": ("가정", "잠재"), "인증": ("가정", "잠재"), "인증·규제": ("가정", "잠재"),
+    "규제": ("실제", "잠재"), "시장": ("실제", "잠재"),
+    "소재 개선": ("가상", "현재"), "노출 확대": ("가상", "현재"), "제외 검토": ("가상", "현재"),   # 검색어 분석 (가상 SQP)
+}
+REPORT_SEVERITY_DATA = {"실제": 1.0, "가정": 0.7, "가상": 0.5}   # 실제(Keepa·DB) > 가정(서리 설정) > 가상(시연 SQP)
+REPORT_SEVERITY_URGENCY = {"현재": 1.0, "잠재": 0.6}             # 지금 생기는 손실 > 조건이 맞으면 생길 위험
+REPORT_SEVERITY_GAP = 0.5                                       # 차이를 숫자로 잴 수 없는 문제의 기본값
+REPORT_SEORI_PROXY = "SleepCOOL"   # 가정: 서리 = 독일 냉감패드 실적 3위 SleepCOOL (냉감 전용 + 1년 판매 신호 기준, 2026-10-25). 양면(2-in-1)·비냉감 혼재 상품은 순위에서 제외. 서리의 판매 실적(Keepa)은 이 브랜드 값을 씀
 REPORT_TOP_RIVALS = 2   # 대시보드에 보여 줄 경쟁사 수: 경쟁사 DB '구분'의 "독일 N위"(Keepa 판매 순위) 상위 N개 + 서리(가정 3위)
 
 
@@ -140,14 +151,22 @@ def report_competitor_merge(rows, keepa_products, keepa_items):
     """경쟁사 행에 Keepa 값(현재가, 90일 평균 대비, 평점, 리뷰, 재고, ㎡당 가격)을 붙입니다."""
     by_brand = {p["db_brand"]: p for p in keepa_products}
     for r in rows:
-        # 서리는 판매 전이라, 가정에 따라 REPORT_SEORI_PROXY(Herlag)의 Amazon 실적을 서리 값으로 씀
+        # 서리의 Amazon 실적은 가정에 따라 REPORT_SEORI_PROXY(SleepCOOL)의 값을 씀
         p = by_brand.get(REPORT_SEORI_PROXY if r["kind"] == "자사" else r["brand"])
         r["proxy"] = REPORT_SEORI_PROXY if r["kind"] == "자사" and p else ""
         k = (keepa_items or {}).get(p["asin"]) if p else None
+        cmp_ = (p or {}).get("compare")   # 대표 상품이 다른 사이즈면, 서리와 같은 90x200 변형 가격으로 비교
+        if k and cmp_:
+            k = {**k, "price": cmp_["price"], "avg90": cmp_.get("avg90"), "change": cmp_.get("change"),
+                 "price_note": cmp_["note"]}
+        own = (report_seori_assumption() or {}).get("price") if r["kind"] == "자사" else None
+        if k and own:   # 서리 판매가는 SleepCOOL 현재가 대신 서리 자체 가격 (가정 파일, 검색어 분석과 같은 값)
+            k = {**k, "price": own["now"], "avg90": own["now"], "change": 0.0, "price_note": own["basis"]}
+            cmp_ = {"width_cm": own["width_cm"], "length_cm": own["length_cm"]}
         r["asin"] = p["asin"] if p else r.get("asin_db", "")
         r["keepa"] = k
-        r["keepa_sqm"] = (k["price"] / (p["width_cm"] * p["length_cm"] / 10000)
-                          if k and k["price"] and p.get("width_cm") else None)
+        w, l = (cmp_["width_cm"], cmp_["length_cm"]) if cmp_ else ((p or {}).get("width_cm"), (p or {}).get("length_cm"))
+        r["keepa_sqm"] = k["price"] / (w * l / 10000) if k and k["price"] and w else None
     return rows
 
 
@@ -211,21 +230,23 @@ def report_internal_factors(rows, criteria, checklist, tests, keepa_time):
     if reviews and own_reviews < reviews[0][0]:
         tops = ", ".join(f"{b} {n:,}건" for n, b in reviews[:2])
         who = f" ({seori['proxy']} 실적 가정)" if seori.get("proxy") else " (신규 브랜드)"
-        out.append({"title": f"리뷰 {own_reviews:,}건{who}, 경쟁사의 {own_reviews / reviews[0][0] * 100:.0f}% 수준",
-                    "level": "높음", "group": "신뢰",
-                    "detail": f"경쟁사 {tops} (Keepa {keepa_time}) · 온라인 쇼핑객 54%가 구매 전 리뷰 확인 (독일 DB SHP-006)"})
+        out.append({"title": f"리뷰 {own_reviews:,}건, 경쟁사의 {own_reviews / reviews[0][0] * 100:.0f}% 수준",
+                    "level": "높음", "group": "신뢰", "gap": 1 - own_reviews / reviews[0][0],
+                    "detail": f"서리{who} · 경쟁사 {tops} (Keepa {keepa_time}) · 온라인 쇼핑객 54%가 구매 전 리뷰 확인 (독일 DB SHP-006)"})
     k = seori.get("keepa") or {}
     tops_rank = [r for r in rivals if (r.get("keepa") or {}).get("rank")]
     detail = report_keepa_detail().get("items", {})
-    summer = {r["brand"]: (detail.get(r.get("asin") or "") or {}).get("rank_root_summer_median") for r in rows}
-    own_summer = summer.get(seori["brand"])
-    rivals_summer = [(summer[r["brand"]], r["brand"]) for r in rivals if summer.get(r["brand"])]
-    if own_summer and rivals_summer:   # 냉감패드 실적 기준: 2026년 여름(6~8월) 순위 중앙값
-        best_rank, best_brand = min(rivals_summer)
-        out.append({"title": f"여름 판매 순위 {own_summer:,}위 (냉감패드 1위 {best_brand} {best_rank:,}위)",
-                    "level": "중간", "group": "판매",
-                    "detail": f"{seori['proxy']} 실적 가정 · 2026년 6~8월 Amazon.de 판매 순위 중앙값, 1위의 약 {own_summer / best_rank:.0f}배 · "
-                              f"지금(10월) {k.get('rank') or 0:,}위, 평점 {k.get('rating') or '-'} (Keepa 상세 2026-10-24)"})
+    sig = {r["brand"]: ((detail.get(r.get("asin") or "") or {}).get("rank_drops") or {}).get("365") for r in rows}
+    own_sig = sig.get(seori["brand"])
+    rivals_sig = [(sig[r["brand"]], r["brand"]) for r in rivals if sig.get(r["brand"])]
+    if own_sig and rivals_sig:   # 냉감패드 실적 기준: 1년 판매 신호 (Keepa 순위가 좋아진 횟수 = 판매 횟수 추정)
+        best_sig, best_brand = max(rivals_sig)
+        own_summer = (detail.get(seori.get("asin") or "") or {}).get("rank_root_summer_median")
+        out.append({"title": f"Amazon 판매량이 냉감패드 1위 {best_brand}의 {own_sig / best_sig * 100:.0f}% 수준",
+                    "level": "중간", "group": "판매", "gap": 1 - own_sig / best_sig,
+                    "detail": f"{seori['proxy']} 실적 가정 · 1년 판매 신호(Keepa 순위가 좋아진 횟수) {own_sig}회 vs {best_brand} {best_sig}회"
+                              + (f" · 여름(6~8월) 순위 중앙값 {own_summer:,}위" if own_summer else "")
+                              + f", 평점 {k.get('rating') or '-'} (Keepa 상세)"})
     elif k.get("rank") and tops_rank:
         best = min(tops_rank, key=lambda r: r["keepa"]["rank"])
         out.append({"title": f"Amazon 판매 순위 {k['rank']:,}위 (1위 {best['brand']} {best['keepa']['rank']:,}위)",
@@ -254,12 +275,12 @@ def report_internal_factors(rows, criteria, checklist, tests, keepa_time):
         src = f"Keepa {keepa_time}" if low.get("keepa_sqm") else "경쟁사 DB"
         own_src = f"{seori['proxy']} 실적 가정" if seori.get("keepa_sqm") else "권장가"
         out.append({"title": f"㎡당 가격이 최저가 경쟁사의 {own / report_sqm(low):.1f}배", "level": "중간",
-                    "group": "가격", "detail": f"서리 €{own:.1f} ({own_src}) vs {low['brand']} €{report_sqm(low):.1f} ({src})"})
+                    "group": "가격", "gap": 1 - report_sqm(low) / own, "detail": f"서리 €{own:.1f} ({own_src}) vs {low['brand']} €{report_sqm(low):.1f} ({src})"})
 
     wide = max(rivals, key=report_channel_count, default=None)
     if wide and report_channel_count(wide) > report_channel_count(seori):
         out.append({"title": f"판매 채널 {report_channel_count(seori)}개 (경쟁사 최다 {report_channel_count(wide)}개)",
-                    "level": "중간", "group": "채널",
+                    "level": "중간", "group": "채널", "gap": 1 - report_channel_count(seori) / report_channel_count(wide),
                     "detail": f"서리: {seori['channels']} / {wide['brand']}: {wide['channels']} (경쟁사 DB)"})
 
     gaps = sorted([c for c in criteria if c["seori"] is not None and c["seori"] < c["best"]],
@@ -272,7 +293,7 @@ def report_internal_factors(rows, criteria, checklist, tests, keepa_time):
 
     out.append({"title": "여름 전용 제품, 독일 물류 거점 없음", "level": "중간", "group": "제품·물류",
                 "detail": f"{seori['weakness']} (경쟁사 DB 서리 약점)"})
-    return sorted(out, key=lambda f: REPORT_LEVEL_ORDER[f["level"]])
+    return sorted(out, key=report_severity_key)
 
 
 def report_price_factor(r, k, keepa_time):
@@ -347,7 +368,7 @@ def report_external_factors(rows, keepa_time, today=None):
     if "CLI-001" in kb:
         out.append({"kind": "기회", "title": "에어컨 없는 가구가 70% 이상", "level": "중간", "group": "시장",
                     "detail": f"{kb['CLI-001']['내용 (한국어)'][:90]}… (독일 DB CLI-001)"})
-    return sorted(out, key=lambda f: (f["kind"] != "위협", REPORT_LEVEL_ORDER[f["level"]]))
+    return sorted(out, key=lambda f: (f["kind"] != "위협", *report_severity_key(f)))
 
 
 def report_competitor_slim(rows):
@@ -391,21 +412,42 @@ REPORT_HMW = {
 REPORT_RULE_IDS = ["LNG-001", "LNG-002", "LNG-003", "LNG-004", "LNG-005", "LNG-006", "LAW-102", "LAW-104"]
 
 
-def report_key_problems(internal, external, limit=3):
-    """핵심 문제 Top N: 내부 1순위, 외부 위협 1순위, 그다음 순위 순으로 고르고 질문(HMW)을 붙입니다."""
+def report_severity(f):
+    """심각도 점수 (0~1): 데이터 신뢰도 × 시급성 × (0.5 + 0.5 × 차이 크기). 차이 크기 gap은 0~1 (클수록 경쟁사·목표와 멀다)."""
+    data, urgency = REPORT_SEVERITY_BASIS.get(f["group"], ("가정", "잠재"))
+    gap = f.get("gap")
+    g = REPORT_SEVERITY_GAP if gap is None else min(max(gap, 0.0), 1.0)
+    score = REPORT_SEVERITY_DATA[data] * REPORT_SEVERITY_URGENCY[urgency] * (0.5 + 0.5 * g)
+    gap_text = "차이 측정 불가(기본 50%)" if gap is None else f"차이 {g * 100:.0f}%"
+    return {"score": round(score, 2), "data": data, "urgency": "지금 손실" if urgency == "현재" else "생길 수 있는 위험",
+            "gap": None if gap is None else round(g, 2),
+            "basis": f"{data} 데이터 {REPORT_SEVERITY_DATA[data]} × {'지금 손실' if urgency == '현재' else '잠재 위험'} "
+                     f"{REPORT_SEVERITY_URGENCY[urgency]} × {gap_text}"}
+
+
+def report_severity_key(f):
+    """정렬 기준: 위험도(높음 > 중간 > 낮음) → 같은 위험도면 심각도 점수가 큰 것."""
+    return REPORT_LEVEL_ORDER[f["level"]], -report_severity(f)["score"]
+
+
+def report_key_problems(internal, external, limit=None):
+    """경쟁 포지션 핵심 문제: 내부 요인과 외부 위협을 섞어 위험도(높음 > 중간 > 낮음) 순, 같은 위험도면 심각도 점수 순으로
+    정렬하고 질문(HMW)을 붙입니다. limit이 없으면 전부 돌려줍니다."""
     threats = [f for f in external if f["kind"] == "위협"]
-    picked = [x for x in (internal[:1] + threats[:1])]
-    rest = sorted(internal[1:] + threats[1:], key=lambda f: REPORT_LEVEL_ORDER[f["level"]])
-    for f in rest:
-        if len(picked) >= limit:
-            break
-        picked.append(f)
+    picked = sorted(internal + threats, key=report_severity_key)
     out = []
     for i, f in enumerate(picked[:limit], 1):
         out.append({"rank": i, "type": "내부" if f in internal else "외부", "level": f["level"], "group": f["group"],
-                    "title": f["title"], "detail": f["detail"],
+                    "title": f["title"], "detail": f["detail"], "gap": f.get("gap"), "severity": report_severity(f),
                     "question": REPORT_HMW.get(f["group"], f"'{f['title']}' 문제를 어떻게 풀까?")})
     return out
+
+
+def report_merge_key_problems(first, position, limit=3):
+    """① 결과 Top N: 검색어 클릭 문제(first)와 경쟁 포지션 문제(내부·외부)를 섞어 위험도 순, 같으면 심각도 점수 순으로.
+    (검색어 분석은 가상 SQP라 신뢰도 0.5로 계산 → 같은 위험도의 실제 데이터 문제보다 뒤로 갈 수 있음)"""
+    merged = sorted(first + position, key=report_severity_key)[:limit]
+    return [{**p, "rank": i, "severity": report_severity(p)} for i, p in enumerate(merged, 1)]
 
 
 def report_marketing_rules():
@@ -439,7 +481,7 @@ def report_team_handoff(rows, keepa_time):
 REPORT_PROBLEM_METRIC = {
     "신뢰": "전환율", "판매": "매출", "인증·규제": "출시 준비", "인증": "전환율", "시험": "전환율", "가격": "전환율", "채널": "매출",
     "경쟁력": "매출", "제품·물류": "매출", "경쟁사": "전환율", "날씨": "매출", "플랫폼": "전환율",
-    "시장": "매출", "규제": "광고 집행",
+    "시장": "매출", "규제": "광고 표현 준수율",
 }
 REPORT_PROBLEM_CONTEXT = {   # 문제 분류 → 독일 DB 근거 ID (local_context)
     "신뢰": "SHP-006", "판매": "SHP-201", "인증·규제": "REV-110", "인증": "REV-110", "시험": "VAL-004", "가격": "VAL-003", "채널": "TRN-104",

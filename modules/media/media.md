@@ -1,6 +1,6 @@
 # 3. 매체 제작 (`media`)
 
-- 매체 제작: 하위 탭 4개 가설에서 변수 도출 → A/B 소재 준비 → 프롬프트 만들기 → 매체 제작·외주 준비 (둥근 알약형 탭) (각 단계 아래 이전/다음 버튼으로 이동)
+- 매체 제작: 하위 탭 5개 가설에서 변수 도출 → A/B 소재 준비 → 프롬프트 만들기(AI 다듬기) → 사진·영상 초안 → 외주 정리 (둥근 알약형 탭) (각 단계 아래 이전/다음 버튼으로 이동)
 - 끝은 외주업체에 넘길 레퍼런스 파일(프롬프트, 사진·영상 초안, 고정 요소) 준비까지입니다. A/B 결과 판정, UTM, 매체 외 솔루션 제안은 지금 흐름에서 빠졌습니다 (판정 코드는 `media_stage2/media_stage2_judge.py`에 보관)
 
 ## 3단계 나눠 개발 (동시 개발 후 1단계 기준으로 합침)
@@ -8,12 +8,12 @@
 | 단계 | 하위 탭 | 브랜치 | 담당 폴더·파일 | 이름 접두어 |
 |---|---|---|---|---|
 | 1단계 | 단일 변수 추출 ~ A/B 소재 선정 (가설에서 변수 도출, A/B 소재 준비) | `min` | `modules/media/` 바로 아래 파일 전부 (공용 파일 포함) | `media_` / `media-` |
-| 2단계 | 프롬프트 만들기: 기본 프롬프트 → 빈칸 → A, B 채우기 | `JY` | `media_stage2/`만 | `media_s2_` / `media-s2-` |
-| 3단계 | 매체 제작·외주 준비: AI 다듬기·확인 → 사진·영상 초안 → 외주 레퍼런스 파일 | `DH` | `media_stage3/`만 | `media_s3_` / `media-s3-` |
+| 2단계 | ③ 프롬프트 만들기: 기본 프롬프트 → 빈칸 → A, B 채우기 → 리포트 값으로 AI 다듬기 + 확인 | `JY` | `media_stage2/`만 | `media_s2_` / `media-s2-` |
+| 3단계 | ④ 사진·영상 초안(사진 레퍼런스, 영상 스토리보드, 영상 초안) → ⑤ 외주 정리(브리프 + zip) | `DH` | `media_stage3/`만 | `media_s3_` / `media-s3-` |
 
 - 공용 파일(`media_page.py`, `media_handoff.py`, `media_style.css`, `media.md`, `media_prompt.md`, `CLAUDE.md`)은 1단계 담당자만 고칩니다.
-- 연결 지점: `media_page.py`가 하위 탭에서 `media_stage2_render()`, `media_stage3_render()`만 부릅니다.
-- 2·3단계 하위 탭 이름은 각 단계 파일의 `MEDIA_S2_TAB_LABEL`, `MEDIA_S3_TAB_LABEL`에서 정하고 `media_page.py`가 가져다 씁니다. 단계 담당자가 직접 바꿉니다.
+- 연결 지점: `media_page.py`가 하위 탭에서 `media_stage2_render()`(③), `media_stage3_render()`(④), `media_stage3_export_render()`(⑤)만 부릅니다.
+- 2·3단계 하위 탭 이름은 각 단계 파일의 `MEDIA_S2_TAB_LABEL`, `MEDIA_S3_TAB_LABEL`, `MEDIA_S3_EXPORT_TAB_LABEL`에서 정하고 `media_page.py`가 가져다 씁니다. 단계 담당자가 직접 바꿉니다.
 - 단계 사이 데이터: `media_handoff.py` (1→2 `media_handoff_set_plan()` / `media_handoff_plan()`, 2→3 `media_handoff_set_prompt()` / `media_handoff_prompt()`).
   - 값은 각 단계 폴더의 JSON 파일로 저장됩니다. **그 파일을 커밋·푸시하면, 다른 컴퓨터에서 풀 받은 사람에게 자동으로 이어집니다.**
     - 1단계: `modules/media/data/media_handoff_plan.json` (min이 올림)

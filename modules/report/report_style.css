@@ -253,11 +253,12 @@
    (Streamlit이 감싸는 stLayoutWrapper에 걸어야 함. 키가 붙은 칸 자체에 걸면 감싸는 칸 높이 안에서만 움직여 고정되지 않음) */
 [data-testid="stLayoutWrapper"]:has(> [class*="st-key-report-dialog-kpis-"]) {
   position: sticky;
-  top: 72px;   /* 고정된 창 제목(h2) 높이만큼 아래 */
+  top: 76px;   /* 처음 위치와 같게: 제목(h2) 64px + 제목과 내용 사이 간격 16px - 위 안쪽 여백 4px */
   z-index: 100;   /* 표(dataframe) 캔버스가 위로 올라오지 않게 */
   padding: 4px 0 10px;
   background: var(--color-bg);
-  box-shadow: 0 8px 8px -8px rgba(80, 78, 118, 0.25);   /* 아래로 지나가는 내용과 경계선 */
+  box-shadow: 0 -16px 0 0 var(--color-bg),                /* 제목과 KPI 사이 빈틈 덮기 */
+              0 8px 8px -8px rgba(80, 78, 118, 0.25);    /* 아래로 지나가는 내용과 경계선 */
 }
 
 [class*="st-key-report-dialog-kpis-"] .report-kpi {
@@ -292,15 +293,20 @@
   position: sticky;
   top: 0;
   z-index: 101;
+  padding-top: 16px;   /* 제목 위 여백 (기본 24px) */
   background: var(--color-bg);
 }
 
 [role="dialog"]:has([class*="st-key-report-dialog-body-"]) > button:first-child {
   position: sticky;
-  top: 26px;
-  display: block;
+  top: 24px;
+  display: flex;
+  justify-content: flex-end;
   margin-left: auto;      /* 오른쪽 끝 */
-  margin-bottom: -18px;   /* 버튼 높이만큼 당겨 제목 위치는 그대로 */
+  height: 0;              /* 자리를 차지하지 않게 (차지하면 처음 열 때 제목 위가 16px 더 비고, 스크롤하면 제목이 튐) */
+  min-height: 0;
+  padding: 0 24px 0 0;
+  overflow: visible;
   z-index: 102;
 }
 

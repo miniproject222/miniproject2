@@ -1,8 +1,8 @@
-# 3. 매체 제작 (단일 변수 → A/B 소재 → 프롬프트 → 매체·외주 준비)
+# 3. 매체 제작 (단일 변수 → A/B 소재 → 프롬프트·AI 다듬기 → 사진·영상 초안 → 외주 정리)
 # 3단계로 나눠 동시에 개발합니다. 이 파일은 1단계 담당자(공용 파일)만 고칩니다.
-#   1단계 단일 변수 추출 ~ A/B 소재 선정: media_variable.py, media_ab.py
-#   2단계 프롬프트 만들기: media_stage2/ (media_stage2_render())
-#   3단계 다듬기·매체 제작·외주 준비: media_stage3/ (media_stage3_render())
+#   1단계 단일 변수 추출 ~ A/B 소재 선정: media_variable.py, media_ab.py (하위 탭 ①②)
+#   2단계 프롬프트 만들기 + AI 다듬기: media_stage2/ (media_stage2_render(), 하위 탭 ③)
+#   3단계 사진·영상 초안 → 외주 정리: media_stage3/ (media_stage3_render() ④, media_stage3_export_render() ⑤)
 #   단계 사이 데이터: media_handoff.py
 from pathlib import Path
 
@@ -11,6 +11,7 @@ import streamlit as st
 import ui_theme as ui
 from modules.media.media_ab import media_ab_plan_step
 from modules.media.media_stage2.media_stage2 import MEDIA_S2_TAB_LABEL, media_stage2_render
+from modules.media.media_stage3.media_stage3_export import MEDIA_S3_EXPORT_TAB_LABEL, media_stage3_export_render
 from modules.media.media_stage3.media_stage3 import MEDIA_S3_TAB_LABEL, media_stage3_render
 from modules.media.media_variable import media_variable_kpi_chip, media_variable_step
 
@@ -20,12 +21,13 @@ MEDIA_STAGE_CSS = [MEDIA_DIR / "media_stage2" / "media_stage2_style.css",
                    MEDIA_DIR / "media_stage3" / "media_stage3_style.css"]
 
 # 하위 탭(단계): (탭 이름, 화면 함수). 순서대로 '다음 단계' 버튼으로 넘어갑니다.
-# 2·3단계 탭 이름은 각 단계 파일의 MEDIA_S2_TAB_LABEL / MEDIA_S3_TAB_LABEL에서 정합니다 (단계 담당자가 바꿈)
+# 2·3단계 탭 이름은 각 단계 파일의 MEDIA_S2_TAB_LABEL / MEDIA_S3_TAB_LABEL / MEDIA_S3_EXPORT_TAB_LABEL에서 정합니다 (단계 담당자가 바꿈)
 MEDIA_STEPS = [
     ("가설에서 변수 도출", media_variable_step),
     ("A/B 소재 준비", media_ab_plan_step),
     (MEDIA_S2_TAB_LABEL, media_stage2_render),
     (MEDIA_S3_TAB_LABEL, media_stage3_render),
+    (MEDIA_S3_EXPORT_TAB_LABEL, media_stage3_export_render),
 ]
 
 
@@ -62,7 +64,7 @@ def media_render():
     media_load_stage_css()
     # key="media-root": media_style.css가 이 탭 안의 간격만 줄이도록 범위를 정하는 class (.st-key-media-root)
     with st.container(key="media-root"):
-        ui.page_header("3. 매체 제작", "가설에서 변수 도출 → A/B 소재 → 프롬프트 → 매체·외주 준비, 단계별로 넘어가요")
+        ui.page_header("3. 매체 제작", "가설에서 변수 도출 → A/B 소재 → 프롬프트 → 사진·영상 초안 → 외주 정리, 단계별로 넘어가요")
         tabs = st.tabs([label for label, _ in MEDIA_STEPS], key="media-step", on_change="rerun")
         for i, (tab, (_, render)) in enumerate(zip(tabs, MEDIA_STEPS)):
             if tab.open:   # 선택된 단계만 그립니다

@@ -1,6 +1,6 @@
 {
   "fetched_at": "2026-10-24",
-  "note": "Keepa 상품 상세(stats=90, rating=1, history=1) 4개 상품 조회 · 8토큰. 판매 순위는 Amazon.de 카테고리별 순위, '순위 하락 횟수'는 순위가 좋아진 횟수로 판매가 일어났다는 신호(Keepa salesRankDrops), '월 구매 배지'는 Amazon 'X+ im letzten Monat gekauft' 표시 기록. · 쿠폰 기록·수수료·상세페이지 특징 문구는 같은 조회 응답에서 추출 (추가 토큰 없음) · price: 신품 가격 기록에서 작년 같은 날·여름 중앙값·365일 중앙값 (계절 보정 비교용, 추가 토큰 없음)",
+  "note": "Keepa 상품 상세(stats=90, rating=1, history=1) 4개 상품 조회 · 8토큰. 판매 순위는 Amazon.de 카테고리별 순위, '순위 하락 횟수'는 순위가 좋아진 횟수로 판매가 일어났다는 신호(Keepa salesRankDrops), '월 구매 배지'는 Amazon 'X+ im letzten Monat gekauft' 표시 기록. · 쿠폰 기록·수수료·상세페이지 특징 문구는 같은 조회 응답에서 추출 (추가 토큰 없음) · price: 신품 가격 기록에서 작년 같은 날·여름 중앙값·365일 중앙값 (계절 보정 비교용, 추가 토큰 없음) · 2026-10-25: Novilla·Ehrenkind·SleepCOOL·Paradies 추가 조회 (8토큰) · type: 냉감 전용 / 양면 2-in-1 / 비냉감 혼재 (순위는 냉감 전용만)",
   "items": {
     "B0DJBVKMY9": {
       "brand": "Traumnacht",
@@ -69,7 +69,8 @@
         "year_ago": 26.9,
         "summer_median": 28.9,
         "median_365": 28.64
-      }
+      },
+      "type": "비냉감 혼재"
     },
     "B0B5RZH8C3": {
       "brand": "Mara Vital",
@@ -136,7 +137,8 @@
         "year_ago": 89.9,
         "summer_median": 89.9,
         "median_365": 89.9
-      }
+      },
+      "type": "냉감 전용"
     },
     "B0F2FN34BS": {
       "brand": "Herlag",
@@ -192,7 +194,8 @@
         "year_ago": 32.9,
         "summer_median": 32.28,
         "median_365": 34.9
-      }
+      },
+      "type": "양면 2-in-1"
     },
     "B07121YZM5": {
       "brand": "RIBECO GERMANY",
@@ -246,7 +249,235 @@
         "year_ago": 39.94,
         "summer_median": 53.44,
         "median_365": 45.69
-      }
+      },
+      "type": "양면 2-in-1"
+    },
+    "B0DQ8BDT9Z": {
+      "brand": "Novilla",
+      "title": "Novilla Cooling Matratzenauflage 160x200cm, Gewebe mit Kühlfaktor, Atmungsaktiv und Hautfreundliches, Dreilagiges Air-La",
+      "category": "Bettwaren & Bettwäsche > Matratzenauflagen & Topper > Matratzenauflagen",
+      "sub_category": "Matratzenauflagen",
+      "listed_since": "2024-12-12",
+      "rank_root_now": 441010,
+      "rank_root_summer_median": 38891,
+      "rank_root_summer_best": 4964,
+      "rank_sub_now": 133,
+      "rank_sub_summer_median": 29,
+      "rank_sub_summer_best": 2,
+      "rank_drops": {
+        "30": 5,
+        "90": 22,
+        "180": 73,
+        "365": 179
+      },
+      "monthly_sold": [
+        {
+          "from": "2025-05-19",
+          "badge": 10
+        },
+        {
+          "from": "2026-06-29",
+          "badge": 50
+        }
+      ],
+      "reviews_now": 310,
+      "rating_now": 3.6,
+      "reviews_1y_ago": 226,
+      "variations": 16,
+      "cooling_variations": 0,
+      "parent_asin": "B0F5HRG4VV",
+      "parent_title": "Novilla Matratzen Topper",
+      "coupons": {
+        "count": 0,
+        "max_pct": 0,
+        "last": null,
+        "active_now": false
+      },
+      "fees": {
+        "referral_pct": 15.01,
+        "fba_eur": 6.1
+      },
+      "features": [
+        "【Zwei-Phasen-Kühlung】Zwei-Kälte-Sensationsdesign: Das Gewebe mit infundierten Kühlfaktoren + die Gewebestruktur mit dreilagiger Luftschicht, um Wärme abzuleiten",
+        "【Hochwertige Faserfüllung】Füllung mit einer hochwertigen Daunenalternative, 50% 3D-Komfortfaser + 50% 7D-Stützfaser, weich wie eine Wolke und gleichzeitig Unter",
+        "【Hautfreundlicher Stoff】Der Stoff besteht aus ultradünnem Stoff, seidiger, bequemer und hautfreundlicher; Mit dem feinsten Fasergewebe blockiert dieses Gewebe d",
+        "【Hohe Elastizität Tiefe Tasche】 360° Stretch-Strickgewebe-Design und 30 cm elastische Kante, geeignet für 20 - 35 cm dicke Matratzen, Er lässt sich nicht leicht",
+        "【KAUFEN SIE MIT VERTRAUEN】 Das Matratze topper hat die strengen Zertifizierungen OEKO-Tex (siehe Details in den Nachhaltigkeitsmerkmalen unten) und CertiPUR-US "
+      ],
+      "images": 9,
+      "price": {
+        "now": 35.99,
+        "year_ago": 35.99,
+        "summer_median": 35.99,
+        "median_365": 35.99,
+        "basis": "90x200 변형(B0DQ84R8QG) 기준 · 160x200은 €49.99 → €25.66 사이즈 한정 할인"
+      },
+      "note": "",
+      "caveat": "상품군 변형 16개 중 15개는 같은 냉감 패드(특징 'Zwei-Phasen-Kühlung'), 1개(B0DZCWR8HX)는 젤 메모리폼 토퍼, 1개(California King)는 냉감 토퍼 · 10월 판매 순위 441,010은 상품군 전체가 공유 (2026-10-25 확인)",
+      "type": "냉감 전용"
+    },
+    "B0H626BRN9": {
+      "brand": "Ehrenkind",
+      "title": "Ehrenkind® Matratzenauflage 90x200 cm, kühlend mit Outlast® & Tencel™",
+      "category": "Bettwaren & Bettwäsche > Matratzenauflagen & Topper > Matratzenauflagen",
+      "sub_category": "Matratzenauflagen",
+      "listed_since": "2026-06-19",
+      "rank_root_now": 543595,
+      "rank_root_summer_median": 802894,
+      "rank_root_summer_best": 222314,
+      "rank_sub_now": 159,
+      "rank_sub_summer_median": 210,
+      "rank_sub_summer_best": 90,
+      "rank_drops": {
+        "30": 6,
+        "90": 12,
+        "180": 13,
+        "365": 13
+      },
+      "monthly_sold": [],
+      "reviews_now": 10,
+      "rating_now": 4.8,
+      "reviews_1y_ago": null,
+      "variations": 0,
+      "cooling_variations": 0,
+      "parent_asin": null,
+      "parent_title": "",
+      "coupons": {
+        "count": 0,
+        "max_pct": 0,
+        "last": null,
+        "active_now": false
+      },
+      "fees": {
+        "referral_pct": 15.01,
+        "fba_eur": 3.75
+      },
+      "features": [
+        "AKTIVE TEMPERATURREGULIERUNG – Die integrierte Outlast-Technologie nimmt überschüssige Wärme auf und gibt sie bei Bedarf wieder ab – für ein ausgeglichenes Schl",
+        "ANGENEHM TROCKENE LIEGEFLÄCHE – TENCEL Lyocell leitet Feuchtigkeit schnell vom Körper weg und unterstützt ein frisches Schlafgefühl.",
+        "IDEAL BEI NÄCHTLICHEM SCHWITZEN – Die kühlende Matratzenauflage hilft dabei, Wärmespitzen auszugleichen und Überhitzung zu reduzieren.",
+        "SICHERER HALT AUF DER MATRATZE – Eckgummis fixieren die Auflage zuverlässig unter dem Spannbettlaken, ohne die Liegeeigenschaften zu verändern.",
+        "PFLEGELEICHT & ZERTIFIZIERT – Maschinenwaschbar, langlebig und nach OEKO-TEX STANDARD 100 Produktklasse 1 zertifiziert."
+      ],
+      "images": 8,
+      "price": {
+        "now": 84.9,
+        "year_ago": null,
+        "summer_median": 84.9,
+        "median_365": 84.9
+      },
+      "note": "",
+      "type": "냉감 전용"
+    },
+    "B078HLXBS4": {
+      "brand": "SleepCOOL",
+      "title": "Kühlende Klimaregulierende Matratzenauflage 90x200cm COOL.XPERIENCE - Klimaregulierend, Weniger Schwitzen, Weniger Frier",
+      "category": "Bettwaren & Bettwäsche > Matratzenauflagen & Topper > Matratzentopper",
+      "sub_category": "Matratzentopper",
+      "listed_since": "2018-03-01",
+      "rank_root_now": 741150,
+      "rank_root_summer_median": 295503,
+      "rank_root_summer_best": 73121,
+      "rank_sub_now": 546,
+      "rank_sub_summer_median": 306,
+      "rank_sub_summer_best": 125,
+      "rank_drops": {
+        "30": 3,
+        "90": 11,
+        "180": 24,
+        "365": 28
+      },
+      "monthly_sold": [],
+      "reviews_now": 31,
+      "rating_now": 3.8,
+      "reviews_1y_ago": 10,
+      "variations": 5,
+      "cooling_variations": 0,
+      "parent_asin": "B08KGMVX7D",
+      "parent_title": "SleepCOOL. Kühlende Matratzenauflage COOL.XPERIENCE -Klimaregulierend, Weniger S",
+      "coupons": {
+        "count": 0,
+        "max_pct": 0,
+        "last": null,
+        "active_now": false
+      },
+      "fees": {
+        "referral_pct": 15.01,
+        "fba_eur": 5.72
+      },
+      "features": [
+        "Matratzenauflage COOL.XPERIENCE von Sleepcool. - Klimaregulierende Bettwaren mit Outlast-Wetraumtechnologie für gesünderen Schlaf",
+        "Das Outlast-Prinzip: Ein ausgeglichenes Klima sorgt für optimalen Schlafkomfort",
+        "Die Herausforderung: Schlechter Schlaf durch Wärmestau, Überhitzen und Schlafschwitzen",
+        "Die Lösung: Die in Sleepcool-Produkten eingearbeiteten Materialien nehmen überschüssige Körperwärme auf und reduzieren Schweißbildung",
+        "Das Ergebnis: Tiefschlafphasen sind aufgrund des guten Schlafklimas deutlich länger. Dadurch ist der Erholungswert ebenfalls deutlich erhöht."
+      ],
+      "images": 7,
+      "price": {
+        "now": 89.9,
+        "year_ago": 84.95,
+        "summer_median": null,
+        "median_365": 89.9
+      },
+      "note": "",
+      "caveat": "Outlast 온도 조절 냉감 패드(Colheim GmbH, 2018년 출시) · 판매가 여름에 몰림(2026 여름 중앙값 295,503 vs 겨울 852,893) · 리뷰 2025년 10건 → 31건",
+      "type": "냉감 전용"
+    },
+    "B0D7HQFXCY": {
+      "brand": "PARADIES",
+      "title": "PARADIES kühlende Matratzenauflage 90x200 cm Cool Dream Pad",
+      "category": "Bettwaren & Bettwäsche > Matratzenauflagen & Topper > Matratzenauflagen",
+      "sub_category": "Matratzenauflagen",
+      "listed_since": "2024-06-19",
+      "rank_root_now": 1073573,
+      "rank_root_summer_median": 38993,
+      "rank_root_summer_best": 9975,
+      "rank_sub_now": 291,
+      "rank_sub_summer_median": 163,
+      "rank_sub_summer_best": 34,
+      "rank_drops": {
+        "30": 0,
+        "90": 0,
+        "180": 12,
+        "365": 25
+      },
+      "monthly_sold": [],
+      "reviews_now": 5,
+      "rating_now": 4.1,
+      "reviews_1y_ago": 21,
+      "variations": 2,
+      "cooling_variations": 0,
+      "parent_asin": "B0H9L9BLS8",
+      "parent_title": "PARADIES_PAD_COOL_Dream_Parent",
+      "coupons": {
+        "count": 5,
+        "max_pct": 20,
+        "last": {
+          "from": "2025-06-04",
+          "pct": 15
+        },
+        "active_now": false
+      },
+      "fees": {
+        "referral_pct": null,
+        "fba_eur": null
+      },
+      "features": [
+        "Kühlende Auflage: Das Unterbett 90x200 unterstützt dich durch den speziellen Bezug mit PCM und durch die Füllung, Schweißbildung zu reduzieren und weniger zu üb",
+        "Kühlende Seite: Die obere Liegeseite des Matratzentoppers 90x200 cm besteht aus einem Trikot mit PCM-Kühlveredelung (Phase Change Material). Überschüssige Körpe",
+        "Untere Seite: Die untere Seite des Matratzenschoners 90x200 cm besteht aus einem atmungsaktiven Baumwollbezug mit einem verbesserten Feuchtigkeitstransport. Som",
+        "Füllung: Der Matratzenbezug 90x200 cm mit Kühleffekt ist mit der Paradies Softcell Füllung ausgestattet (70% Polyester und 30% Lyocell) .Durch das Zusammenspiel",
+        "Pflegeleicht: Die kühlende Unterlage 90x200 cm Cool Dream Pad kann einfach bei 40°C gewaschen und im Trockner getrocknet werden."
+      ],
+      "images": 8,
+      "price": {
+        "now": 149.0,
+        "year_ago": 149.0,
+        "summer_median": 149.0,
+        "median_365": 149.0
+      },
+      "note": "",
+      "type": "냉감 전용"
     }
   }
 }
