@@ -1,5 +1,5 @@
 # 3. 매체 제작 > 단계 사이 데이터 주고받기 (1단계 담당 파일 · 2·3단계는 읽고 부르기만)
-# 1단계(단일 변수 추출 ~ A/B 소재 선정) → 2단계(프롬프트 만들기) → 3단계(다듬기·매체 제작·외주 준비)로 넘기는 값의 모양을 여기서 정합니다.
+# 1단계(단일 변수 추출 ~ A/B 소재 선정) → 2단계(프롬프트 만들기·AI 다듬기) → 3단계(사진·영상 초안 → 외주 정리)로 넘기는 값의 모양을 여기서 정합니다.
 # 모양(키 이름)을 바꿀 때는 세 담당자가 같이 정하고 이 파일만 고칩니다.
 #
 # 넘긴 값은 각 단계 폴더의 JSON 파일로 저장됩니다. 그 파일을 커밋·푸시하면, 다른 컴퓨터에서 풀 받은 사람에게 자동으로 이어집니다.
@@ -42,6 +42,12 @@ MEDIA_HANDOFF_PROMPT_SAMPLE = {
               "and the knitted cooling fabric texture",           # B 빈칸
     # 고정 요소: 기본 프롬프트 안의 문구 그대로 (다듬은 뒤에도 남아 있어야 함)
     "fixed": ["white seamless background", "90x200 cm", "soft even studio light", "no text", "no props"],
+    # 2단계 AI 다듬기 결과 (다듬기 전이면 빈칸만 채운 문장, 바꾼 곳 없음)
+    "prompt_a": "",                                # 다듬은 프롬프트 A (비어 있으면 base + slot_a)
+    "prompt_b": "",                                # 다듬은 프롬프트 B (비어 있으면 base + slot_b)
+    "changes": [],                                 # 바꾼 곳 [{"where", "kind": "뺌"|"더함", "reason", "basis": DB ID}]
+    "avoid": [],                                   # 찍지 말 것 (외주 브리프로 그대로 감)
+    "include": [],                                 # 넣을 것 (외주 브리프로 그대로 감)
 }
 
 # (새 흐름에서는 쓰지 않음) 판정 결과 예시. 2단계가 아직 결과를 넣지 않았을 때 3단계가 이 값으로 먼저 개발합니다.
@@ -95,11 +101,34 @@ def media_handoff_set_prompt(prompt: dict) -> None:
 
 
 def media_handoff_prompt() -> dict:
-    """2단계 → 3단계: 프롬프트 재료. 2단계가 아직 넣지 않았으면 예시 값에 "sample": True를 붙여 돌려줍니다."""
+    """2단계 → 3단계: 프롬프트 재료와 다듬은 결과. 2단계가 아직 넣지 않았으면 예시 값에 "sample": True를 붙여 돌려줍니다.
+    다듬은 프롬프트(prompt_a/prompt_b)가 비어 있으면 빈칸만 채운 문장으로 채워서 돌려줍니다."""
     saved = _media_handoff_get("prompt")
-    if saved:
-        return {**saved, "sample": False}
-    return {**MEDIA_HANDOFF_PROMPT_SAMPLE, "fixed": list(MEDIA_HANDOFF_PROMPT_SAMPLE["fixed"]), "sample": True}
+    src = {**MEDIA_HANDOFF_PROMPT_SAMPLE, **saved, "sample": False} if saved else \
+        {**MEDIA_HANDOFF_PROMPT_SAMPLE, "sample": True}
+    src = {**src, **{k: list(src[k]) for k in ("fixed", "changes", "avoid", "include")}}
+    src["prompt_a"] = src["prompt_a"] or media_handoff_fill(src["base"], src["slot_a"])
+    src["prompt_b"] = src["prompt_b"] or media_handoff_fill(src["base"], src["slot_b"])
+    return src
+
+
+def media_handoff_fill(base: str, slot: str) -> str:
+    """기본 프롬프트의 빈칸({slot})을 채웁니다."""
+    return base.replace(MEDIA_HANDOFF_SLOT, slot, 1)
+
+
+def media_handoff_check(src: dict, prompt_a: str, prompt_b: str) -> dict:
+    """A/B 확인 (2단계 다듬기 직후, 3단계 받을 때 둘 다 씀):
+    빈칸 문구가 남아 있는지, 빈칸 밖이 A와 B에서 똑같은지, 고정 요소가 빠지지 않았는지."""
+    slot_a, slot_b = src["slot_a"], src["slot_b"]
+    slot_ok = slot_a in prompt_a and slot_b in prompt_b
+    # 빈칸 문구를 다시 {slot}으로 바꿔 나머지를 비교 (빈칸이 없으면 비교할 수 없어 실패)
+    rest_a = prompt_a.replace(slot_a, MEDIA_HANDOFF_SLOT, 1)
+    rest_b = prompt_b.replace(slot_b, MEDIA_HANDOFF_SLOT, 1)
+    same_rest = slot_ok and rest_a == rest_b
+    missing = [f for f in src["fixed"] if f not in prompt_a or f not in prompt_b]
+    return {"slot_ok": slot_ok, "same_rest": same_rest, "missing": missing,
+            "ok": slot_ok and same_rest and not missing}
 
 
 def media_handoff_set_result(result: dict) -> None:

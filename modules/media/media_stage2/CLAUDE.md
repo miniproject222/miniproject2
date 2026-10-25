@@ -1,4 +1,4 @@
-# media 2단계(프롬프트 만들기) AI 작업 안내
+# media 2단계(프롬프트 만들기 + AI 다듬기) AI 작업 안내
 
 이 파일은 Claude Code가 `modules/media/media_stage2/`에서 작업할 때 자동으로 읽습니다.
 
