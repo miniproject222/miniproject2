@@ -1,0 +1,18 @@
+{
+  "base": "Product photo reference, white seamless background, a cooling mattress pad 90x200 cm {slot}, soft even studio light, no text, no props",
+  "slot_a": "folded, seen from above",
+  "slot_b": "laid flat, camera 45 degrees above, one corner gently lifted to show the edge thickness and the knitted cooling fabric texture",
+  "fixed": [
+    "white seamless background",
+    "90x200 cm",
+    "soft even studio light",
+    "no text",
+    "no props"
+  ],
+  "variable": "메인 이미지 촬영 구도",
+  "prompt_a": "Product photo reference, white seamless background, a cooling mattress pad 90x200 cm folded, seen from above, soft even studio light, no text, no props",
+  "prompt_b": "Product photo reference, white seamless background, a cooling mattress pad 90x200 cm laid flat, camera 45 degrees above, one corner gently lifted to show the edge thickness and the knitted cooling fabric texture, soft even studio light, no text, no props",
+  "changes": [],
+  "avoid": [],
+  "include": []
+}

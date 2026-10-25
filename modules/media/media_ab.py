@@ -1,12 +1,12 @@
 # 3. 매체 제작 > 메인 이미지 A/B (문제 시나리오.md '가설과 소재 연결')
-# 하위 탭 ①과 같은 A/B 설계(plan, media_variable_plan())로 메인 이미지 A/B 안, 촬영 브리프,
+# 하위 탭 ①에서 확정한 A/B 설계(plan, media_variable_confirmed_plan())로 메인 이미지 A/B 안, 촬영 브리프,
 # Manage Your Experiments 안내를 보여 줍니다. 3번 탭의 하위 탭 'A/B 소재 준비'(1단계)에서 부릅니다.
 # 가설·리포트는 직접 읽지 않고 media_variable.py의 함수를 거칩니다 (출처가 바뀌면 그쪽만 고침).
 # 이전 결과·판정 코드는 media_stage2/media_stage2_judge.py에 보관합니다 (지금 흐름에서는 안 씀).
 import streamlit as st
 
-from modules.media.media_variable import (media_variable_candidates, media_variable_hypothesis, media_variable_plan,
-                                          media_variable_report_sqp)
+from modules.media.media_variable import (media_variable_confirmed_plan, media_variable_go_step, media_variable_hypothesis,
+                                          media_variable_plan, media_variable_ref_prompt, media_variable_report_sqp)
 
 MEDIA_AB_REF_PROMPT = ("Product photo reference, white seamless background, a cooling mattress pad 90x200 cm laid flat, "
                        "camera 45 degrees above, one corner gently lifted to show the edge thickness and the knitted "
@@ -20,7 +20,7 @@ MEDIA_AB_RULES = [
 
 
 def media_ab_brief(plan, price, hypothesis_text):
-    """촬영 외주용 브리프 (다운로드 텍스트). A/B와 검색어는 하위 탭 ①과 같은 plan에서 가져옵니다."""
+    """촬영 외주용 브리프 (다운로드 텍스트). A/B와 검색어는 하위 탭 ①에서 확정한 plan에서 가져옵니다."""
     return "\n".join([
         "[메인 이미지 촬영 브리프] SEORI 냉감패드 · amazon.de",
         f"검색어: {plan['query']}",
@@ -40,18 +40,28 @@ def media_ab_brief(plan, price, hypothesis_text):
 
 def media_ab_plan_step():
     """하위 탭 ② A/B 소재 준비: A/B 안, 메인 이미지 규칙, 촬영 브리프, 테스트 도구. 반드시 media_render() 안에서 부릅니다.
+    ①에서 고르는 중인 값이 아니라 '이 변수로 확정'을 누른 값으로 그립니다 (③ 이후 단계와 같은 값).
     가설은 하위 탭 ①에서 이미 보여 주므로 여기서는 다시 보여 주지 않습니다."""
-    plan, price, defaults = media_variable_plan()
+    plan, state = media_variable_confirmed_plan()
+    if plan is None:   # 아직 확정 전: 빈 카드로 ①에서 확정하도록 안내
+        with st.container(border=True, key="media-ab-empty"):
+            st.markdown("**아직 확정한 변수가 없어요**")
+            st.caption("① 에서 변수와 B안을 고르고 '이 변수로 확정'을 누르면 여기에 A/B 소재가 나와요.")
+            st.button("① 으로 가서 확정하기", key="media-btn-ab-go-confirm", type="primary",
+                      on_click=media_variable_go_step)
+        return
+    if state == "changed":   # ①에서 다른 값을 골랐지만 아직 확정하지 않음
+        with st.container(horizontal=True, vertical_alignment="center", key="media-ab-pending"):
+            st.markdown(":orange-badge[확정 안 됨] ① 에서 새로 고른 값이 아직 확정되지 않아, 이전에 확정한 값으로 보여 줘요")
+            st.button("① 으로 가서 확정하기", key="media-btn-ab-go-confirm", type="secondary",
+                      on_click=media_variable_go_step)
+    _, price, defaults = media_variable_plan()   # 가격·기본값 안내는 리포트 값 그대로
     hypothesis_text, _ = media_variable_hypothesis()   # 2번 탭 가설 (없으면 기준 가설)
     # plan에 없는 값(노출·클릭 점유율, 지금 이미지의 문제점, 데이터 출처)만 리포트에서 따로 읽습니다
     sqp = media_variable_report_sqp()
     listing = sqp.get("listing") if isinstance(sqp.get("listing"), dict) else {}
 
-    kpi = f"{plan['kpi']} {plan['kpi_now']:g}배 → 목표 {plan['kpi_goal']:g}배 이상"
-    if sqp.get("imp_share") is not None and sqp.get("click_share") is not None:
-        kpi = (f"노출 점유율 {sqp['imp_share']}% · 클릭 점유율 {sqp['click_share']}% · "
-               f"{kpi} ({sqp.get('source', '')})")
-    st.markdown(f'<div class="media-desc">\'{plan["query"]}\' 검색 · {kpi}</div>', unsafe_allow_html=True)
+    # 검색어·목표 KPI·점유율·출처는 하위 탭 바 오른쪽의 목표 KPI 칩(media_variable_kpi_chip())에 있습니다
     c1, c2 = st.columns(2)
     with c1:
         with st.container(border=True):
@@ -87,5 +97,5 @@ def media_ab_plan_step():
             st.download_button("브리프 다운로드 (.txt)", brief, file_name="media_ab_brief.txt", key="media-btn-ab-brief")
     with c2:
         with st.expander("🤖 AI 각도 레퍼런스 프롬프트 (메인 이미지로 쓰지 않음)", expanded=False):
-            # 하위 탭 ①에서 고른 후보의 레퍼런스 프롬프트 (후보 목록 파일에 없으면 기본 문장)
-            st.code(media_variable_candidates()["picked"].get("ref_prompt") or MEDIA_AB_REF_PROMPT, language=None)
+            # 확정한 B안의 레퍼런스 프롬프트 (후보 목록 파일에 없으면 기본 문장)
+            st.code(media_variable_ref_prompt(plan["b"]) or MEDIA_AB_REF_PROMPT, language=None)
