@@ -12,7 +12,7 @@ import ui_theme as ui
 from modules.media.media_ab import media_ab_plan_step
 from modules.media.media_stage2.media_stage2 import MEDIA_S2_TAB_LABEL, media_stage2_render
 from modules.media.media_stage3.media_stage3 import MEDIA_S3_TAB_LABEL, media_stage3_render
-from modules.media.media_variable import media_variable_step
+from modules.media.media_variable import media_variable_kpi_chip, media_variable_step
 
 MEDIA_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경로 만들 때 사용)
 # 공통 로더(layout_load_css)는 media_style.css만 읽으므로, 단계 폴더의 CSS는 여기서 읽어 넣습니다
@@ -67,5 +67,7 @@ def media_render():
         for i, (tab, (_, render)) in enumerate(zip(tabs, MEDIA_STEPS)):
             if tab.open:   # 선택된 단계만 그립니다
                 with tab:
+                    if i > 0:   # 하위 탭 바 오른쪽에 목표 KPI 칩 (하위 탭 ①은 요약 카드에 KPI가 이미 있음)
+                        media_variable_kpi_chip()
                     render()
                     media_step_nav(i)

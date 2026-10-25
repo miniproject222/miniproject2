@@ -29,6 +29,8 @@ MEDIA_VARIABLE_BADGES = [":blue-badge[If]", ":violet-badge[Because]", ":green-ba
 # KPI 이름: 가설 문장(2번 탭과 같은 원문)은 그대로 두고, 화면에 보일 때만 쉬운 이름으로 바꿉니다
 MEDIA_VARIABLE_KPI_RAW = "클릭 점유율 ÷ 노출 점유율"
 MEDIA_VARIABLE_KPI = MEDIA_HANDOFF_PLAN["kpi"]   # "노출 대비 클릭률"
+# 목표 KPI 칩의 짧은 출처 표시 (리포트 검색어 클릭 분석은 가상 SQP, 전체 출처는 칩의 ⓘ 툴팁)
+MEDIA_VARIABLE_SQP_LABEL = "가상 데이터"
 
 # 후보 목록 파일: 가설마다 후보 묶음 하나 {"hypothesis", "note", "variables"}. 가설이 바뀌면 그 가설의 묶음만 추가합니다.
 # 표의 한 줄 = 사용자가 고를 수 있는 변수 하나. 판정(통과/제외)은 파일에 쓰지 않고 media_variable_judge()가 규칙으로 계산합니다.
@@ -197,6 +199,27 @@ def media_variable_plan() -> tuple[dict, str, list[str]]:
         price = "현재 가격"
         defaults.append("가격")
     return plan, price, defaults
+
+
+def media_variable_kpi_chip() -> None:
+    """하위 탭 바 오른쪽 빈자리에 띄우는 목표 KPI 칩 (하위 탭 ②~④, media_page.py에서 부름).
+    단계를 옮겨 다녀도 목표값이 계속 보이게 합니다. 검색어·점유율·출처는 칩의 ⓘ 툴팁에 둡니다 (media_style.css)."""
+    plan, _, defaults = media_variable_plan()
+    sqp = media_variable_report_sqp()
+    tip = [f"**검색어**: {plan['query']}"]
+    if sqp.get("imp_share") is not None and sqp.get("click_share") is not None:
+        tip.append(f"**지금**: 노출 점유율 {sqp['imp_share']}% · 클릭 점유율 {sqp['click_share']}% "
+                   f"→ {plan['kpi']} {plan['kpi_now']:g}배")
+    if sqp.get("source"):   # 리포트의 출처 문장은 여러 지표의 실제/가상 구분이라 길어서 항목별로 나눠 보여 줌
+        tip.append("**데이터 출처** (1번 리포트)\n"
+                   + "\n".join(f"- {s.strip()}" for s in str(sqp["source"]).split(" / ") if s.strip()))
+    if sqp.get("period"):
+        tip.append(f"**기간**: {sqp['period']}")
+    if defaults:
+        tip.append(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
+    with st.container(key="media-kpi-chip"):
+        st.markdown(f"🎯 {plan['kpi']} {plan['kpi_now']:g}배 → **{plan['kpi_goal']:g}배 이상** · "
+                    f":gray[{MEDIA_VARIABLE_SQP_LABEL}]", help="\n\n".join(tip))
 
 
 def media_variable_hypothesis_step(plan: dict, picked: dict, text: str, status: str):

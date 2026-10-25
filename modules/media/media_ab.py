@@ -11,8 +11,6 @@ from modules.media.media_variable import (media_variable_candidates, media_varia
 MEDIA_AB_REF_PROMPT = ("Product photo reference, white seamless background, a cooling mattress pad 90x200 cm laid flat, "
                        "camera 45 degrees above, one corner gently lifted to show the edge thickness and the knitted "
                        "cooling fabric texture, soft even studio light, no text, no props")
-# 맨 위 설명 줄의 노출·클릭 숫자 옆 짧은 출처 표시 (리포트 검색어 클릭 분석은 가상 SQP, 전체 출처는 ⓘ 툴팁)
-MEDIA_AB_SQP_LABEL = "가상 데이터"
 MEDIA_AB_RULES = [
     "흰 배경(RGB 255, 255, 255)에 텍스트·로고·워터마크 없는 실제 제품 사진",
     "AI로 만든 연출 장면은 메인 이미지에 쓰지 않음 → 서브 이미지나 스폰서드 브랜드 광고에서만 사용",
@@ -49,18 +47,7 @@ def media_ab_plan_step():
     sqp = media_variable_report_sqp()
     listing = sqp.get("listing") if isinstance(sqp.get("listing"), dict) else {}
 
-    kpi = f"{plan['kpi']} {plan['kpi_now']:g}배 → 목표 {plan['kpi_goal']:g}배 이상"
-    source_help = None
-    if sqp.get("imp_share") is not None and sqp.get("click_share") is not None:
-        kpi = (f"노출 점유율 {sqp['imp_share']}% · 클릭 점유율 {sqp['click_share']}% · "
-               f"{kpi} ({MEDIA_AB_SQP_LABEL})")
-        # 리포트의 출처 문장은 길어서(여러 지표의 실제/가상 구분) 줄 끝에는 짧게 쓰고 전체는 ⓘ에 둡니다
-        if sqp.get("source"):
-            source_help = ("**데이터 출처** (1번 리포트)\n\n"
-                           + "\n".join(f"- {s.strip()}" for s in str(sqp["source"]).split(" / ") if s.strip())
-                           + (f"\n\n**기간**: {sqp['period']}" if sqp.get("period") else ""))
-    st.markdown(f'<div class="media-desc">\'{plan["query"]}\' 검색 · {kpi}</div>', unsafe_allow_html=True,
-                help=source_help)
+    # 검색어·목표 KPI·점유율·출처는 하위 탭 바 오른쪽의 목표 KPI 칩(media_variable_kpi_chip())에 있습니다
     c1, c2 = st.columns(2)
     with c1:
         with st.container(border=True):

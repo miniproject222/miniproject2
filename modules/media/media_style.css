@@ -225,3 +225,34 @@
   background: var(--color-bg);
   text-align: center;
 }
+
+/* 목표 KPI 칩 (media_variable.py의 media_variable_kpi_chip, 하위 탭 ②~④) - 작은 알약형 */
+.st-key-media-kpi-chip {
+  width: fit-content !important;
+  margin-left: auto;
+  padding: 6px 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+
+.st-key-media-kpi-chip p {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* 탭 바 오른쪽에 칩이 다 들어가는 화면(탭 바 560px + 칩 약 370px)에서만: 칩을 하위 탭 바와 같은 줄
+   오른쪽 끝으로 올리고, 흐름에서 빼서 아래 내용은 그대로 둠. 그보다 좁으면 탭 바 아래 줄 오른쪽에 그대로 둠
+   (top 값과 1200px은 실제 화면에서 잰 값. 탭 바 높이나 탭 패널 위 여백, 칩 문구가 바뀌면 맞춰야 함) */
+@media (min-width: 1200px) {
+  .st-key-media-root [data-testid="stTabPanel"] {
+    position: relative;
+  }
+
+  [data-testid="stLayoutWrapper"]:has(> .st-key-media-kpi-chip) {
+    position: absolute;
+    top: -41px;
+    right: 0;
+    z-index: 1;
+  }
+}
