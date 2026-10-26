@@ -862,3 +862,34 @@
 [class*="st-key-media-s3-ex-vd-"] { flex-wrap: nowrap; }
 [class*="st-key-media-s3-ex-vd-"] [data-testid="stCaptionContainer"] p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-key-media-s3-ex-head { flex-wrap: wrap; }
+
+/* 스토리보드 크게 보기 팝업 표: 칸 안에서 줄바꿈해 잘리지 않게 (가로 스크롤 없이 한 번에) */
+.media-s3-sb-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+.media-s3-sb-table th,
+.media-s3-sb-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.media-s3-sb-table th { color: var(--color-sub); font-weight: 600; background: var(--color-bg); }
+.media-s3-sb-table th:nth-child(1) { width: 9%; }
+.media-s3-sb-table th:nth-child(2) { width: 6%; }
+.media-s3-sb-table th:nth-child(3) { width: 27%; }
+.media-s3-sb-table th:nth-child(4) { width: 20%; }
+.media-s3-sb-table th:nth-child(5) { width: 20%; }
+.media-s3-sb-table th:nth-child(6) { width: 18%; }
+/* 스토리보드 크게 보기 팝업만 화면 폭 거의 끝까지 넓혀 줄바꿈을 줄임 (세로 스크롤 없이 한 번에) */
+div[role="dialog"]:has(.media-s3-sb-table) {
+  width: 96vw !important;
+  max-width: 96vw !important;
+}
