@@ -168,6 +168,19 @@ def report_keepa_auto_daily():
         return "아침 자동 갱신 꺼짐 (secrets의 KEEPA_AUTO_DAILY = \"on\"으로 켬)"
     from modules.report.report_ab import report_ab_day   # 아침 기준일 (08:00 전이면 전날)
     day = report_ab_day()
+    # 창 두 개가 동시에 열려도 한 번만 조회 (2026-10-26 17:37에 동시 접속으로 두 번 조회돼 12토큰 사용) - 잠근 뒤 다시 확인
+    with report_keepa_auto_lock():
+        return _report_keepa_auto_daily_locked(day)
+
+
+@st.cache_resource
+def report_keepa_auto_lock():
+    """아침 자동 갱신용 잠금 (앱 서버 하나에 하나)."""
+    import threading
+    return threading.Lock()
+
+
+def _report_keepa_auto_daily_locked(day):
     snap = report_keepa_snapshot() or {}
     if snap.get("auto_day") == day:
         return f"아침 자동 갱신 완료 ({snap.get('fetched_at', day)})"
