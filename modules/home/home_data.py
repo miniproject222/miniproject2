@@ -70,6 +70,33 @@ def home_heat_scenario(temps):
     return out
 
 
+# 지역별 광고 비중: ④ 광고 타이밍과 같은 규칙(weather_data.weather_build_plan)을 홈 도시 예보로 계산
+#   60%는 4개 지역에 똑같이, 40%는 30°C 이상 예보일에 (최고기온 - 29)점 비례로 추가. 30°C 이상 예보가 없으면 4개 지역 똑같이.
+# ④는 지역별 비중을 store에 저장하지 않아(배수·근거·알림·날짜별 아마존 예산만 저장) 홈이 같은 규칙으로 계산합니다.
+# ④ 지역(3개 도시 평균) 대신 홈 지도의 권역 대표 도시 1곳씩 씀 (home_globe.HOME_CITIES)
+HOME_REGIONS = [("북부", ["Hamburg"]), ("서부", ["Köln"]), ("동부", ["Berlin"]), ("남부", ["München"])]
+HOME_HEAT_POOL = 0.40
+
+
+def home_region_shares(temps):
+    """[{"name", "share"(%), "max7", "hot_days"}] (비중 큰 순) + 30°C 이상 예보가 있었는지"""
+    by_city = {p["city"]: p for p in temps}
+    rows = []
+    for name, cities in HOME_REGIONS:
+        days = [[d["max"] for d in (by_city[c].get("daily") or [])][:7] for c in cities if c in by_city]
+        days = [d for d in days if d]
+        if not days:
+            continue
+        tmax = [sum(col) / len(col) for col in zip(*days)]   # 지역 기온 = 도시 평균
+        points = sum(max(0.0, t - (HOME_HEAT_TEMP - 1)) for t in tmax)
+        rows.append({"name": name, "points": points, "max7": max(tmax), "hot_days": sum(1 for t in tmax if t >= HOME_HEAT_TEMP)})
+    total = sum(r["points"] for r in rows)
+    pool = HOME_HEAT_POOL if total else 0
+    for r in rows:
+        r["share"] = ((1 - pool) / len(rows) + (pool * r["points"] / total if total else 0)) * 100
+    return sorted(rows, key=lambda r: -r["share"]), bool(total)
+
+
 def home_city_warning(p):
     """도시별 경보: ("폭염경보" / "더위 주의" / "", 기준 기온)"""
     peak = max(p["temp"], p.get("tomorrow", p["temp"]))
