@@ -40,7 +40,7 @@
   width: var(--common-rail-w);
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
+  gap: 8px;
   box-sizing: border-box;
   padding: 12px 3px 16px;
   overflow-y: auto;
@@ -49,6 +49,8 @@
 }
 
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"] {
+  position: relative;
+  overflow: visible;
   height: auto;
   min-height: 48px;
   justify-content: center;
@@ -56,7 +58,7 @@
   border-radius: 14px !important;
   background: transparent !important;
   box-shadow: none !important;
-  color: var(--color-sub) !important;
+  color: var(--color-text) !important;
 }
 
 /* 탭 그림은 윗줄, 이름은 아랫줄 (그림은 common_layout.py가 탭마다 --common-tab-img로 넘김)
@@ -107,11 +109,46 @@
   min-height: 52px;
   padding: 6px 1px !important;
   background-position: center !important;
-  background-size: 40px !important;
+  background-size: 32px !important;
 }
 
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(1) p {
   display: none;
+}
+
+/* 문제 분석 → 가설 수립 → 매체 제작은 이어지는 흐름: 탭 사이를 띄우고 아래 방향 화살표 */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2),
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(3) {
+  margin-bottom: 14px;
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2)::after,
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(3)::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -16px;
+  width: 7px;
+  height: 7px;
+  margin-left: -5px;
+  border-right: 2px solid var(--color-sub);
+  border-bottom: 2px solid var(--color-sub);
+  transform: rotate(45deg);
+}
+
+/* 날씨 광고 타이밍은 별도 단계: 화살표 없이 띄우고 구분선 */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(5) {
+  margin-top: 14px;
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(5)::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-sub) 45%, transparent);
 }
 
 /* 세로 줄에서는 필요 없는 탭 밑줄과 좌우 스크롤 화살표 숨기기 */
