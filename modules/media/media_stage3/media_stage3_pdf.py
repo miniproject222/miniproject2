@@ -91,8 +91,70 @@ class MediaS3Pdf(FPDF):
         return self.get_y()
 
 
+# ① 분석에서 '상세 정보 없음'으로 나온 항목 → 여분으로 찍어 둘 영상 컷 (다음 가설 대비, 재촬영 방지)
+MEDIA_S3_EXTRA_CUTS = {"세탁": "세탁기에 넣고 빼는 장면", "고정 밴드": "고정 밴드가 매트리스 모서리를 잡는 장면",
+                       "인증": "인증 라벨 클로즈업", "두께·사이즈": "줄자로 두께·사이즈를 재는 장면"}
+
+
+def media_s3_brief(src: dict, group: dict, ctx: dict) -> dict:
+    """외주 브리프 1·2번 내용 (⑤ 화면 카드와 PDF가 같이 씀). 값은 전부 ctx(리포트·가설·스토리보드)에서 가져오고,
+    없는 값은 그 줄을 뺍니다. ctx: sqp, kpi_photo, hooks{"A","B"}, common, video_sec, hook_sec, fixed_ko, forbidden, image_fixes."""
+    sqp = ctx.get("sqp") or {}
+    why = []
+    if sqp.get("query") and isinstance(sqp.get("ratio"), (int, float)):
+        why.append(f"amazon.de 검색어 '{sqp['query']}'에서 우리 상품은 보이는 것에 비해 덜 눌립니다 "
+                   f"(노출 대비 클릭 {sqp['ratio']:g}배).")
+    if sqp.get("cart_rate_ours") is not None and sqp.get("cart_rate_market") is not None:
+        why.append(f"클릭한 뒤 장바구니 비율은 시장과 비슷합니다 (우리 {sqp['cart_rate_ours']}% vs 시장 {sqp['cart_rate_market']}%). "
+                   "그래서 문제는 첫인상입니다.")
+    if isinstance(sqp.get("price_gap"), (int, float)) and sqp["price_gap"] > 0:
+        why.append(f"클릭된 상품보다 €{sqp['price_gap']:.0f} 비싼데, 비싼 이유가 화면에서 안 보입니다.")
+    hooks, common = ctx.get("hooks"), ctx.get("common") or []
+    video_sec, hook_sec = ctx.get("video_sec", 10), ctx.get("hook_sec", 3)
+    variable, a, b = group.get("variable") or src["variable"], group.get("a") or src["slot_a"], group.get("b") or src["slot_b"]
+    if hooks:
+        exp = [("어디서", "아마존 메인 이미지", "자사몰 상품 영상"),
+               ("바꾸는 것", variable, f"첫 {hook_sec}초 장면"),
+               ("A (지금 방식)", a, hooks["A"].get("화면", "")),
+               ("B (가설)", b, hooks["B"].get("화면", "")),
+               ("같게 둘 것", "배경·조명·보정·제품", f"나머지 {video_sec - hook_sec}초·길이·자막·음악"),
+               ("목표", ctx.get("kpi_photo") or "-", "영상 클릭률 B > A")]
+        result = f"사진 2장 + 영상 2버전({video_sec}초)을 한 번의 촬영으로 만듭니다."
+    else:
+        exp = [("어디서", "아마존 메인 이미지", "-"), ("바꾸는 것", variable, "-"), ("A (지금 방식)", a, "-"),
+               ("B (가설)", b, "-"), ("같게 둘 것", "배경·조명·보정·제품", "-"), ("목표", ctx.get("kpi_photo") or "-", "-")]
+        result = "사진 2장을 촬영합니다 (영상 A·B 스토리보드가 없어 영상은 이번 요청에서 빠짐)."
+    common_txt = " → ".join(str(r.get("화면", "")) for r in common)
+    cuts = ([("컷 1 · 공통", f"{common_txt} ({video_sec - hook_sec}초)", "A·B 둘 다"),
+             ("컷 2 · A 첫 3초", hooks["A"].get("화면", ""), "영상 A"),
+             ("컷 3 · B 첫 3초", hooks["B"].get("화면", ""), "영상 B")] if hooks else [])
+    edit_rules = (["편집: 영상 A = 컷 2 + 컷 1, 영상 B = 컷 3 + 컷 1",
+                   "컷 2와 컷 3은 같은 위치·조명·인물. 컷 1은 두 버전이 완전히 같은 파일",
+                   "소리 없이 자동 재생: 자막은 독일어 존댓말(Sie)로 짧게, 첫 3초에는 자막 없음 (차이가 화면에만 있게)"]
+                  if hooks else [])
+    rules = ["'체온을 낮춘다' 금지 → '피부 표면이 시원하게 느껴진다'만",
+             "숫자 옆에는 시험 조건을 꼭 같이 (완제품·온도차 10 °C·시험기관·성적서 번호)"]
+    rules += [f"쓰지 말 것: {f}" for f in (ctx.get("forbidden") or [])[1:5]]
+    extra, seen = [], []   # 순서 유지 (세탁 → 고정 밴드 → …)
+    for fix in ctx.get("image_fixes") or []:
+        for key, cut in MEDIA_S3_EXTRA_CUTS.items():
+            if key in str(fix.get("title", "")) and key not in seen:
+                seen.append(key)
+                extra.append(cut)
+    extra_note = ("① 분석에서 '상세페이지에 " + "·".join(seen) + " 정보 없음'이 다음 문제로 나왔어요. "
+                  "가설이 틀리면 다시 찍지 않고 편집만 바꿔요.") if seen else ""
+    return {"why": why, "hypothesis": group.get("hypothesis") or "", "exp": exp, "result": result,
+            "common": ["실제 SEORI 냉감패드 90×200 cm 사용. 색·원단·누빔은 실물 그대로, 두께 과장 금지",
+                       "사진과 영상은 같은 날, 같은 세트, 같은 조명에서 촬영"],
+            "photo": [("사진 A", a), ("사진 B", b),
+                      ("규칙", "흰 배경(RGB 255), 글자·로고·소품·사람·손 없음 (아마존 메인 이미지 규칙)"),
+                      ("고정 요소", ctx.get("fixed_ko") or ", ".join(src["fixed"]) or "-"),
+                      ("받을 것", "A·B 각 3컷 (원본 + 흰 배경 보정본)")],
+            "cuts": cuts, "edit": edit_rules, "rules": rules, "extra": extra, "extra_note": extra_note}
+
+
 def media_s3_build_pdf(src: dict, group: dict, storyboard: list, photos: list, videos: list,
-                       today: str, note: str) -> bytes:
+                       today: str, note: str, ctx: dict | None = None) -> bytes:
     """외주 촬영 브리프 PDF. 순서: 개요(가설·단일 변수·A/B) → 촬영 지시 → 프롬프트 A·B → 영상 스토리보드 → 첨부 파일."""
     pdf = MediaS3Pdf()
     pdf.add_page()
@@ -105,32 +167,44 @@ def media_s3_build_pdf(src: dict, group: dict, storyboard: list, photos: list, v
         pdf.set_line_width(wd)
         pdf.line(L, yy, L + W, yy)
     pdf.text_at(L, 37, W, "외주 촬영 브리프", size=18, bold=True, align="C", line_h=9)
-    pdf.text_at(L, 47, W, "(SEORI 냉감패드 · amazon.de 메인 이미지 A/B 테스트용 촬영 요청)", size=9, color="muted", align="C")
+    pdf.text_at(L, 47, W, "(SEORI 냉감패드 · 아마존 메인 이미지 A/B + 자사몰 영상 A/B 촬영 요청)", size=9, color="muted", align="C")
     pdf.text_at(L, 57, W, f"보고일자 {today}", size=8, color="muted", align="R")
     pdf.set_y(64)
 
-    # 1. 개요
+    brief = media_s3_brief(src, group, ctx or {})
+
+    # 1. 이번 촬영의 목적: 왜 찍나(데이터) → 무엇을 확인하나(가설) → 어떻게 확인하나(사진·영상 실험 2개) → 결과물
     pdf.head("1. 이번 촬영의 목적")
-    if group.get("hypothesis"):
-        pdf.text_at(L + 3, pdf.get_y() + 1, W - 3, "검증할 가설", size=8.5, bold=True, color="muted")
-        pdf.box(group["hypothesis"], size=9)
-    pdf.set_y(pdf.get_y() + 2)
-    pdf.table_rows([("구분", "내용"),
-                    ("두 사진에서 바꾸는 것", group.get("variable") or src["variable"]),
-                    ("지금 사진 (지금 아마존에 올라간 것)", group.get("a") or src["slot_a"]),
-                    ("새로 찍을 사진", group.get("b") or src["slot_b"])], widths=(32, 68))
-    pdf.text_at(L, pdf.get_y() + 1.5, W, "두 사진은 위 한 가지만 다르고 나머지(조명·배경·보정·제품)는 똑같아야 "
-                "어느 쪽이 더 잘 팔리는지 정확히 비교할 수 있습니다.", size=8, color="muted")
+    pdf.text_at(L, pdf.get_y() + 1, W, "① 왜 찍나 (1번 문제 분석 데이터)", size=9, bold=True)
+    pdf.bullets(brief["why"] or ["1번 리포트 값이 없어 생략"])
+    if brief["hypothesis"]:
+        pdf.text_at(L, pdf.get_y() + 1.5, W, "② 무엇을 확인하나 (가설)", size=9, bold=True)
+        pdf.box(brief["hypothesis"], size=9)
+    pdf.text_at(L, pdf.get_y() + 1.5, W, "③ 어떻게 확인하나 (같은 가설, 실험 2개)", size=9, bold=True)
+    pdf.table_rows([("구분", "사진 A/B", "영상 A/B"), *brief["exp"]], widths=(18, 41, 41))
+    pdf.text_at(L, pdf.get_y() + 1.5, W, "④ " + brief["result"], size=9, bold=True)
 
     # 2. 촬영 지시
     pdf.head("2. 촬영 지시")
-    pdf.bullets(["조명, 배경, 보정은 A·B 똑같이",
-                 "고정 요소: " + (", ".join(src["fixed"]) or "-"),
-                 "받을 것: 메인 이미지 A·B 각 3컷 (원본 + 흰 배경 보정본), 가능하면 서브 이미지도 같이"])
-    pdf.text_at(L, pdf.get_y() + 1, W, "찍지 말 것", size=9, bold=True)
-    pdf.bullets(src["avoid"] or ["(2단계 AI 다듬기 결과가 들어갈 자리)"])
-    pdf.text_at(L, pdf.get_y() + 1, W, "넣을 것", size=9, bold=True)
-    pdf.bullets(src["include"] or ["(2단계 AI 다듬기 결과가 들어갈 자리)"])
+    pdf.text_at(L, pdf.get_y() + 1, W, "① 공통 (사진·영상 모두)", size=9, bold=True)
+    pdf.bullets(brief["common"])
+    pdf.text_at(L, pdf.get_y() + 1, W, "② 사진 (아마존 메인 이미지)", size=9, bold=True)
+    pdf.table_rows([("항목", "내용"), *brief["photo"]], widths=(18, 82))
+    if src["avoid"]:
+        pdf.text_at(L, pdf.get_y() + 1, W, "사진에서 찍지 말 것", size=8.5, bold=True, color="muted")
+        pdf.bullets(src["avoid"], size=8)
+    if src["include"]:
+        pdf.text_at(L, pdf.get_y() + 1, W, "사진에 넣을 것", size=8.5, bold=True, color="muted")
+        pdf.bullets(src["include"], size=8)
+    if brief["cuts"]:
+        pdf.text_at(L, pdf.get_y() + 1.5, W, "③ 영상 (자사몰, 한 번 촬영 → 두 버전 편집)", size=9, bold=True)
+        pdf.table_rows([("컷", "내용", "쓰는 곳"), *brief["cuts"]], widths=(18, 66, 16))
+        pdf.bullets(brief["edit"], size=8.5)
+    pdf.text_at(L, pdf.get_y() + 1.5, W, "④ 독일 광고 규칙 (어기면 재촬영)", size=9, bold=True)
+    pdf.bullets(brief["rules"], size=8.5)
+    if brief["extra"]:
+        pdf.text_at(L, pdf.get_y() + 1.5, W, "⑤ 여분 컷 (재촬영 방지)", size=9, bold=True)
+        pdf.bullets(brief["extra"] + [brief["extra_note"]], size=8.5)
 
     # 3. 프롬프트
     pdf.head("3. 참고 이미지 프롬프트 (AI 초안을 만든 문장)")
@@ -140,6 +214,9 @@ def media_s3_build_pdf(src: dict, group: dict, storyboard: list, photos: list, v
 
     # 4. 영상 스토리보드
     pdf.head("4. 영상 스토리보드")
+    if storyboard and any("첫" in str(r.get("장면", "")) and str(r.get("장면", "")).strip()[-1:] in ("A", "B") for r in storyboard):
+        pdf.text_at(L + 3, pdf.get_y() + 1, W - 3, "자사몰 A/B 영상 2버전: 한 번 촬영해서 두 버전으로 편집해 주세요. "
+                    "첫 3초만 A·B가 다르고, 나머지 장면·길이·자막·음악은 두 버전이 완전히 같아야 합니다.", size=8.5, bold=True)
     if storyboard:
         cols = ["장면", "길이(초)", "화면", "움직임", "자막", "피할 것"]
         rows = [tuple(cols)] + [tuple(r.get(c, "") for c in cols) for r in storyboard]

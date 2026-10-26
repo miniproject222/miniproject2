@@ -16,7 +16,7 @@ from modules.media.media_stage3.media_stage3_hf_login import (media_s3_hf_login_
                                                                media_s3_hf_logout)
 from modules.media.media_stage3.media_stage3_hf_mcp import (MediaS3HFError, media_s3_hf_check, media_s3_hf_download,
                                                            media_s3_hf_submit)
-from modules.media.media_stage3.media_stage3_ai import (MEDIA_S3_VIDEO_ASPECT, MEDIA_S3_VIDEO_SECONDS, MediaS3AIError, media_s3_ai_ready, media_s3_forbidden_hits,
+from modules.media.media_stage3.media_stage3_ai import (MEDIA_S3_VIDEO_ASPECT, MEDIA_S3_VIDEO_HOOK, MEDIA_S3_VIDEO_SECONDS, MediaS3AIError, media_s3_scene_version, media_s3_video_avoid, media_s3_ai_ready, media_s3_forbidden_hits,
                                                        media_s3_edit_image, media_s3_make_image, media_s3_make_storyboard, media_s3_make_video,
                                                        media_s3_translate,
                                                        media_s3_video_ready)
@@ -38,7 +38,7 @@ MEDIA_S3_PHOTOS = "media-s3-assets-photos"
 MEDIA_S3_VIDEOS = "media-s3-assets-videos"
 MEDIA_S3_STORYBOARD = "media-s3-storyboard"
 MEDIA_S3_STORYBOARD_DONE = "media-s3-storyboard-done"   # 확정한 스토리보드 (영상 초안은 이걸로 만듦)
-MEDIA_S3_VIDEO_JOB = "media-s3-video-job"               # 만드는 중인 Higgsfield 영상 작업 {"job_id", "prompt"}
+MEDIA_S3_VIDEO_JOB = "media-s3-video-job"               # 만드는 중인 Higgsfield 영상 작업 [{"job_id", "prompt", "ver", "started"}] (A·B 둘)
 MEDIA_S3_VIDEO_LINKS = "media-s3-video-links"           # 영상 파일 이름 → {"job_id", "url"} (Higgsfield에서 보기)
 MEDIA_S3_HF_SITE = "https://higgsfield.ai"
 MEDIA_S3_GROUP = "media-s3-group"               # 지금 가설 묶음 {"id", "hypothesis", "variable", "a", "b"}
@@ -47,18 +47,18 @@ MEDIA_S3_HISTORY = "media-s3-history"           # 만든 결과 기록 목록
 MEDIA_S3_PICK = "media-s3-pick"                 # ⑤로 보내려고 고른 기록(file) 목록 ('만든 결과 보기'의 체크)
 MEDIA_S3_NOTES = "media-s3-notes"               # 위쪽 알림(예시 프롬프트 등) → 각 탭 아래 안내 줄에 붙임
 MEDIA_S3_PHOTO_IDX = "media-s3-photo-idx"       # 사진 넘겨 보기에서 지금 보는 사진 번호
-# 영상 스토리보드 틀: 문제 → 해결 → 증거 → 신뢰 → 마무리 (AI가 리포트 값으로 채울 자리, 지금은 예시)
+# 영상 스토리보드 틀 (자사몰 A/B, 10초): 첫 3초만 A·B가 다르고(A = 지금 방식, B = 가설의 이유가 보임) 나머지는 공통.
+# 외주는 한 번 찍고 두 버전으로 편집. AI가 가설·리포트 값으로 채울 자리, 지금은 예시 (가설: 두께·원단이 보이면 클릭↑)
 MEDIA_S3_STORYBOARD_SAMPLE = [
-    {"장면": "1 문제", "길이(초)": 3, "화면": "여름밤 독일식 침실, 이불을 걷어 내는 손", "움직임": "이불을 천천히 걷어 냄",
-     "자막": "„Über 26 °C im Schlafzimmer?\"", "피할 것": "과장된 표정, 공포 연출"},
-    {"장면": "2 해결", "길이(초)": 3, "화면": "접힌 냉감패드를 침대 위에서 펼침 (레퍼런스 A)", "움직임": "두 손으로 펼침",
-     "자막": "", "피할 것": "얼음, 서리, 차가운 김"},
-    {"장면": "3 증거: 두께", "길이(초)": 4, "화면": "모서리를 들어 단면 두께를 보여 줌 (레퍼런스 B)", "움직임": "모서리를 천천히 들기",
-     "자막": "두께 수치 (시험값 확보 후)", "피할 것": "실제보다 두꺼워 보이는 연출"},
-    {"장면": "4 증거: 원단", "길이(초)": 4, "화면": "손바닥으로 원단을 쓸고 면 뒷면을 보여 줌", "움직임": "쓸기 → 뒤집기",
-     "자막": "피부 표면 기준 표현만", "피할 것": "체온을 낮춘다, 천연"},
-    {"장면": "5 신뢰·마무리", "길이(초)": 3, "화면": "90×200 침대에 깔린 모습, 인증 라벨 클로즈업", "움직임": "위에서 내려오는 카메라",
-     "자막": "90 × 200 cm · OEKO-TEX® (인증 번호)", "피할 것": "친환경 아이콘, 직접 만든 인증 마크"},
+    {"장면": "1 첫 3초 · A", "길이(초)": 3, "화면": "침대에 깔린 냉감패드를 멀리서 보여 줌 (두께·원단은 안 보임)", "움직임": "고정 카메라",
+     "자막": "", "피할 것": "B와 다른 배경·조명"},
+    {"장면": "1 첫 3초 · B", "길이(초)": 3, "화면": "같은 침대, 손이 원단을 쓸고 모서리를 들어 두께 클로즈업", "움직임": "쓸기 → 모서리 들기",
+     "자막": "", "피할 것": "실제보다 두꺼워 보이는 연출"},
+    {"장면": "2 공통 · 증거", "길이(초)": 4, "화면": "손바닥을 패드에 대는 장면", "움직임": "손을 천천히 올려놓기",
+     "자막": "Die Hautoberfläche fühlt sich bis zu 7,8 °C kühler an (Wärmebildmessung, Fertigprodukt)",
+     "피할 것": "체온을 낮춘다, 얼음·서리 연출"},
+    {"장면": "3 공통 · 마무리", "길이(초)": 3, "화면": "90×200 침대에 깔린 모습, OEKO-TEX 라벨 → 자사몰 구매 안내", "움직임": "위에서 내려오는 카메라",
+     "자막": "OEKO-TEX® STANDARD 100 · Jetzt im Shop", "피할 것": "친환경 아이콘, 직접 만든 인증 마크"},
 ]
 
 
@@ -111,16 +111,85 @@ def media_s3_current(key: str) -> list:
     return [f for f in st.session_state.get(key, []) if file_group.get(f[0], gid) == gid]
 
 
-def media_s3_video_prompt(src: dict, storyboard: list) -> str:
-    """영상 초안 프롬프트: 스토리보드 장면을 순서대로 이어 붙이고, 2단계의 찍지 말 것을 덧붙입니다."""
+def media_s3_video_versions(storyboard: list) -> dict:
+    """확정한 스토리보드 → 버전별 장면 {"A": [...], "B": [...]} (첫 3초 A·B + 공통 장면).
+    첫 3초 A·B가 없는 예전 스토리보드면 {"": 전체 장면} (영상 하나)."""
+    hooks = {media_s3_scene_version(r): r for r in storyboard if media_s3_scene_version(r)}
+    common = [r for r in storyboard if not media_s3_scene_version(r)]
+    if set(hooks) != {"A", "B"}:
+        return {"": list(storyboard)}
+    return {v: [hooks[v], *common] for v in ("A", "B")}
+
+
+def media_s3_video_prompt(src: dict, storyboard: list, ver: str = "") -> str:
+    """영상 초안 프롬프트(버전 하나): 그 버전의 장면을 순서대로 이어 붙이고, 2단계의 찍지 말 것을 덧붙입니다.
+    A·B는 첫 장면만 다르고 나머지 문장은 글자까지 같습니다 (공통 장면이 비슷하게 나오도록)."""
+    rows = media_s3_video_versions(storyboard).get(ver) or storyboard
     scenes = [f"{i}. ({r.get('길이(초)', '')}s) {r.get('화면', '')} / {r.get('움직임', '')}"
               + (f" / 자막: {r['자막']}" if r.get("자막") else "") + (f" / 피할 것: {r['피할 것']}" if r.get("피할 것") else "")
-              for i, r in enumerate(storyboard, 1) if r.get("화면")]
-    total = sum(int(r.get("길이(초)") or 0) for r in storyboard)
-    return "\n".join([f"Short product video draft, about {total} seconds, 16:9, realistic and calm, no exaggeration.",
-                      f"Product: cooling mattress pad 90x200 cm. Single variable shown in the photos: {src['variable']}.",
+              for i, r in enumerate(rows, 1) if r.get("화면")]
+    return "\n".join([f"Short product video draft, {MEDIA_S3_VIDEO_SECONDS} seconds, 16:9, realistic and calm, no exaggeration, "
+                      "silent autoplay (no sound, short German subtitles on screen).",
+                      "Product: cooling mattress pad 90x200 cm, the same product look in every scene.",
                       "Scenes:", *scenes,
-                      *(["Avoid: " + ", ".join(src["avoid"])] if src["avoid"] else [])])
+                      *(["Avoid: " + ", ".join(media_s3_video_avoid(src))] if media_s3_video_avoid(src) else [])])
+
+
+def _media_s3_sub_time(sec: float, sep: str) -> str:
+    return f"00:{int(sec) // 60:02d}:{int(sec) % 60:02d}{sep}000"
+
+
+def media_s3_video_subs(rows: list, ver: str = "") -> dict:
+    """초안 영상에 붙일 한국어 설명 자막 {"vtt", "srt"}: 스토리보드 장면 길이대로 시간을 나누고,
+    장면마다 '[영상 A · 첫 3초] 화면 설명'과 (있으면) 독일어 자막의 뜻을 한국어로 보여 줍니다.
+    AI 영상에 글자를 직접 넣으면 한글이 깨져서, 영상 위에 겹쳐 보이는 자막 파일로 만듭니다 (앱 재생기·zip의 .srt)."""
+    def short(text: str, n: int = 55) -> str:   # 영상을 덜 가리게 한두 줄로
+        text = str(text).strip().split(". ")[0].rstrip(".")
+        return text if len(text) <= n else text[:n].rstrip() + "…"
+
+    cues, t = [], 0.0
+    for i, r in enumerate(rows):
+        sec = float(r.get("길이(초)") or 0) or 3.0
+        hv = media_s3_scene_version(r)
+        part = (f"첫 {int(sec)}초 · {'A안 (지금 방식)' if hv == 'A' else 'B안 (가설 장면)'}" if hv
+                else f"공통 장면 {i}" if ver else str(r.get("장면", "")))
+        lines = [f"[영상 {ver} · {part}]" if ver else f"[{part}]", short(r.get("화면", ""))]
+        de = str(r.get("자막") or "").strip()
+        if de:
+            ko = ""
+            if media_s3_ai_ready("OPENAI_API_KEY"):
+                try:
+                    ko = media_s3_translate(de)
+                except MediaS3AIError:
+                    ko = ""
+            lines.append(f"자막 뜻: {short(ko or de)}")
+        cues.append((t, t + sec, [line for line in lines if line]))
+        t += sec
+    vtt = "WEBVTT\n\n" + "\n".join(f"{_media_s3_sub_time(a, '.')} --> {_media_s3_sub_time(b, '.')}\n" + "\n".join(ls) + "\n"
+                                     for a, b, ls in cues)
+    srt = "\n".join(f"{i}\n{_media_s3_sub_time(a, ',')} --> {_media_s3_sub_time(b, ',')}\n" + "\n".join(ls) + "\n"
+                    for i, (a, b, ls) in enumerate(cues, 1))
+    return {"vtt": vtt, "srt": srt}
+
+
+def media_s3_video_subtitles(name: str, kind: str = "vtt") -> str | None:
+    """영상 파일 이름(작업 공간 이름 또는 기록 사본 이름)에 붙은 한국어 설명 자막. 없으면 None (예전 영상)."""
+    for key, info in (st.session_state.get(MEDIA_S3_VIDEO_LINKS) or {}).items():
+        if (name == key or name.endswith("_" + key)) and isinstance(info, dict) and info.get(f"subs_{kind}"):
+            return info[f"subs_{kind}"]
+    return None
+
+
+def media_s3_play(name: str, content: bytes) -> None:
+    """영상 재생 (한국어 설명 자막이 있으면 같이 켬)."""
+    subs = media_s3_video_subtitles(name)
+    st.video(content, subtitles={"한국어 설명": subs} if subs else None)
+
+
+def media_s3_video_label(name: str) -> str:
+    """만든 영상 파일 이름 → 부르는 이름: video_A_…_ai.mp4 → '영상 A', 그 밖(예전 영상) → '영상'."""
+    part = name.split("_")
+    return f"영상 {part[1]}" if len(part) > 2 and part[1] in ("A", "B") else "영상"
 
 
 @st.dialog("자세히 보기", width="large")
@@ -186,16 +255,16 @@ A/B 테스트는 사진 A와 B가 **딱 한 가지(단일 변수)만** 달라야
 
 ※ AI 사진은 아마존 메인 이미지로 쓰지 않아요 (촬영 참고용).""",
     "video": """**이 탭은 뭐 하는 곳?**
-외주 업체에 보낼 **짧은 상품 영상의 설계도(스토리보드)**를 만들고, 그 설계도로 **초안 영상**을 AI로 만들어 보는 곳이에요.
+자사몰에서 클릭률을 비교할 **영상 A·B의 설계도(스토리보드)**를 만들고, 그 설계도로 **10초 초안 영상 A·B**를 AI로 만들어 보는 곳이에요.
 
 **왜 하나요?**
-영상은 장면 순서·길이·자막을 먼저 정해 둬야 업체와 오해가 없어요.
-**문제 → 해결 → 증거 → 신뢰 → 마무리** 순서로 "왜 이 패드를 사야 하는지" 보여 줘요.
+같은 가설을 영상에서도 시험해요. **첫 3초만** A(지금 방식)와 B(가설의 이유가 보이는 장면)가 다르고, 나머지 장면은 같아요.
+외주는 이 표를 보고 **한 번 찍어서 두 버전으로 편집**해요.
 
 **순서**
-1. **스토리보드 만들기** (AI가 리포트 값으로 채움) → 표에서 직접 고치기
-2. **스토리보드 확정** (오른쪽 영상 프롬프트가 이 표로 만들어져요)
-3. **영상 초안 만들기** (Higgsfield, 3~5분) → 다 되면 '만든 결과 보기'에서 확인
+1. **스토리보드 만들기** (AI가 2번 가설의 이유 + 리포트 값으로 채움) → 표에서 직접 고치기
+2. **스토리보드 확정**
+3. **영상 A·B 초안 만들기** (Higgsfield, 10초·480p·소리 없음, A·B 동시에) → '만든 영상 보기'에서 비교
 
 **표시 뜻**: 확정됨 = 지금 표로 영상을 만듦 · 다시 확정 필요 = 표가 바뀜, 확정을 다시 눌러야 반영 · 금지 표현 있음 = 리포트 금지어가 들어 있음""",
     "history": """**이 탭은 뭐 하는 곳?**
@@ -320,10 +389,20 @@ def media_s3_photo_carousel():
                       args=(MEDIA_S3_PHOTOS, name, "media-s3-photo-files"))
 
 
+def media_s3_video_labels(names: list) -> list:
+    """팝업에서 고를 이름: '영상 A', '영상 B' (같은 이름이 또 있으면 '영상 A (2)'처럼 번호)."""
+    out, seen = [], {}
+    for n in names:
+        base = media_s3_video_label(n)
+        seen[base] = seen.get(base, 0) + 1
+        out.append(base if seen[base] == 1 else f"{base} ({seen[base]})")
+    return out
+
+
 def _media_s3_video_view_set(names: list) -> None:
     """'만든 영상' 팝업에서 영상 1·2… 고르기 콜백."""
     picked = st.session_state.get("media-s3-video-view")
-    labels = [f"영상 {i + 1}" for i in range(len(names))]
+    labels = media_s3_video_labels(names)
     if picked in labels:
         st.session_state["media-s3-video-idx"] = labels.index(picked)
 
@@ -338,12 +417,12 @@ def media_s3_video_dialog():
             st.caption("아직 만든 영상이 없어요.")
             return
         names = [n for n, _ in kept]
-        labels = [f"영상 {i + 1}" for i in range(len(kept))]
+        labels = media_s3_video_labels(names)
         idx = st.session_state.get("media-s3-video-idx", len(kept) - 1) % len(kept)
         st.session_state["media-s3-video-idx"] = idx
         st.session_state["media-s3-video-view"] = labels[idx]
         name, content = kept[idx]
-        st.video(content)
+        media_s3_play(name, content)
         with st.container(horizontal=True, vertical_alignment="center", key="media-s3-video-dialog-info"):
             st.segmented_control("볼 영상", labels, key="media-s3-video-view", on_change=_media_s3_video_view_set,
                                  args=(names,), label_visibility="collapsed")
@@ -454,7 +533,8 @@ def media_s3_storyboard_section(src: dict):
     if make:
         with st.spinner("스토리보드를 만드는 중이에요 (10~20초)"):
             try:
-                st.session_state[MEDIA_S3_STORYBOARD] = media_s3_make_storyboard(src, report)
+                from modules.media.media_variable import media_variable_saved   # 2번 탭 가설 (순환 import 방지)
+                st.session_state[MEDIA_S3_STORYBOARD] = media_s3_make_storyboard(src, report, media_variable_saved())
                 # 표 위젯을 새로 그려 AI 결과가 바로 보이게 (key를 바꿈)
                 st.session_state["media-s3-storyboard-ver"] = st.session_state.get("media-s3-storyboard-ver", 0) + 1
             except MediaS3AIError as err:
@@ -525,7 +605,10 @@ def media_s3_video_section(src: dict):
     만든 영상은 '만든 결과 보기'에서 봅니다 (이 탭에는 따로 보여 주지 않음)."""
     storyboard = st.session_state.get(MEDIA_S3_STORYBOARD_DONE)
     with st.container(horizontal=True, vertical_alignment="center", key="media-s3-video-head"):
-        st.markdown("**② 영상 초안 만들기** · Higgsfield")
+        st.markdown("**② 영상 A·B 초안** · :green-badge[🎯 클릭률 B > A]",
+                    help=f"영상 A/B 목표: 자사몰 영상 클릭률, B가 A보다 높으면 성공. 첫 {MEDIA_S3_VIDEO_HOOK}초만 다르게 편집해요.\n\n"
+                         "사진 A/B의 목표(노출 대비 클릭률 0.63→0.98배)는 아마존 검색 숫자라 영상에는 쓰지 않아요. "
+                         "자사몰에서 손님을 반반 나눠 A·B 영상을 보여 주고, 영상을 본 뒤 상세·구매 버튼을 누른 비율을 비교해요.")
         st.space("stretch")
         if storyboard is not None and st.button("프롬프트 보기", key="media-s3-btn-view-video",
                                                 icon=":material/open_in_new:"):
@@ -538,30 +621,51 @@ def media_s3_video_section(src: dict):
     media_s3_hf_login_section()
     route = media_s3_video_ready()   # "mcp"(계정 로그인, 구독 크레딧) / "api"(HF_KEY) / ""
     ready = bool(route)
-    prompt = media_s3_video_prompt(src, storyboard)
-    st.markdown(f'<div class="media-s3-vprompt">{html.escape(prompt)}</div>', unsafe_allow_html=True)
+    versions = media_s3_video_versions(storyboard)   # {"A": 장면, "B": 장면} (예전 표면 {"": 장면})
+    prompts = {v: media_s3_video_prompt(src, storyboard, v) for v in versions}
+    if set(versions) == {"A", "B"}:   # A·B 차이(첫 3초)만 짧게 보여 줌 (전체 프롬프트는 '프롬프트 보기')
+        hook = {v: versions[v][0] for v in ("A", "B")}
+        summary = (f"[A 첫 {MEDIA_S3_VIDEO_HOOK}초] {hook['A'].get('화면', '')}\n"
+                   f"[B 첫 {MEDIA_S3_VIDEO_HOOK}초] {hook['B'].get('화면', '')}\n"
+                   f"[공통 {MEDIA_S3_VIDEO_SECONDS - MEDIA_S3_VIDEO_HOOK}초] "
+                   + " → ".join(str(r.get("화면", "")) for r in versions["A"][1:]))
+    else:
+        summary = prompts[""]
+    st.markdown(f'<div class="media-s3-vprompt">{html.escape(summary)}</div>', unsafe_allow_html=True)
+    label = "영상 A·B 초안 만들기" if set(versions) == {"A", "B"} else "영상 초안 만들기"
     with st.container():
-        if st.button("영상 초안 만들기", key="media-s3-btn-video", type="primary", width="stretch",
+        if st.button(label, key="media-s3-btn-video", type="primary", width="stretch",
                      disabled=not ready or bool(st.session_state.get(MEDIA_S3_VIDEO_JOB)),
                      help=("위 'Higgsfield 로그인 창 열기'로 로그인하면 구독 크레딧으로 만들 수 있어요." if not ready else
-                           "Higgsfield 계정(구독 크레딧)으로 만들어요. 완성까지 1~5분" if route == "mcp" else
-                           "Higgsfield API 잔액으로 만들어요. 완성까지 1~5분")):
+                           f"{MEDIA_S3_VIDEO_SECONDS}초 480p 소리 없이, A·B를 동시에 만들어요 (구독 크레딧). 보통 몇 분" if route == "mcp" else
+                           "Higgsfield API 잔액으로 A·B를 차례로 만들어요")):
             if route == "mcp":
+                jobs = []
                 try:
-                    job_id = media_s3_hf_submit(prompt, MEDIA_S3_VIDEO_SECONDS, MEDIA_S3_VIDEO_ASPECT)
-                    st.session_state[MEDIA_S3_VIDEO_JOB] = {"job_id": job_id, "prompt": prompt}
-                    media_s3_store_json(MEDIA_S3_VIDEO_JOB, st.session_state[MEDIA_S3_VIDEO_JOB])
+                    for v, p in prompts.items():   # A·B를 한꺼번에 요청 → 동시에 만들어짐
+                        jobs.append({"job_id": media_s3_hf_submit(p, MEDIA_S3_VIDEO_SECONDS, MEDIA_S3_VIDEO_ASPECT),
+                                     "prompt": p, "ver": v, "started": time.time(), "rows": versions[v]})
                 except MediaS3HFError as err:
                     st.warning(str(err))
                 except Exception as err:   # 네트워크 등 예상 못 한 오류도 화면을 멈추지 않게
                     st.warning(f"영상 요청 중 오류가 났어요: {err}")
+                if jobs:   # 하나만 요청됐어도 그건 끝까지 받음
+                    st.session_state[MEDIA_S3_VIDEO_JOB] = jobs
+                    media_s3_store_json(MEDIA_S3_VIDEO_JOB, jobs)
             else:
                 status = st.empty()
-                with st.spinner("영상 초안을 만드는 중이에요 (1~5분, 창을 닫지 마세요)"):
+                with st.spinner("영상 초안을 만드는 중이에요 (창을 닫지 마세요)"):
                     try:
-                        media_s3_put_file(MEDIA_S3_VIDEOS, "video_draft_ai.mp4",
-                                          media_s3_make_video(prompt, on_status=lambda t: status.caption(f"진행: {t}")),
-                                          prompt=prompt)
+                        for v, p in prompts.items():
+                            name = f"video_{v or 'draft'}_api_ai.mp4"
+                            media_s3_put_file(MEDIA_S3_VIDEOS, name,
+                                              media_s3_make_video(p, on_status=lambda t, v=v: status.caption(f"영상 {v} 진행: {t}")),
+                                              prompt=p)
+                            subs = media_s3_video_subs(versions[v], v)
+                            links = {**st.session_state.get(MEDIA_S3_VIDEO_LINKS, {}),
+                                     name: {"subs_vtt": subs["vtt"], "subs_srt": subs["srt"]}}
+                            st.session_state[MEDIA_S3_VIDEO_LINKS] = links
+                            media_s3_store_json(MEDIA_S3_VIDEO_LINKS, links)
                         st.toast("영상 초안이 완성됐어요. '만든 영상 보기'에서 볼 수 있어요", icon="🎬")
                     except MediaS3AIError as err:
                         st.warning(str(err))
@@ -570,47 +674,79 @@ def media_s3_video_section(src: dict):
     media_s3_video_job_step()
 
 
+def _media_s3_jobs() -> list:
+    """만드는 중인 영상 작업 목록 (예전 저장 모양 {"job_id", "prompt"} 하나짜리도 목록으로)."""
+    jobs = st.session_state.get(MEDIA_S3_VIDEO_JOB)
+    if isinstance(jobs, dict):
+        jobs = [jobs]
+    return [j for j in jobs or [] if isinstance(j, dict) and j.get("job_id")]
+
+
+def _media_s3_set_jobs(jobs: list) -> None:
+    if jobs:
+        st.session_state[MEDIA_S3_VIDEO_JOB] = jobs
+    else:
+        st.session_state.pop(MEDIA_S3_VIDEO_JOB, None)
+    media_s3_store_json(MEDIA_S3_VIDEO_JOB, jobs or None)
+
+
 def _media_s3_clear_job() -> None:
-    st.session_state.pop(MEDIA_S3_VIDEO_JOB, None)
-    media_s3_store_json(MEDIA_S3_VIDEO_JOB, None)
+    _media_s3_set_jobs([])
+
+
+def _media_s3_elapsed(job: dict) -> str:
+    sec = int(time.time() - job["started"]) if job.get("started") else None
+    return "" if sec is None else f"{sec // 60}분 {sec % 60:02d}초"
 
 
 @st.fragment(run_every=10)
 def media_s3_video_job_step():
-    """만드는 중인 영상이 있으면 10초마다 상태를 보고, 완성되면 작업 공간에 넣습니다 (다른 탭에 다녀와도 이어짐)."""
-    job = st.session_state.get(MEDIA_S3_VIDEO_JOB)
-    if not job:
+    """만드는 중인 영상(A·B)이 있으면 10초마다 상태를 보고, 완성된 것부터 작업 공간에 넣습니다 (다른 탭에 다녀와도 이어짐).
+    요청한 뒤 걸린 시간을 같이 보여 줘요."""
+    jobs = _media_s3_jobs()
+    if not jobs:
         return
-    try:
-        status, url = media_s3_hf_check(job["job_id"])
-    except Exception as err:
-        st.caption(f"영상 상태를 확인하지 못했어요 (10초 뒤 다시 확인): {err}")
-        return
-    if status == "completed" and url:
-        name = f"video_{job['job_id'][:8]}_ai.mp4"
+    left, lines, done_any = [], [], False
+    for job in jobs:
+        tag = f"영상 {job.get('ver')}" if job.get("ver") else "영상"
         try:
-            media_s3_put_file(MEDIA_S3_VIDEOS, name, media_s3_hf_download(url), prompt=job.get("prompt", ""))
-        except MediaS3HFError as err:
-            st.warning(str(err))
-            return
-        links = {**st.session_state.get(MEDIA_S3_VIDEO_LINKS, {}), name: {"job_id": job["job_id"], "url": url}}
-        st.session_state[MEDIA_S3_VIDEO_LINKS] = links
-        media_s3_store_json(MEDIA_S3_VIDEO_LINKS, links)
-        _media_s3_clear_job()
-        st.toast("영상 초안이 완성됐어요. '만든 영상 보기'에서 볼 수 있어요", icon="🎬")
-        st.rerun()   # 넘기기 줄의 보낼 개수 등을 다시 그림
-    elif status == "ip_detected":
-        st.warning("Higgsfield가 저작권 확인을 기다리고 있어요. Higgsfield 사이트 기록(History)에서 이 영상을 열어 확인을 눌러 주세요. "
-                   "확인하면 여기에 자동으로 들어와요.")
-    elif status == "not_found":
-        _media_s3_clear_job()
-        st.warning("Higgsfield에 이 작업이 없어요 (요청이 영상으로 이어지지 않았어요). '영상 초안 만들기'를 다시 눌러 주세요.")
-    elif status in ("failed", "canceled", "cancelled", "nsfw", "error"):
-        _media_s3_clear_job()
-        st.warning(f"영상이 만들어지지 않았어요 ({status}). 프롬프트를 바꿔 다시 눌러 주세요.")
-    else:
-        st.info(f"🎬 만드는 중 ({status or '대기'}) · 보통 3~5분. 다른 탭에 다녀와도 계속 만들어지고, "
-                "완성되면 '만든 결과 보기'에 들어가요.")
+            status, url = media_s3_hf_check(job["job_id"])
+        except Exception as err:
+            lines.append(f"{tag}: 상태 확인 실패 (10초 뒤 다시) {err}")
+            left.append(job)
+            continue
+        if status == "completed" and url:
+            name = f"video_{job.get('ver') or 'draft'}_{job['job_id'][:8]}_ai.mp4"
+            try:
+                media_s3_put_file(MEDIA_S3_VIDEOS, name, media_s3_hf_download(url), prompt=job.get("prompt", ""))
+            except MediaS3HFError as err:
+                lines.append(f"{tag}: {err}")
+                left.append(job)
+                continue
+            subs = media_s3_video_subs(job.get("rows") or [], job.get("ver") or "") if job.get("rows") else {}
+            links = {**st.session_state.get(MEDIA_S3_VIDEO_LINKS, {}),
+                     name: {"job_id": job["job_id"], "url": url, "seconds": int(time.time() - job.get("started", time.time())),
+                            **({"subs_vtt": subs["vtt"], "subs_srt": subs["srt"]} if subs else {})}}
+            st.session_state[MEDIA_S3_VIDEO_LINKS] = links
+            media_s3_store_json(MEDIA_S3_VIDEO_LINKS, links)
+            st.toast(f"{tag} 초안이 완성됐어요 ({_media_s3_elapsed(job)}). '만든 영상 보기'에서 볼 수 있어요", icon="🎬")
+            done_any = True
+        elif status == "ip_detected":
+            lines.append(f"{tag}: Higgsfield 저작권 확인 대기. 사이트 기록(History)에서 이 영상을 열어 확인을 눌러 주세요")
+            left.append(job)
+        elif status == "not_found":
+            lines.append(f"{tag}: Higgsfield에 이 작업이 없어요. 다시 만들어 주세요")
+        elif status in ("failed", "canceled", "cancelled", "nsfw", "error"):
+            lines.append(f"{tag}: 만들어지지 않았어요 ({status}). 스토리보드를 고쳐 다시 만들어 주세요")
+        else:
+            lines.append(f"{tag}: 만드는 중 ({status or '대기'}) · {_media_s3_elapsed(job)} 지남")
+            left.append(job)
+    if len(left) != len(jobs):
+        _media_s3_set_jobs(left)
+    if done_any:
+        st.rerun()   # 넘기기 줄의 보낼 개수, '만든 영상 보기' 개수를 다시 그림
+    if lines:
+        (st.info if left else st.warning)("🎬 " + "  \n".join(lines) + ("  \n다른 탭에 다녀와도 계속 만들어져요." if left else ""))
 
 
 def media_s3_set_pick(files: list) -> None:
@@ -755,7 +891,7 @@ def media_s3_history_tile(e: dict, picks: list, latest: bool, no: int, where: st
         else:
             with st.container(key=f"media-s3-hist-vid-{k}"):
                 try:
-                    st.video(content)
+                    media_s3_play(e["name"], content)
                 except Exception:
                     st.caption("재생할 수 없는 파일이에요")
         with st.container(horizontal=True, vertical_alignment="center", gap="small",
@@ -864,7 +1000,7 @@ def media_s3_history_card(gid: str, slot: str, title: str, diff: str, picks: lis
         else:
             with st.container(key=f"media-s3-hist-bigvid-{slot}"):
                 try:
-                    st.video(content)
+                    media_s3_play(e["name"], content)
                 except Exception:
                     st.caption("재생할 수 없는 파일이에요")
         if diff:   # 사진 아래 한 줄 칩 (넘치면 …, 마우스를 올리면 전체)
@@ -986,6 +1122,30 @@ def media_s3_nav(i: int) -> None:
                       on_click=_media_s3_go, kwargs=nxt)
 
 
+def media_s3_summary_chip() -> None:
+    """④ 탭 바 오른쪽 칩 '[독립 변수] … · [🎯 목표 KPI] …' (① 가설에서 변수 도출의 요약 칩과 같은 모양).
+    ④에서는 공통 '목표 KPI' 칩(media_variable_kpi_chip) 대신 이 칩을 보여 줘서, 무엇을 바꾸는 실험인지도 같이 보이게 합니다
+    (공통 칩은 media_stage3_style.css에서 ④일 때만 숨김). 값은 ①에서 확정한 plan, 확정 전이면 고르는 중인 값."""
+    from modules.media.media_variable import (media_variable_candidates, media_variable_confirmed_plan,  # 순환 import 방지
+                                              media_variable_hypothesis, media_variable_kpi_text,
+                                              media_variable_label, media_variable_plan)
+    current, _, _ = media_variable_plan()
+    plan = media_variable_confirmed_plan()[0] or current
+    picked = media_variable_candidates()["picked"]
+    variable = plan.get("variable") or "없음"   # 칩은 한 줄로 짧게 (고른 B안 이름은 ⓘ에)
+    tip = [f"**독립 변수**: A/B 사진에서 바꾸는 것 딱 하나예요. 나머지(배경·조명·제품)는 A와 B가 같아요."
+           + (f" 고른 B안: {media_variable_label(picked)}" if picked else ""),
+           f"**A · 대조군**: {plan.get('a') or '-'}",
+           f"**B · 실험군**: {plan.get('b') or '-'}",
+           f"**목표 KPI**: B안이 {media_variable_kpi_text(plan).replace('**', '')}이면 성공이에요."]
+    hypo = media_variable_hypothesis()
+    if hypo:
+        tip.append(f"**가설**: {hypo}")
+    with st.container(key="media-s3-chip"):
+        st.markdown(f":violet-badge[독립 변수] {variable} · :green-badge[🎯 목표 KPI] {media_variable_kpi_text(plan)}",
+                    help="\n\n".join(tip))
+
+
 def media_stage3_render():
     """3단계 ④ 하위 탭(이름은 MEDIA_S3_TAB_LABEL, 탭 이름이 제목 역할). 반드시 media_render() 안에서 부릅니다."""
     media_s3_store_load()   # 탭을 옮기거나 새로고침해도 작업물이 남게 폴더에서 다시 읽음
@@ -999,6 +1159,7 @@ def media_stage3_render():
     if not media_handoff_check(src, src["prompt_a"], src["prompt_b"])["ok"]:
         notes.append("받은 프롬프트 A·B가 빈칸 말고도 달라요. 2단계에서 확인해 주세요")
     st.session_state[MEDIA_S3_NOTES] = notes
+    media_s3_summary_chip()   # 탭 바 오른쪽: 독립 변수 + 목표 KPI (공통 KPI 칩 대신)
 
     # ④ 안의 하위 탭: 사진 초안 제작 / 영상 초안 제작 (영상은 스토리보드 확정 → 영상 초안 순서)
     # on_change="rerun": 고른 탭만 그리고, 아래 '다음' 버튼으로 하위 탭을 바꿀 수 있게 (선택 상태를 기억)

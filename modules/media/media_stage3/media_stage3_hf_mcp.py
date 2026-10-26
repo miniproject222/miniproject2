@@ -10,8 +10,11 @@ from modules.media.media_stage3.media_stage3_hf_login import (MEDIA_S3_HF_AUTH, 
                                                                MEDIA_S3_HF_TOKEN_FILE, media_s3_hf_logout,
                                                                media_s3_hf_save)
 
-MEDIA_S3_HF_MODEL = "seedance_2_5"   # Higgsfield 모델 이름 (MCP 카탈로그 기준)
+MEDIA_S3_HF_MODEL = "seedance_2_0"   # Higgsfield 모델 이름 (MCP 카탈로그 기준). 2026-10-26 실측: 10초 A·B 동시 약 2분 (2.5는 약 5분)
+MEDIA_S3_HF_MODE = "fast"            # seedance_2_0의 빠른 모드 (480p·720p만, 10초 10크레딧)
 MEDIA_S3_HF_WAIT = 600               # 영상 완성까지 최대 기다리는 시간(초)
+MEDIA_S3_HF_RESOLUTION = "480p"      # 초안이라 480p
+MEDIA_S3_HF_AUDIO = False            # 자사몰 자동 재생은 소리 없이 → 소리 안 만듦
 
 
 class MediaS3HFError(Exception):
@@ -129,14 +132,15 @@ def media_s3_hf_cost(prompt: str, seconds: int, aspect: str) -> dict:
     """돈(크레딧)을 쓰지 않고 이 영상의 크레딧 비용만 물어봅니다."""
     return MediaS3HFSession().call("generate_video", {"params": {
         "model": MEDIA_S3_HF_MODEL, "prompt": prompt, "duration": seconds, "aspect_ratio": aspect,
-        "get_cost": True, "use_unlim": False}})
+        "mode": MEDIA_S3_HF_MODE, "resolution": MEDIA_S3_HF_RESOLUTION, "generate_audio": MEDIA_S3_HF_AUDIO, "get_cost": True, "use_unlim": False}})
 
 
 def media_s3_hf_make_video(prompt: str, seconds: int, aspect: str, on_status=None) -> bytes:
     """구독 크레딧으로 영상을 만들고 MP4를 돌려줍니다."""
     s = MediaS3HFSession()
     sent = s.call("generate_video", {"params": {"model": MEDIA_S3_HF_MODEL, "prompt": prompt, "duration": seconds,
-                                                "aspect_ratio": aspect, "use_unlim": False},
+                                                "aspect_ratio": aspect, "mode": MEDIA_S3_HF_MODE, "resolution": MEDIA_S3_HF_RESOLUTION,
+                                                "generate_audio": MEDIA_S3_HF_AUDIO, "use_unlim": False},
                                      "context": "Draft product video for an outsourcing reference"})
     job_id = _media_s3_hf_find(sent, ("job_id", "id"))
     if sent.get("_is_error") or not job_id:
@@ -167,7 +171,8 @@ def media_s3_hf_submit(prompt: str, seconds: int, aspect: str) -> str:
     """영상 요청만 보내고 작업 번호를 돌려줍니다 (완성을 기다리지 않음 → 탭을 옮겨도 계속 만들어짐).
     Higgsfield가 비슷한 프리셋을 추천하면(영상을 만들지 않고 되물음) 추천을 거절하고 프롬프트 그대로 다시 요청합니다."""
     s = MediaS3HFSession()
-    params = {"model": MEDIA_S3_HF_MODEL, "prompt": prompt, "duration": seconds, "aspect_ratio": aspect, "use_unlim": False}
+    params = {"model": MEDIA_S3_HF_MODEL, "prompt": prompt, "duration": seconds, "aspect_ratio": aspect,
+              "mode": MEDIA_S3_HF_MODE, "resolution": MEDIA_S3_HF_RESOLUTION, "generate_audio": MEDIA_S3_HF_AUDIO, "use_unlim": False}
     for _ in range(3):
         sent = s.call("generate_video", {"params": params, "context": "Draft product video for an outsourcing reference"})
         notice = sent.get("notice") if isinstance(sent.get("notice"), dict) else {}

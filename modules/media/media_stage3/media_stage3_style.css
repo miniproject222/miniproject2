@@ -942,3 +942,54 @@ div[role="dialog"]:has(.media-s3-sb-table) {
   color: var(--color-primary) !important;
   font-weight: 700;
 }
+
+/* ④ 탭 바 오른쪽 칩 (media_s3_summary_chip): 독립 변수 + 목표 KPI 한 줄.
+   ④에서는 공통 목표 KPI 칩(media_style.css의 .st-key-media-kpi-chip)을 숨기고 이 칩을 같은 자리에 띄움 */
+.st-key-media-root:has(.st-key-media-s3-chip) [data-testid="stLayoutWrapper"]:has(> .st-key-media-kpi-chip),
+.st-key-media-root:has(.st-key-media-s3-chip) .st-key-media-kpi-chip {
+  display: none !important;
+}
+.st-key-media-s3-chip {
+  width: fit-content !important;
+  margin-left: auto;
+  padding: 6px 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+.st-key-media-s3-chip p {
+  font-size: 14px;
+  white-space: nowrap;   /* 공통 목표 KPI 칩과 같은 모양 (글자를 자르지 않음) */
+}
+@media (min-width: 1280px) {
+  [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-chip) {
+    position: absolute;
+    top: -41px;   /* 공통 KPI 칩과 같은 자리 (하위 탭 바와 같은 줄) */
+    right: 0;
+    z-index: 1;
+    width: auto !important;
+    pointer-events: none;
+  }
+  .st-key-media-s3-chip {
+    pointer-events: auto;
+  }
+}
+
+/* ⑤ 브리프 1·2번 작은 제목(① 왜 찍나 …)은 제목 줄과 따로 한 줄씩 */
+.media-s3-ex-sec > i {
+  display: block;
+  margin: 8px 0 2px;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--color-sub);
+}
+.media-s3-ex-sec > b {
+  display: block;
+}
+
+/* 초안 영상의 한국어 설명 자막(media_s3_video_subs): 영상을 덜 가리게 작게 */
+.st-key-media-root video::cue {
+  font-size: 13px;
+  line-height: 1.35;
+  background: rgba(0, 0, 0, 0.55);
+}

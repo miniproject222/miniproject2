@@ -24,7 +24,7 @@
 | 파일 | 내용 |
 |---|---|
 | `media_stage3.py` | 하위 탭 ④ 사진·영상 초안 제작. 진입 함수 `media_stage3_render()` (이름은 바꾸지 않음) |
-| `media_stage3_ai.py` | ④의 AI 호출: 사진 초안 `media_s3_make_image()`·스토리보드 `media_s3_make_storyboard()`(OpenAI), 영상 초안 `media_s3_make_video()`(Higgsfield Seedance 2.5). 모델·화질·영상 길이는 파일 맨 위 상수 |
+| `media_stage3_ai.py` | ④의 AI 호출: 사진 초안 `media_s3_make_image()`·스토리보드 `media_s3_make_storyboard()`(OpenAI), 영상 초안 `media_s3_make_video()`(Higgsfield, 로그인 시 Seedance 2.0 fast). 모델·화질·영상 길이는 파일 맨 위 상수 |
 | `media_stage3_hf_login.py` | Higgsfield 계정 로그인 (컴퓨터마다 처음 한 번). ④ 영상 초안 제작의 **'Higgsfield 로그인 창 열기'** 버튼을 누르면 시크릿 창(크롬 `--incognito`, 엣지 `--inprivate`, 없으면 기본 브라우저)으로 로그인 화면이 뜨고, 로그인하면 앱이 3초 안에 알아챔. '계정 바꾸기'로 로그인 지우기. 앱을 **자기 컴퓨터에서 켰을 때만** 동작(돌아오는 주소가 127.0.0.1:8765). 터미널로도 가능: `python -m modules.media.media_stage3.media_stage3_hf_login`. 로그인 열쇠를 `.streamlit/hf_mcp_token.json`에 저장 (`.gitignore`에 등록됨) |
 | `media_stage3_hf_mcp.py` | Higgsfield MCP(`https://mcp.higgsfield.ai/mcp`)로 영상 만들기: `generate_video` → `jobs_wait`. 구독 크레딧 사용, 열쇠 자동 갱신 |
 | `media_stage3_store.py` | 작업물 보관: 만든 결과 기록(`history/`, `history.json`)·고른 목록·만드는 중인 영상 작업 번호를 `data/workspace/`에 저장하고 화면을 그릴 때 다시 읽음. **사진·영상 초안 제작 탭의 작업물(사진·영상·스토리보드·확정본)은 이번 접속 동안만**(`MEDIA_S3_SESSION_ONLY`, 폴더에 쓰지도 읽지도 않음) |
@@ -78,7 +78,7 @@
   - 직접 만든 사진도 올릴 수 있음 (AI 사진과 같이 보관)
 - **영상 초안 제작**: 순서대로 진행
   1. **스토리보드 만들기**: `스토리보드 만들기` 버튼을 누르면 리포트 값(허용 장면 `ad_claims.allowed_scenes`, 쓸 수 있는 문구 `ad_claims.claims`, 금지 표현 `ad_claims.forbidden`, 서리 강점)과 프롬프트 A·B로 문제 → 해결 → 증거 → 신뢰 → 마무리 장면 표를 채움 (`gpt-4.1-mini`). 표는 직접 고칠 수 있고, 금지 표현이 남아 있으면 경고 → **`스토리보드 확정`**
-  2. **영상 초안 만들기**: 스토리보드를 확정해야 열림. 확정한 장면을 이어 붙인 영상 프롬프트(`media_s3_video_prompt()`)로 `영상 초안 만들기`를 누르면 **Higgsfield 계정 로그인(MCP)이 되어 있으면 구독 크레딧으로**(Seedance 2.5, 5초 약 35크레딧), 아니면 **Higgsfield API 잔액(HF_KEY)으로** 영상을 만들어(`bytedance/seedance-2.5/text-to-video`, 5초, 720p, 16:9, 소리 없음, 1~5분) 화면에 보여 주고 `video_draft_ai.mp4`로 보관. **Higgsfield API는 선불 잔액에서 차감**(사이트 구독 크레딧과 별개, 최소 충전 $5). 잔액 부족·실패·검열이면 경고만 띄움. 직접 만든 영상도 올릴 수 있음
+  2. **영상 A·B 초안 만들기** (2026-10-26 변경): 자사몰 클릭률 A/B용. 스토리보드는 사진 프롬프트 A·B가 아니라 **2번 가설(If·Because·Then) + 리포트 광고 문구·허용 장면·금지 표현**으로 만들고, 맨 앞 `1 첫 3초 · A`(지금 방식)·`1 첫 3초 · B`(가설의 이유가 보이는 장면)만 다르고 나머지 장면은 공통 (총 10초). 확정하면 `media_s3_video_versions()`가 A·B 장면을 나누고 `영상 A·B 초안 만들기`가 두 영상을 **동시에** 요청 (Higgsfield 로그인(MCP): Seedance 2.0 fast, 480p, 소리 없음, 10초 각 10크레딧, 실측 약 2분 / API 잔액(HF_KEY): Seedance 2.5로 차례로). 완성되면 `video_A_…_ai.mp4`·`video_B_…_ai.mp4`로 보관, '만든 영상 보기'에서 영상 A·B로 비교. 영상 KPI는 사진과 따로: 자사몰 영상 클릭률, B > A면 성공. ⑤ PDF에 '한 번 촬영, 두 버전 편집' 안내
 - 화면 맨 아래 **'⑤로 넘기기'** 버튼(`media_s3_handoff_step()`, 스토리보드를 확정해야 눌림)을 눌렀을 때만 확정한 스토리보드와 '만든 결과 보기'에서 고른 사진·영상의 기록 이름이 Supabase(`handoff.assets`)로 넘어갑니다. 넘기기 줄에 '보낼 것: 사진 n · 영상 m'이 보입니다. 넘긴 뒤 바뀌면 '다시 넘기기 필요'가 보입니다.
 - **작업물 범위**: 사진·영상 초안 제작 탭에 보이는 것(만든 사진 보기, 스토리보드 표·확정본, 올린 영상)은 **이번 접속에서 만든 것만**. 탭을 옮겨도 남지만 앱을 새로 열거나 새로고침하면 빈 상태로 시작하고, 만든 사진·영상은 '만든 결과 보기'에 남음. ⑤로 넘기기는 스토리보드가 없어도 사진·영상을 골랐으면 누를 수 있음
 - 버튼은 모두 `type="primary"`로 둡니다. media 탭 공용 CSS(`media_style.css`)가 탭 안 버튼 글자를 흰색으로 바꿔서, 흰 바탕 버튼은 글자가 안 보이기 때문입니다.

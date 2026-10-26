@@ -14,19 +14,40 @@ import streamlit as st
 from modules.media.media_handoff import (media_handoff_assets, media_handoff_check, media_handoff_prompt,
                                          media_handoff_set_assets)
 from modules.media.media_stage3.media_stage3 import (MEDIA_S3_MEDIA_NOTE, MEDIA_S3_PICK, media_s3_group, media_s3_guide,
+                                                    media_s3_video_subtitles, media_s3_video_versions,
                                                     media_s3_set_pick,
                                                     media_s3_storyboard_dialog, media_s3_text_dialog)
-from modules.media.media_stage3.media_stage3_pdf import media_s3_build_pdf
+from modules.media.media_stage3.media_stage3_pdf import media_s3_brief, media_s3_build_pdf
+from common.common_store import store_get
 from modules.media.media_stage3.media_stage3_ai import MediaS3AIError, media_s3_ai_ready, media_s3_translate
 from modules.media.media_stage3.media_stage3_store import media_s3_store_history_find, media_s3_store_load
 
 MEDIA_S3_EXPORT_TAB_LABEL = "외주 정리"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
 MEDIA_S3_EXPORT_PDF_NAME = "외주_촬영_브리프.pdf"
 
+def media_s3_brief_ctx(src: dict, storyboard: list) -> dict:
+    """브리프 1·2번에 쓸 값: 1번 리포트(검색어 클릭 분석·금지 표현·이미지 문제) + 1단계 KPI + 영상 스토리보드 A·B."""
+    from modules.media.media_stage3.media_stage3_ai import MEDIA_S3_VIDEO_HOOK, MEDIA_S3_VIDEO_SECONDS
+    from modules.media.media_handoff import media_handoff_plan
+    report = store_get("report") or {}
+    plan = media_handoff_plan()
+    kpi = (f"{plan['kpi']} {plan['kpi_now']:g} → {plan['kpi_goal']:g}배"
+           if isinstance(plan.get("kpi_now"), (int, float)) and isinstance(plan.get("kpi_goal"), (int, float))
+           else plan.get("kpi") or "")
+    versions = media_s3_video_versions(storyboard or [])
+    hooks = {v: versions[v][0] for v in ("A", "B")} if set(versions) == {"A", "B"} else None
+    return {"sqp": report.get("sqp") if isinstance(report.get("sqp"), dict) else {}, "kpi_photo": kpi,
+            "hooks": hooks, "common": versions["A"][1:] if hooks else [],
+            "video_sec": MEDIA_S3_VIDEO_SECONDS, "hook_sec": MEDIA_S3_VIDEO_HOOK,
+            "fixed_ko": media_s3_export_ko(src, media_s3_group(src))["fixed"],
+            "forbidden": (report.get("ad_claims") or {}).get("forbidden") or [],
+            "image_fixes": report.get("image_fixes") or []}
+
+
 def media_s3_pdf(src: dict, storyboard: list, photos: list, videos: list) -> bytes:
-    """글로 된 부분(가설·단일 변수·촬영 지시·프롬프트 A/B·스토리보드·첨부 목록)을 보고서 형식 PDF로."""
+    """글로 된 부분(목적·촬영 지시·프롬프트 A/B·스토리보드·첨부 목록)을 보고서 형식 PDF로."""
     return media_s3_build_pdf(src, media_s3_group(src), storyboard, photos, videos,
-                              time.strftime("%Y-%m-%d"), MEDIA_S3_MEDIA_NOTE)
+                              time.strftime("%Y-%m-%d"), MEDIA_S3_MEDIA_NOTE, media_s3_brief_ctx(src, storyboard))
 
 
 def media_s3_package(src: dict, storyboard: list, photos: list, videos: list) -> bytes:
@@ -38,6 +59,9 @@ def media_s3_package(src: dict, storyboard: list, photos: list, videos: list) ->
             z.writestr(f"photo_reference/{name}", content)
         for name, content in videos:
             z.writestr(f"video_draft/{name}", content)
+            srt = media_s3_video_subtitles(name, "srt")   # 한국어 설명 자막 (같은 이름이라 재생기에서 자동으로 켜짐)
+            if srt:
+                z.writestr(f"video_draft/{name.rsplit('.', 1)[0]}.srt", srt.encode("utf-8-sig"))
     return buf.getvalue()
 
 
@@ -58,27 +82,36 @@ def media_s3_export_ko(src: dict, group: dict) -> dict:
             "b": group.get("b") or src["slot_b"], "fixed": fixed}
 
 
-def media_s3_export_brief_html(src: dict, group: dict) -> str:
-    """PDF에 들어가는 내용 (목적 → 두 사진 차이 → 촬영 지시)을 읽기 좋은 HTML로. 카드와 '크게 보기' 팝업이 같이 씀."""
-    ko = media_s3_export_ko(src, group)
-    avoid = src["avoid"] or ["(2단계 AI 다듬기 결과가 들어갈 자리)"]
-    include = src["include"] or ["(2단계 AI 다듬기 결과가 들어갈 자리)"]
+def _media_s3_export_rows(rows: list, head: tuple | None = None) -> str:
+    """표 HTML (첫 칸은 제목 칸)."""
+    esc = html.escape
+    top = ("<tr>" + "".join(f"<th>{esc(str(h))}</th>" for h in head) + "</tr>") if head else ""
+    return (f'<table class="media-s3-ex-table">{top}'
+            + "".join("<tr><th>" + esc(str(r[0])) + "</th>" + "".join(f"<td>{esc(str(c))}</td>" for c in r[1:]) + "</tr>"
+                      for r in rows) + "</table>")
+
+
+def media_s3_export_brief_html(src: dict, group: dict, storyboard: list | None = None) -> str:
+    """PDF 1·2번과 같은 내용(목적: 데이터 → 가설 → 사진·영상 실험 → 결과물 / 촬영 지시: 공통 → 사진 → 영상 컷 → 규칙 → 여분 컷)을
+    읽기 좋은 HTML로. 카드와 '크게 보기' 팝업이 같이 씀. 내용은 media_stage3_pdf.media_s3_brief() 한 곳에서 만듦."""
+    b = media_s3_brief(src, group, media_s3_brief_ctx(src, storyboard or []))
+    lst = _media_s3_export_list
+    video = (f"""<i>③ 영상 (자사몰, 한 번 촬영 → 두 버전 편집)</i>{_media_s3_export_rows(b["cuts"], ("컷", "내용", "쓰는 곳"))}
+<ul>{lst(b["edit"])}</ul>""" if b["cuts"] else "")
+    extra = (f'<i>⑤ 여분 컷 (재촬영 방지)</i><ul>{lst(b["extra"] + [b["extra_note"]])}</ul>' if b["extra"] else "")
     return f"""<div class="media-s3-ex-body">
 <div class="media-s3-ex-sec"><b>1. 이번 촬영의 목적</b>
-<div class="media-s3-ex-hypo">{html.escape(group.get("hypothesis") or "가설 문장이 기록되지 않았어요")}</div>
-<table class="media-s3-ex-table">
-<tr><th>두 사진에서 바꾸는 것</th><td>{html.escape(ko["variable"])}</td></tr>
-<tr><th>지금 사진 (지금 아마존에 올라간 것)</th><td>{html.escape(ko["a"])}</td></tr>
-<tr><th>새로 찍을 사진</th><td>{html.escape(ko["b"])}</td></tr>
-</table>
-<div class="media-s3-ex-note">두 사진은 이 한 가지만 다르고 조명·배경·보정·제품은 똑같아야 어느 쪽이 더 잘 팔리는지 비교할 수 있어요.</div></div>
+<i>① 왜 찍나 (1번 문제 분석 데이터)</i><ul>{lst(b["why"] or ["1번 리포트 값이 없어 생략"])}</ul>
+<i>② 무엇을 확인하나 (가설)</i>
+<div class="media-s3-ex-hypo">{html.escape(b["hypothesis"] or "가설 문장이 기록되지 않았어요")}</div>
+<i>③ 어떻게 확인하나 (같은 가설, 실험 2개)</i>{_media_s3_export_rows(b["exp"], ("구분", "사진 A/B", "영상 A/B"))}
+<div class="media-s3-ex-note"><b>④ {html.escape(b["result"])}</b></div></div>
 <div class="media-s3-ex-sec"><b>2. 촬영 지시</b>
-<div class="media-s3-ex-cols">
-<div><i>공통</i><ul>{_media_s3_export_list(["조명, 배경, 보정은 두 사진 똑같이", "고정 요소: " + ko["fixed"],
-                                          "받을 것: 두 사진 각 3컷 (원본 + 흰 배경 보정본)"])}</ul></div>
-<div><i>찍지 말 것</i><ul>{_media_s3_export_list(avoid)}</ul></div>
-<div><i>넣을 것</i><ul>{_media_s3_export_list(include)}</ul></div>
-</div></div>
+<i>① 공통 (사진·영상 모두)</i><ul>{lst(b["common"])}</ul>
+<i>② 사진 (아마존 메인 이미지)</i>{_media_s3_export_rows(b["photo"])}
+{video}
+<i>④ 독일 광고 규칙 (어기면 재촬영)</i><ul>{lst(b["rules"])}</ul>
+{extra}</div>
 <div class="media-s3-ex-note">PDF에는 3. 참고 프롬프트, 4. 영상 스토리보드, 5. 함께 보내는 파일 목록도 들어가요 (위 버튼으로 미리 보기).</div>
 </div>"""
 
@@ -92,7 +125,7 @@ def media_s3_export_brief_dialog(body: str):
 def media_s3_export_brief(src: dict, group: dict, storyboard: list) -> None:
     """왼쪽 카드: PDF에 들어가는 내용. 제목 옆 '크게 보기'(팝업), 프롬프트·스토리보드도 팝업으로."""
     ko = media_s3_export_ko(src, group)
-    body = media_s3_export_brief_html(src, group)
+    body = media_s3_export_brief_html(src, group, storyboard)
     with st.container(horizontal=True, vertical_alignment="center", key="media-s3-ex-head"):
         st.markdown(f"**📄 {MEDIA_S3_EXPORT_PDF_NAME}에 들어가는 내용**")
         if st.button("크게 보기", key="media-s3-btn-view-exBig", icon=":material/open_in_full:"):
