@@ -14,7 +14,7 @@ import streamlit as st
 from modules.media.media_handoff import (media_handoff_assets, media_handoff_check, media_handoff_prompt,
                                          media_handoff_set_assets)
 from modules.media.media_stage3.media_stage3 import (MEDIA_S3_MEDIA_NOTE, MEDIA_S3_PICK, media_s3_group, media_s3_guide,
-                                                    media_s3_video_subtitles, media_s3_video_versions,
+                                                    media_s3_video_burned, media_s3_video_subtitles, media_s3_video_versions,
                                                     media_s3_set_pick,
                                                     media_s3_storyboard_dialog, media_s3_text_dialog)
 from modules.media.media_stage3.media_stage3_pdf import media_s3_brief, media_s3_build_pdf
@@ -62,6 +62,9 @@ def media_s3_package(src: dict, storyboard: list, photos: list, videos: list) ->
             srt = media_s3_video_subtitles(name, "srt")   # 한국어 설명 자막 (같은 이름이라 재생기에서 자동으로 켜짐)
             if srt:
                 z.writestr(f"video_draft/{name.rsplit('.', 1)[0]}.srt", srt.encode("utf-8-sig"))
+                burned = media_s3_video_burned(name, content)   # 자막을 구워 넣은 영상 (설명 보기용)
+                if burned:
+                    z.writestr(f"video_draft/{name.rsplit('.', 1)[0]}_한국어설명.mp4", burned)
     return buf.getvalue()
 
 
