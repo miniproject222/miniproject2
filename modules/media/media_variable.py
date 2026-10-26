@@ -2,7 +2,7 @@
 # 3번 탭이 그려질 때 2번 탭이 저장한 가설(store "hypothesis")을 자동으로 읽고, 그 가설로 후보 변수 묶음을 만들어
 # (AI 또는 규칙, media_variable_ai.py) 사용자가 변수 블럭에서 A/B로 실험할 변수 하나와 그 변수의 B안을 고릅니다.
 # 어떤 변수 블럭이든 고를 수 있고, 메인 이미지로 진행할 수 없는 변수는 2·3단계로 넘기는 확정을 막는 대신
-# 블럭의 '솔루션 보러가기'로 AI 줄글 솔루션 팝업을 띄우고, 확정하면 보고서에 쓸 파일(.md)로 내려받게 합니다.
+# 블럭의 '솔루션 보러가기'로 AI 줄글 솔루션 팝업을 띄우고, 확정하면 보고서에 쓸 PDF로 내려받게 합니다.
 # 3번 탭의 하위 탭 ①(가설에서 변수 도출)에서 부릅니다.
 # 고른 A/B 설계(plan)는 1번 리포트 값으로 채워 화면에 보여 주고, 사용자가 확정하면 2단계로 넘깁니다 (media_handoff.py).
 # 바깥 값을 읽는 곳은 두 함수뿐입니다: 가설 media_variable_saved(), 리포트 media_variable_report_sqp()
@@ -453,7 +453,7 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             f"**{MEDIA_VARIABLE_PASS}**: 2·3단계가 이어받을 수 있는 메인 이미지 변수이고, "
             "아마존 메인 이미지 규칙 안에서 Manage Your Experiments로 돌릴 B안이 있어요.\n\n"
             f"**{MEDIA_VARIABLE_NOT_IMAGE} · {MEDIA_VARIABLE_NO_B}**: 사진·영상으로 A/B를 만들 수 없는 변수라 "
-            f"{MEDIA_VARIABLE_SOLUTION_LINE}해요. 블럭의 '솔루션 보러가기'로 AI 솔루션을 보고, 확정하면 보고서에 쓸 파일로 저장할 수 있어요. "
+            f"{MEDIA_VARIABLE_SOLUTION_LINE}해요. 블럭의 '솔루션 보러가기'로 AI 솔루션을 보고, 확정하면 보고서에 쓸 PDF로 저장할 수 있어요. "
             "가설의 If와 다른 변수는 블럭 아랫줄 이유에 적어요."
             + ("\n\n**화면에 안 보이는 변수**: " + ", ".join(f"{v['name']} ({v['verdict']})" for v in hidden)
                if hidden else "")))
@@ -547,11 +547,11 @@ def media_variable_confirm_step(plan: dict, variable: dict):
     state = media_variable_confirm_state(plan)
     if not variable:
         note = ":orange-badge[🚫 다음 단계 진행 불가] 후보 변수가 없어요 · 2번 탭에서 다른 가설을 고르고 다시 불러와 주세요"
-    elif not variable.get("ok"):   # 진행 불가 변수: 매체 제작 대신 솔루션 (확정했으면 파일로 저장할 수 있다고 알림)
+    elif not variable.get("ok"):   # 진행 불가 변수: 매체 제작 대신 솔루션 (확정했으면 PDF로 저장할 수 있다고 알림)
         if media_handoff_solution().get("variable") == variable["name"]:
-            note = ":green-badge[✅ 솔루션 확정됨] '솔루션 보러가기'에서 보고서용 파일로 저장할 수 있어요"
+            note = ":green-badge[✅ 솔루션 확정됨] '솔루션 보러가기'에서 보고서용 PDF로 저장할 수 있어요"
         else:
-            note = f":gray-badge[{MEDIA_VARIABLE_SOLUTION_LINE}] 솔루션을 확정하면 보고서용 파일로 저장할 수 있어요"
+            note = f":gray-badge[{MEDIA_VARIABLE_SOLUTION_LINE}] 솔루션을 확정하면 보고서용 PDF로 저장할 수 있어요"
     elif state == "same":
         note = ":green-badge[✅ 확정됨] 다음 단계(A/B 소재 준비부터)가 이 값을 받아요 · 체크한 카드를 다시 누르면 확정이 취소돼요"
     elif state == "changed" and media_handoff_plan().get("variable") == variable["name"]:   # 같은 변수인데 리포트 값 등이 바뀜
@@ -610,25 +610,9 @@ def _media_variable_regen_solution(name: str) -> None:
     st.session_state.get(MEDIA_VARIABLE_SOLUTION_KEY, {}).pop(_media_variable_solution_cache_key(name), None)
 
 
-def media_variable_solution_markdown(solution: dict) -> str:
-    """확정한 솔루션을 보고서에 옮겨 쓰기 좋은 마크다운 글로 (솔루션 팝업의 파일 저장 버튼이 씀).
-    solution 모양은 media_handoff_set_solution()과 같음."""
-    steps = "\n".join(f"{i}. **{step['action']}**" + (f" — {step['detail']}" if step.get("detail") else "")
-                      for i, step in enumerate(solution.get("steps") or [], start=1))
-    parts = [f"# {solution.get('title', '솔루션')}",
-             f"- 가설: {solution.get('hypothesis', '-')}\n"
-             f"- 변수: {solution.get('variable', '-')}\n"
-             f"- 작성: {solution.get('source', '-')} · {datetime.now().strftime('%Y-%m-%d')}",
-             f"## 요약\n\n{solution.get('summary', '')}",
-             f"## 실행 단계\n\n{steps}"]
-    parts += [f"## {head}\n\n{solution[k]}" for head, k in (("기대 효과", "effect"), ("확인할 것", "check"))
-              if solution.get(k)]
-    return "\n\n".join(parts) + "\n"
-
-
 def _media_variable_confirm_solution(solution: dict) -> None:
     """솔루션 팝업의 '확정하기' 콜백. store("media")의 solution 칸에 저장하고, 다시 그릴 때 팝업을 다시 띄워
-    파일 저장 버튼을 보여 줍니다."""
+    PDF 저장 버튼을 보여 줍니다."""
     media_handoff_set_solution(solution)
     st.session_state["media-variable-solution-toast"] = True
     st.session_state[MEDIA_VARIABLE_SOLUTION_OPEN_KEY] = solution["variable"]
@@ -637,7 +621,7 @@ def _media_variable_confirm_solution(solution: dict) -> None:
 @st.dialog("솔루션 제공", width="large")
 def _media_variable_solution_dialog(name: str) -> None:
     """진행 불가 변수의 줄글 솔루션 팝업. 처음 열 때 AI로 만들고(가설·변수가 같으면 다시 부르지 않음),
-    확정하면 보고서에 쓸 파일(.md)로 내려받는 버튼을 보여 줍니다."""
+    확정하면 보고서에 쓸 PDF로 내려받는 버튼을 보여 줍니다."""
     hypo = media_variable_loaded()
     cands = media_variable_candidates()
     variable = next((v for v in cands["rows"] + cands["hidden"] if v["name"] == name), None)
@@ -681,22 +665,18 @@ def _media_variable_solution_dialog(name: str) -> None:
                                 **solution, "source": made["source"]}
         done = bool(payload) and saved == payload
         if solution:
-            st.caption(f"{made['source']}가 만든 솔루션 · " + ("✅ 확정됨 · 파일로 저장해 보고서에 쓰세요" if done else
-                       "확정하면 보고서에 쓸 파일로 저장할 수 있어요"), width="stretch")
+            st.caption(f"{made['source']}가 만든 솔루션 · " + ("✅ 확정됨 · PDF로 저장해 보고서에 쓰세요" if done else
+                       "확정하면 보고서에 쓸 PDF로 저장할 수 있어요"), width="stretch")
         st.button("↻ 다시 만들기", key="media-btn-variable-solution-regen", type="secondary",
                   on_click=_media_variable_regen_solution, args=(name,))
-        if done:   # 확정한 솔루션: 보고서용 파일 저장 .md · PDF (내려받아도 팝업이 닫히지 않게 다시 그리지 않음)
-            file_name = f"media_solution_{datetime.now().strftime('%Y-%m-%d')}"
-            st.download_button(".md 저장", media_variable_solution_markdown(payload).encode("utf-8"),
-                               file_name=f"{file_name}.md", mime="text/markdown",
-                               key="media-btn-variable-solution-download", type="secondary",
-                               icon=":material/download:", on_click="ignore")
+        if done:   # 확정한 솔루션: 보고서용 PDF 저장 (내려받아도 팝업이 닫히지 않게 다시 그리지 않음)
             try:
                 from modules.media.media_variable_pdf import media_variable_solution_pdf   # fpdf2가 없어도 탭은 열리게
             except ImportError:
                 st.caption("PDF는 fpdf2가 필요해요 (`pip install -r requirements.txt`)")
             else:
-                st.download_button("PDF 저장", media_variable_solution_pdf(payload), file_name=f"{file_name}.pdf",
+                st.download_button("보고서용 PDF 저장", media_variable_solution_pdf(payload),
+                                   file_name=f"media_solution_{datetime.now().strftime('%Y-%m-%d')}.pdf",
                                    mime="application/pdf", key="media-btn-variable-solution-download-pdf",
                                    type="primary", icon=":material/picture_as_pdf:", on_click="ignore")
         elif solution:
@@ -709,7 +689,7 @@ def media_variable_leave_notice() -> None:
     """media_render()가 매번 부릅니다. 솔루션 팝업 표시(블럭 버튼 또는 진행 불가 변수에서 '다음')가 있으면 솔루션 팝업을,
     ①을 떠나려다 막혔으면(media_variable_can_leave가 이유를 남김) 가운데 경고창을 띄웁니다. 솔루션을 확정한 직후면 토스트."""
     if st.session_state.pop("media-variable-solution-toast", False):
-        st.toast("솔루션을 확정했어요. 팝업에서 보고서용 파일로 저장할 수 있어요", icon="✅")
+        st.toast("솔루션을 확정했어요. 팝업에서 보고서용 PDF로 저장할 수 있어요", icon="✅")
     if name := st.session_state.pop(MEDIA_VARIABLE_SOLUTION_OPEN_KEY, None):
         st.session_state.pop(MEDIA_VARIABLE_LEAVE_KEY, None)
         _media_variable_solution_dialog(name)

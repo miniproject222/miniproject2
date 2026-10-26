@@ -1,5 +1,5 @@
 # 3. 매체 제작 > 가설에서 변수 도출: 확정한 솔루션 PDF (보고서에 붙이는 한 장)
-# 솔루션 팝업의 '보고서용 PDF 저장' 버튼이 씁니다. 내용·순서는 .md 파일(media_variable_solution_markdown)과 같습니다.
+# 솔루션 팝업의 '보고서용 PDF 저장' 버튼이 씁니다. 순서: 제목 · 가설·변수·작성 · 요약 · 실행 단계 · 기대 효과 · 확인할 것
 # 다른 모듈 파일은 import할 수 없어서(RULES.md) ①·② PDF와 같은 공통 폰트·색으로 따로 만듭니다.
 import re
 from datetime import datetime
