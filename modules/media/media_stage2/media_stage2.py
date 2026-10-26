@@ -14,7 +14,6 @@
 from html import escape
 from pathlib import Path
 
-import pandas as pd
 import streamlit as st
 
 from common.common_store import store_get
@@ -165,6 +164,7 @@ def _media_s2_ai_refine() -> None:
     st.session_state["media-s2-ai-result"] = result
     st.session_state[MEDIA_S2_REFINED] = gen["sig"]
     st.session_state["media-s2-ai-msg"] = check["warnings"]
+    st.session_state["media-s2-show-ai"] = True   # 다음 화면에서 'AI 다듬기 결과' 팝업을 띄움
 
 
 def media_s2_ai_current(prompt_a: str, prompt_b: str) -> dict | None:
@@ -175,89 +175,109 @@ def media_s2_ai_current(prompt_a: str, prompt_b: str) -> dict | None:
     return None
 
 
+MEDIA_S2_HELP = ("정확한 성과 측정을 위해 AI가 선정한 핵심 변수({var}) 외 세부 요소는 고정됩니다. "
+                 "브랜드에 어울리는 '전체 분위기'를 편하게 수정해주세요.")
+
+
+@st.dialog("A안·B안 프롬프트 만들기")
+def _media_s2_help_dialog(variable: str) -> None:
+    """제목 옆 (?) 버튼을 누르면 뜨는 설명 (✕로 닫힘)."""
+    st.markdown(MEDIA_S2_HELP.format(var=variable))
+
+
 def media_s2_ai_header(gen: dict) -> None:
-    """프롬프트 A·B 칸 바로 위 제목 줄: 'A안·B안 프롬프트 만들기'(조금 크게) + 옆 설명(작게), 아래에 만든 방식 한 줄."""
-    draft = gen["draft"]
-    st.markdown(
-        '<div class="media-s2-head"><b>📝 A안·B안 프롬프트 만들기</b> <span>정확한 성과 측정을 위해 AI가 선정한 핵심 변수'
-        f"({escape(draft['variable'])}) 외 세부 요소는 고정됩니다. "
-        "브랜드에 어울리는 '전체 분위기'를 편하게 수정해주세요</span></div>",
-        unsafe_allow_html=True)
-    how = "A안: 지금 메인 이미지 그대로" if gen.get("mode") == "keep" else "A안: 새로 설계"
-    src = {"ai": "AI가 A를 만들고 독립 변수만 바꿔 B를 만들었어요", "saved": "전에 넘긴 프롬프트를 이어서 보여 줘요",
-           "sample": "예시 프롬프트예요"}.get(gen["source"], "")
-    st.markdown(f'<div class="media-s2-how">{how} → B안: 독립 변수 칸만 바꿈 · {src}</div>', unsafe_allow_html=True)
+    """맨 위 제목 줄: '📝 A안·B안 프롬프트 만들기' + (?) 버튼 (누르면 설명이 뜸)."""
+    # (?)는 펼침 메뉴(popover) 대신 아이콘만 있는 버튼 → 누르면 설명 팝업 (아래 화살표가 붙지 않게)
+    with st.container(horizontal=True, vertical_alignment="center", key="media-s2-title-row"):
+        st.markdown('<div class="media-s2-title">📝 A안·B안 프롬프트 만들기</div>', unsafe_allow_html=True)
+        st.button("", key="media-s2-help", icon=":material/help_outline:", type="tertiary",
+                  on_click=_media_s2_help_dialog, args=(gen["draft"]["variable"],))
     if gen["source"] == "sample" and gen.get("error"):
         st.warning(f"AI로 A·B 프롬프트를 만들지 못했어요 ({gen['error']}). 'A·B 다시 만들기'를 눌러 다시 시도해 주세요.")
 
 
+def media_s2_marked(text: str, slot: str) -> str:
+    """보기 화면용 HTML: 줄바꿈을 지키고, 독립 변수 부분(slot)에 빨간 밑줄 (.media-s2-var)."""
+    if slot and text.count(slot) == 1:
+        head, _, tail = text.partition(slot)
+        body = f'{escape(head)}<span class="media-s2-var">{escape(slot)}</span>{escape(tail)}'
+    else:
+        body = escape(text)
+    return f'<div class="media-s2-view">{body}</div>'
+
+
+def _media_s2_toggle_edit(name: str) -> None:
+    """'수정하기' / '수정 완료' 버튼 콜백: 그 칸을 입력 칸 ↔ 보기 화면(빨간 밑줄)으로 바꿈."""
+    key = f"media-s2-edit-{name}"
+    st.session_state[key] = not st.session_state.get(key, False)
+
+
 def media_s2_ai_report(draft: dict, prompt_a: str, prompt_b: str) -> None:
-    """프롬프트 칸 아래: AI 경고, 바꾼 곳 표, 찍지 말 것 / 넣을 것, 그리고 키가 없어도 도는 금지 단어 검사."""
+    """프롬프트 칸 아래: AI 경고, 금지 단어 경고 (AI 다듬기 결과 표는 팝업 _media_s2_ai_dialog)."""
     for msg in st.session_state.pop("media-s2-ai-msg", []):
         st.warning(msg)
-
-    # 금지 단어 검사는 늘 돌리고, 걸렸을 때만 경고 (통과 문구는 화면에서 뺌)
+    # 금지 단어 검사는 늘 돌리고, 걸렸을 때만 경고
     material = media_s2_ai_material(draft)
     hits = media_s2_forbidden_hits(prompt_a + "\n" + prompt_b, material["forbidden"])
     if hits:
         st.warning("리포트 금지 표현이 프롬프트에 있어요: " + ", ".join(hits))
 
-    result = media_s2_ai_current(prompt_a, prompt_b)
-    if result is None:
-        return
-    with st.container(border=True, key="media-s2-ai-box"):
-        st.markdown(f"**AI 다듬기 결과** · {result.get('provider', '')}")
-        if not result["used_report"]:
-            st.info("리포트 규칙 없이 다듬었어요 (아마존 메인 이미지 규칙만 사용). ① 문제 분석 탭을 열고 다시 눌러 주세요.")
-        for w in result["slot_warnings"]:
-            st.warning(f"A/B 문구 확인: {w}")
-        if result["changes"]:
-            st.dataframe(pd.DataFrame([{
-                "바꾼 곳": c["where"], "뺌·더함": c["kind"], "이유": c["reason"],
-                "근거": c["basis"] if c["basis_ok"] else f"{c['basis'] or '-'} ⚠️ 근거 확인 필요",
-            } for c in result["changes"]]), hide_index=True, width="stretch")
-        else:
-            st.caption("AI가 바꾼 곳이 없어요.")
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("**🚫 찍지 말 것**")
-            st.markdown("\n".join(f"- {x}" for x in result["avoid"]) or "-")
-        with c2:
-            st.markdown("**✅ 넣을 것**")
-            st.markdown("\n".join(f"- {x}" for x in result["include"]) or "-")
 
-
-def media_s2_refine_section(gen: dict) -> tuple[str, str, bool]:
-    """A안·B안 프롬프트 칸 + 도구 줄(규칙 팝업 · A·B 다시 만들기 · AI로 다듬기) + 확인 경고.
+def media_s2_refine_section(gen: dict, plan: dict) -> tuple[str, str, bool]:
+    """프롬프트 박스 두 칸(위에 A·B 소재 요약 → 프롬프트 보기/수정 → 되돌리기·수정하기) → 독립 변수 줄 → 도구 줄 → 경고.
     프롬프트 A, B와 확인 통과 여부를 돌려줍니다."""
     draft = gen["draft"]
     media_s2_ai_header(gen)
     msg = st.session_state.pop("media-s2-sync-msg", "")
     if msg:
         st.warning(msg)
+    listing = media_s2_listing()
+    summary = {   # 박스 맨 위 A·B 소재 요약 (①에서 확정한 A·B, A는 지금 메인 이미지 문제점도)
+        "A": f'<b>A · 현재 (대조군)</b> : {escape(plan["a"])}'
+             + (f'<br><span>{escape(listing["main_image_issue"])}</span>' if listing.get("main_image_issue") else ""),
+        "B": f'<b>B · 제안 (실험군)</b> : {escape(plan["b"])}',
+    }
     prompts = {}
     c1, c2 = st.columns(2)
     for col, name in ((c1, "A"), (c2, "B")):
         key = f"media-s2-prompt-{name}"
         if key not in st.session_state:
             st.session_state[key] = media_handoff_fill(draft["base"], draft[f"slot_{name.lower()}"])
+        editing = st.session_state.get(f"media-s2-edit-{name}", False)
         with col:
-            # 제목 한 줄로 고정해 A·B 칸의 흰 입력 상자 위치·크기가 똑같게 함
             with st.container(border=True, key=f"media-s2-prompt-box-{name}"):
-                st.markdown(f"**프롬프트 {name}** · {'대조군' if name == 'A' else '실험군'}")
-                prompts[name] = st.text_area(f"프롬프트 {name}", key=key, height=210, label_visibility="collapsed",
-                                             on_change=_media_s2_sync, args=(name,))
-                st.button("되돌리기", key=f"media-s2-btn-reset-{name}", type="secondary", icon=":material/undo:",
-                          on_click=_media_s2_reset, help="A·B 두 칸을 처음 만든 프롬프트로 함께 되돌려요")
+                st.markdown(f'<div class="media-s2-sum">{summary[name]}</div>', unsafe_allow_html=True)
+                st.markdown(f"**프롬프트 {name} · {'대조군' if name == 'A' else '실험군'}**")
+                if editing:   # 수정 중: 입력 칸 (고치면 다른 칸 같은 부분도 같이 바뀜)
+                    prompts[name] = st.text_area(f"프롬프트 {name}", key=key, height=230, label_visibility="collapsed",
+                                                 on_change=_media_s2_sync, args=(name,))
+                else:         # 보기: 독립 변수 부분에 빨간 밑줄
+                    prompts[name] = st.session_state[key]
+                    st.markdown(media_s2_marked(prompts[name], draft[f"slot_{name.lower()}"]), unsafe_allow_html=True)
+                with st.container(horizontal=True, key=f"media-s2-box-btns-{name}"):
+                    st.button("되돌리기", key=f"media-s2-btn-reset-{name}", type="secondary", icon=":material/undo:",
+                              on_click=_media_s2_reset, help="A·B 두 칸을 처음 만든 프롬프트로 함께 되돌려요")
+                    st.button("수정 완료" if editing else "수정하기", key=f"media-s2-btn-edit-{name}", type="secondary",
+                              icon=":material/check:" if editing else ":material/edit:",
+                              on_click=_media_s2_toggle_edit, args=(name,),
+                              help=None if editing else "고치면 다른 칸의 같은 부분도 같이 바뀌어요 (빨간 밑줄 부분은 그대로)")
 
-    # 프롬프트 칸 아래 한 줄: 왼쪽 '리포트에서 받은 규칙'(알약 모양 · 팝업), 오른쪽 'A·B 다시 만들기' + 'AI로 다듬기'
+    st.markdown(f'<div class="media-s2-ab-var">🎯 <span>독립 변수</span> : <b>{escape(plan["variable"])}</b></div>',
+                unsafe_allow_html=True)
+
+    # 도구 줄: 왼쪽 '리포트에서 받은 규칙 ↗' · 'AI 다듬기 목록 보러가기 ↗', 오른쪽 'A·B 다시 만들기' + 'AI로 다듬기'
     rules = media_s2_report_rules()
     ready = media_s2_ai_ready()
+    has_result = bool(st.session_state.get("media-s2-ai-result"))
     with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center",
                       key="media-s2-tool-row"):
-        st.button(f"리포트에서 받은 규칙 · 금지 표현 {len(rules['forbidden'])}개 · "
-                  f"광고 표현 규칙 {len(rules['marketing_rules'])}개", key="media-s2-btn-rules", type="secondary",
-                  icon=":material/cancel:", on_click=_media_s2_rules_dialog)
+        with st.container(horizontal=True, vertical_alignment="center", width="content", key="media-s2-link-btns"):
+            st.button(f"리포트에서 받은 규칙 · 금지 표현 {len(rules['forbidden'])}개 · "
+                      f"광고 표현 규칙 {len(rules['marketing_rules'])}개 ↗", key="media-s2-btn-rules", type="secondary",
+                      on_click=_media_s2_rules_dialog)
+            st.button("AI 다듬기 목록 보러가기 ↗", key="media-s2-btn-ai-list", type="secondary",
+                      disabled=not has_result, on_click=_media_s2_ai_dialog,
+                      help=None if has_result else "'AI로 다듬기'를 누르면 볼 수 있어요")
         with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
                           width="content", key="media-s2-ai-btns"):
             st.button("A·B 다시 만들기", key="media-s2-btn-regen", type="secondary", icon=":material/refresh:",
@@ -279,6 +299,36 @@ def media_s2_refine_section(gen: dict) -> tuple[str, str, bool]:
             st.warning("빠진 고정 요소: " + ", ".join(check["missing"]))
     media_s2_ai_report(draft, prompts["A"], prompts["B"])
     return prompts["A"], prompts["B"], check["ok"]
+
+
+@st.dialog("AI 다듬기 결과", width="large")
+def _media_s2_ai_dialog() -> None:
+    """AI로 다듬기 결과 팝업 (다듬기 직후 자동으로 뜨고, 'AI 다듬기 목록 보러가기 ↗'로 다시 열 수 있음, ✕로 닫힘).
+    표 모양은 리포트 규칙 팝업과 같은 .media-s2-rules."""
+    result = st.session_state.get("media-s2-ai-result")
+    if not result:
+        st.caption("아직 AI로 다듬은 결과가 없어요.")
+        return
+    st.caption(f"{result.get('provider', '')} · 바꾼 곳 {len(result['changes'])}개")
+    if not result["used_report"]:
+        st.info("리포트 규칙 없이 다듬었어요 (아마존 메인 이미지 규칙만 사용). ① 문제 분석 탭을 열고 다시 눌러 주세요.")
+    for w in result["slot_warnings"]:
+        st.warning(f"A/B 문구 확인: {w}")
+    rows = "".join(
+        f"<tr><td>{escape(c['where'])}</td><td>{escape(c['kind'])}</td><td>{escape(c['reason'])}</td>"
+        f"<td><b>{escape(c['basis'] or '-')}</b>{'' if c.get('basis_ok', True) else ' ⚠️ 근거 확인 필요'}</td></tr>"
+        for c in result["changes"]) or '<tr><td colspan="4">AI가 바꾼 곳이 없어요.</td></tr>'
+    st.markdown('<div class="media-s2-rules"><h4>✏️ 바꾼 곳</h4>'
+                '<table class="media-s2-rules-ai"><colgroup><col><col><col><col></colgroup>'
+                f"<thead><tr><th>바꾼 곳</th><th>뺌·더함</th><th>이유</th><th>근거</th></tr></thead><tbody>{rows}</tbody>"
+                "</table></div>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown('<div class="media-s2-rules"><h4>🚫 찍지 말 것</h4></div>', unsafe_allow_html=True)
+        st.markdown("\n".join(f"- {escape(x)}" for x in result["avoid"]) or "-")
+    with c2:
+        st.markdown('<div class="media-s2-rules"><h4>✅ 넣을 것</h4></div>', unsafe_allow_html=True)
+        st.markdown("\n".join(f"- {escape(x)}" for x in result["include"]) or "-")
 
 
 @st.dialog("리포트에서 받은 규칙", width="large")
@@ -362,7 +412,7 @@ def media_s2_handoff_now():
 # 화면
 # ─────────────────────────────────────────────
 def media_s2_ab_section() -> dict | None:
-    """위쪽: ①에서 '이 변수로 확정'한 A·B 소재 카드 (옛 media_ab.py의 media_ab_plan_step() 위쪽을 옮김).
+    """①에서 '이 변수로 확정'한 A/B 설계를 읽습니다 (A·B 요약은 아래 프롬프트 박스 맨 위에 보여 줌).
     확정 전이면 빈 카드와 '① 으로 가서 확정하기' 버튼만 보여 주고 None (그 아래 프롬프트 만들기도 그리지 않음)."""
     plan, state = media_variable_confirmed_plan()
     if plan is None:   # 아직 확정 전: 빈 카드로 ①에서 확정하도록 안내
@@ -377,36 +427,24 @@ def media_s2_ab_section() -> dict | None:
             st.markdown(":orange-badge[확정 안 됨] ① 에서 새로 고른 값이 아직 확정되지 않아, 이전에 확정한 값으로 보여 줘요")
             st.button("① 으로 가서 확정하기", key="media-s2-btn-go-confirm", type="secondary",
                       on_click=media_variable_go_step)
-
-    # 지금 메인 이미지의 문제점은 리포트(검색어 분석 sqp의 listing)에서 읽음 (검색어·KPI는 탭 바 오른쪽 KPI 칩에 있음)
-    listing = media_s2_listing()
-    # A·B 카드: HTML 격자 한 줄에 두 칸 (격자는 두 칸 높이를 자동으로 똑같이 맞추고, 글이 길어도 잘리지 않음)
-    st.markdown(
-        '<div class="media-s2-ab-grid">'
-        f'<div class="media-s2-ab-card"><b>A · 현재 (대조군)</b><p>{escape(plan["a"])}</p>'
-        f'<span class="media-desc">{escape(listing.get("main_image_issue", ""))}</span></div>'
-        f'<div class="media-s2-ab-card"><b>B · 제안 (실험군)</b><p>{escape(plan["b"])}</p></div>'
-        '</div>', unsafe_allow_html=True)
-    # 독립 변수는 카드 밖, 구분선 위에 따로 (min #42에서 B 카드에 넣었던 '독립 변수: …'를 옮김)
-    st.markdown(f'<div class="media-s2-ab-var">🎯 <span>독립 변수</span> : <b>{escape(plan["variable"])}</b></div>',
-                unsafe_allow_html=True)
     return plan
 
 
 def media_s2_prompt_section(plan: dict) -> None:
-    """아래쪽: A안·B안 프롬프트 만들기 (제목 줄 → 프롬프트 A·B 칸 → 도구 줄 → 확인 경고 → AI 다듬기 결과).
+    """A안·B안 프롬프트 만들기 (제목 줄 → 프롬프트 박스 두 칸 → 독립 변수 줄 → 도구 줄 → 경고).
     넘기기는 맨 아래 '다음: 사진·영상 초안 제작 →' 버튼이 media_s2_handoff_now()로 함."""
     gen = media_s2_ensure_draft(plan)
-    media_s2_refine_section(gen)
+    media_s2_refine_section(gen, plan)
 
 
 def media_stage2_render():
     """하위 탭 ② A/B 소재 준비 (이름은 MEDIA_S2_TAB_LABEL). 반드시 media_render() 안에서 부릅니다.
-    위쪽 A·B 소재 카드 → 아래쪽 프롬프트 만들기. ①에서 확정하기 전에는 빈 카드만 보여 줍니다."""
+    ①에서 확정하기 전에는 빈 카드만 보여 줍니다."""
     plan = media_s2_ab_section()
     if plan is None:
         return
-    st.divider()
     media_s2_prompt_section(plan)
-    if st.session_state.pop("media-s2-need-refine", False):   # '다음'을 눌렀는데 다듬기 전이면 가운데 경고창
+    if st.session_state.pop("media-s2-show-ai", False):        # 방금 AI로 다듬었으면 결과 팝업
+        _media_s2_ai_dialog()
+    elif st.session_state.pop("media-s2-need-refine", False):   # '다음'을 눌렀는데 다듬기 전이면 가운데 경고창
         _media_s2_need_refine_dialog()
