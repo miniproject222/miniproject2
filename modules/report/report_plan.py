@@ -48,6 +48,29 @@ def report_plan_sqp_goal(sqp):
     return round(goal, 2), f"문제 없는 검색어 {len(normal)}개에서 우리 상품의 배수 중앙값"
 
 
+def report_plan_issue_aspects(issue):
+    """상품 정보의 메인 이미지 문제 문장에서 '안 보이는 것'을 하나씩: '접혀 있어 두께와 냉감 원단 질감이 안 보임' → ['두께', '냉감 원단 질감']."""
+    text = re.sub(r"\s*[이가]?\s*안 보임\s*$", "", str(issue or "")).strip()
+    text = text.split("있어 ", 1)[-1]   # '접혀 있어 ' 같은 원인 앞부분은 뺌
+    return [a.strip() for a in re.split(r"와 |과 |, |·", text) if a.strip()]
+
+
+def report_plan_josa(word, with_batchim, without):
+    last = word[-1] if word else ""
+    return with_batchim if "가" <= last <= "힣" and (ord(last) - 0xAC00) % 28 else without
+
+
+def report_plan_sqp_variants(listing, base_action):
+    """③ 탭(메인 이미지)으로 바로 이어지는 B안 후보: 전체 고침 + 안 보이는 것 하나씩 (상품 정보 데이터, 고정 문구 없음).
+    ③은 가설 If의 낱말로 변수 종류를 정하므로, '가격·제목·상세·문구' 같은 낱말 없이 '메인 이미지 … 사진'으로만 씁니다."""
+    aspects = report_plan_issue_aspects(listing.get("main_image_issue"))
+    if len(aspects) < 2:
+        return []
+    return [{"label": "B안 · 전체", "action": base_action}] + [
+        {"label": f"B안 · {a}", "action": f"메인 이미지 B안(지금 '{listing['main_image']}'에서 안 보이는 "
+                                         f"{a}{report_plan_josa(a, '이', '가')} 잘 보이는 사진)"} for a in aspects]
+
+
 def report_plan_sqp_main(x, sqp, store):
     """'소재 개선' (보이는데 안 눌림): 메인 이미지 A/B."""
     t, listing = x["total"], sqp["listing"]
@@ -59,8 +82,10 @@ def report_plan_sqp_main(x, sqp, store):
     n = report_plan_sample_size(p1, p2)
     weekly = t["our_imp"] / len(x["weeks"]) if x["weeks"] else 0
     weeks = math.ceil(2 * n / weekly) if n and weekly else None
+    action = f"메인 이미지 B안(지금 '{listing['main_image']}'의 문제인 '{listing['main_image_issue']}'을 고친 사진)"
     return {
-        "action": f"메인 이미지 B안(지금 '{listing['main_image']}'의 문제인 '{listing['main_image_issue']}'을 고친 사진)",
+        "action": action,
+        "variants": report_plan_sqp_variants(listing, action),   # ② 가설 후보로 나뉘는 B안 (모두 ③ 메인 이미지로 진행)
         "because": (f"클릭 뒤 장바구니 비율은 우리 {store['cart_rate_ours']}%·시장 {store['cart_rate_market']}%로 비슷해 "
                     f"문제는 첫인상이고 클릭된 상품 중앙 가격보다 €{store['price_gap']:.0f} 비싼 이유가 사진에서 안 보이기"),
         "kpi": "클릭 점유율 ÷ 노출 점유율", "now": round(t["ratio"], 2), "goal": goal, "unit": "배", "better": "up",
@@ -198,8 +223,33 @@ def report_attach_plans(data):
         by_title[p["title"]] = (p["plan"], p["plan_none"])
     for k in data["key_problems"]:   # 핵심 문제 Top 3도 같은 제목의 plan
         k["plan"], k["plan_none"] = by_title.get(k["title"], (None, "데이터로 지금 값·목표 값을 정할 수 없음"))
+    report_plan_link(data)
     if store:   # ③ 탭이 읽는 검색어 목표 배수도 같은 데이터 기준
         main = next((p["plan"] for p in data["problems"] if p.get("sqp_type") == "소재 개선" and p.get("plan")), None)
         store["kpi_goal"] = main["goal"] if main else None
         store["kpi_goal_basis"] = main["goal_basis"] if main else ""
     return data
+
+
+def report_plan_link(data):
+    """① 문제끼리 잇기 (② → ③으로 자연스럽게):
+    - 메인 이미지 가설(③ 가능)에 '함께 개선되는 ① 문제' = 가설 재료가 없는 결과 지표 문제(판매)
+    - 메인 이미지 가설의 고정 요소에 ① 규제(UWG) 문제를 제약으로 (사진에 냉감 수치를 넣지 않음)"""
+    main = next((p for p in data["problems"] if p.get("sqp_type") == "소재 개선" and p.get("plan")), None)
+    if not main:
+        return
+    plan = main["plan"]
+    results = [p["title"] for p in data["problems"] if not p.get("plan") and p.get("group") == "판매"]
+    if results:
+        plan["related"] = results
+        for p in data["problems"]:
+            if p["title"] in results:
+                p["plan_none"] = f"{p['plan_none']} → 원인 가설(메인 이미지: {main['title'][:40]}…)로 함께 개선"
+    rule = next((p for p in data["problems"] if p.get("group") == "규제" and "UWG" in p["title"]), None)
+    if rule:
+        plan["fixed"] = f"{plan['fixed']}, 사진에 냉감 수치 표기 없음 (① '{rule['title'][:30]}…')"
+    for k in data["key_problems"]:
+        hit = next((p for p in data["problems"] if p["title"] == k["title"]), None)
+        if hit:
+            k["plan_none"] = hit["plan_none"]
+

@@ -23,7 +23,7 @@ from modules.report.report_competitor import (
 from modules.report.report_review import report_cooling_sales, report_review_analysis
 from common.common_store import store_get
 from modules.report.report_ga4 import report_ga4_fetch, report_ga4_ready
-from modules.report.report_image import report_image_fixes, report_image_rank, report_stage3_check
+from modules.report.report_image import report_image_brief, report_image_fixes, report_image_rank, report_stage3_check
 from modules.report.report_plan import report_attach_plans
 from modules.report.report_keepa import report_keepa_auto_daily, report_keepa_detail, report_keepa_products, report_keepa_snapshot, report_keepa_usage
 from modules.report.report_sqp import report_sqp_analyze, report_sqp_handoff
@@ -185,6 +185,7 @@ def report_load_data():
     data["image_fixes"] = report_image_fixes(data)   # 이미지로 고칠 수 있는 문제 (② 가설·③ 광고 소재용)
     report_image_rank(data)   # 1·2순위 = ② 가설 가능 + ③ 이미지로 개선 가능한 문제 (3순위부터는 다른 문제여도 됨)
     report_stage3_check(data)   # 문제마다 ① → ② → ③ 연결 판정 (problems[*].stage3, ② 후보 순서·배지)
+    report_image_brief(data)    # ③ 이미지 생성 재료 (problems[*].image_brief, 저장 리포트 image_brief)
     saved = store_get("report")
     # [보류] 해결안 A/B: ③ 탭이 UTM·GA4·A/B 실행 결과를 store("media")에 저장하면, 매일 아침(한국 08:00 이후 첫 접속)
     # 한 번 읽어 분석하고 전날 분석과 비교해 보여 주는 기능. ③ 탭에서 저장 기능을 아직 만들지 않아 꺼 둠.

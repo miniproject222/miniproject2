@@ -182,6 +182,10 @@ def _weather_read_competitors():
                 "competitor": r["기업/브랜드"], "product": r["제품명"], "asin": asin, "rank": int(rank.group(1)),
                 "status": "normal" if items[asin].get("in_stock") else "soldout",
                 "days": None, "checked": checked,
+                # 경쟁사 분석용 Keepa 값 (현재가·90일 평균 대비 변화·평점·리뷰·판매 순위)
+                "price": items[asin].get("price"), "change": items[asin].get("change"),
+                "rating": items[asin].get("rating"), "reviews": items[asin].get("reviews"),
+                "sales_rank": items[asin].get("rank"),
             })
     return sorted(out, key=lambda c: c["rank"])
 
