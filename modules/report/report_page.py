@@ -402,12 +402,17 @@ def report_show_rank_card(data, k, rank):
             return
         sev = k.get("severity") or {}
         tip = f' title="심각도 {sev["score"]:.2f} = {sev["basis"]}"' if sev else ""   # 심각도는 배지에 마우스를 올리면 (한 화면에 들어오게)
-        st.markdown(
-            f'<div class="report-detail-head"><span class="report-level report-level-{REPORT_LEVEL_CLASS[k["level"]]}"{tip}>{rank}순위 · {k["type"]}</span>'
-            f'<span class="report-tag">{k["group"]}</span></div>'
-            f'<div class="report-detail-title">{k["title"]}</div>'
-            f'<div class="report-desc"><b>근거</b> {k["detail"]}</div>' + marks,   # 표시용 span은 맨 뒤 (앞에 두면 빈 줄이 생김)
-            unsafe_allow_html=True)
+        # 배지 줄: 왼쪽 'N순위 · 내부/외부'·분류, 오른쪽 끝 물음표(근거 글 전체) - 근거는 카드에 늘어놓지 않음
+        with st.container(horizontal=True, vertical_alignment="center", key=f"report-rank-head{rank}"):
+            st.markdown(
+                f'<div class="report-detail-head"><span class="report-level report-level-{REPORT_LEVEL_CLASS[k["level"]]}"{tip}>{rank}순위 · {k["type"]}</span>'
+                f'<span class="report-tag">{k["group"]}</span></div>' + marks,   # 표시용 span은 같은 칸에 (따로 두면 빈 줄)
+                unsafe_allow_html=True)
+            with st.popover("", icon=":material/help:", type="tertiary", help="이 문제의 근거"):
+                st.markdown(f"**근거**\n\n{k['detail']}")
+                if sev:
+                    st.caption(f"심각도 {sev['score']:.2f} = {sev['basis']}")
+        st.markdown(f'<div class="report-detail-title">{k["title"]}</div>', unsafe_allow_html=True)
         fix = k.get("image_fix")
         if fix:
             st.markdown(

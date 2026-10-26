@@ -611,3 +611,53 @@
   min-width: 220px;
   justify-content: flex-end;
 }
+
+/* 제목 줄 물음표: 제목 바로 오른쪽, 제목 글자 아래쪽에 맞춤 (버튼·토글은 오른쪽 끝 그대로) - ①·②·④ 같은 규칙 */
+.st-key-weather-head .st-key-weather-head-title {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-weather-head .st-key-weather-help {
+  flex: 1 1 auto !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+
+/* 6) ① 탭 색으로 맞춤: PDF 버튼·토글을 ①의 밝은 보라(#7B6CF2)로 */
+.st-key-weather-btn-pdf button {
+  background: #7B6CF2 !important;
+  border-color: #7B6CF2 !important;
+  box-shadow: 0 4px 12px color-mix(in srgb, #7B6CF2 28%, transparent) !important;
+}
+.st-key-weather-btn-pdf button p,
+.st-key-weather-btn-pdf button span { color: #fff !important; }
+.st-key-weather-toggle-sample label[data-baseweb="checkbox"] > div:first-child,
+.st-key-weather-toggle-sample [role="checkbox"][aria-checked="true"] {
+  background-color: #7B6CF2 !important;
+}
+
+/* (위 규칙 보완) 폭은 키 달린 칸을 감싼 stLayoutWrapper가 정하므로 감싸개에도 같은 규칙 */
+.st-key-weather-head > [data-testid="stLayoutWrapper"]:has(> .st-key-weather-head-title) {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-weather-head > [data-testid="stLayoutWrapper"]:has(> .st-key-weather-help) {
+  flex: 1 1 auto !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+.st-key-weather-head .st-key-weather-head-title .ui-title { width: auto; }
+
+/* 물음표 칸은 남는 폭만 (기본 폭 0에서 늘어남) → 버튼과 같은 줄에 머묾 */
+.st-key-weather-head > [data-testid="stLayoutWrapper"]:has(> .st-key-weather-help) {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+}
+.st-key-weather-head { flex-wrap: nowrap !important; }
+
+/* 폭염 시나리오 토글: 켜졌을 때 바탕을 ①의 밝은 보라로 (토글 바탕 = stCheckbox > label > 첫 div) */
+.st-key-weather-toggle-sample [data-testid="stCheckbox"] label:has(input:checked) > div:first-of-type {
+  background-color: #7B6CF2 !important;
+}

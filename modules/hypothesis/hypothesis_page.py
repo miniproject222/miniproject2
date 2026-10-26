@@ -581,11 +581,31 @@ def hypothesis_render_skeleton(report: dict | None) -> None:
             st.caption(("불러올 ① 리포트가 없어요 → ① 문제 분석 탭에서 '불러오기' → '다음으로'를 먼저 눌러 주세요" if loaded and not has_report
                         else "아직 불러오지 않음 → 오른쪽 위 '불러오기'를 누르면 ① 탭에서 저장한 리포트로 가설 후보를 만들어요 · " + status))
     with right:
-        with st.container(key="hypothesis-heading-selected"):
-            st.markdown("#### :material/check_circle: 지금 선택된 가설")
+        _hypothesis_selected_heading("오른쪽 위 '불러오기'를 누르면 ① 탭에서 저장한 리포트로 가설 후보를 만들어요.\n\n"
+                                     "가설을 고르면 여기에 If · Because · Then으로 정리되고, '다음으로'를 누르면 저장하고 ③ 광고 소재 탭으로 넘어가요.")
         st.markdown('<div class="hypothesis-heading-gap"></div>', unsafe_allow_html=True)
         with st.container(border=True, key="hypothesis-selected-card"):
             st.markdown('<p class="hypothesis-callout-box hypothesis-callout-empty">불러오기 전</p>', unsafe_allow_html=True)
+
+
+def _hypothesis_selected_heading(help_text: str) -> None:
+    """오른쪽 '지금 선택된 가설' 제목 + 바로 옆 물음표 (저장 상태·다음 단계 안내는 물음표 안).
+    제목은 글자 폭만 써서 물음표가 제목 바로 옆에 붙음 (① 탭 제목 옆 물음표와 같은 방식)."""
+    with st.container(horizontal=True, vertical_alignment="center", gap="small", key="hypothesis-heading-selected"):
+        st.markdown("#### :material/check_circle: 지금 선택된 가설", width="content")
+        with st.popover("", icon=":material/help:", type="tertiary", help="저장 상태 · 다음 단계"):
+            st.markdown(help_text)
+
+
+def hypothesis_selected_help(current: dict | None, total: int) -> str:
+    """'지금 선택된 가설' 제목 옆 물음표 안 글: 고르기 전 → 고르는 법, 저장 전 → '다음으로' 안내, 저장 후 → 저장 시각·읽는 곳."""
+    if not current:
+        return (f"왼쪽 가설 1~{total} 중 하나를 보고 '선택하기'를 누르면 여기에 If · Because · Then으로 정리돼요.\n\n"
+                "그다음 오른쪽 위 '다음으로'를 누르면 저장하고 ③ 광고 소재 탭으로 넘어가요.")
+    if current.get("pending"):
+        return "**아직 저장 안 됨**\n\n오른쪽 위 '다음으로'를 누르면 저장하고 ③ 광고 소재 탭으로 넘어가요."
+    saved_at = st.session_state.get("hypothesis-saved-at")
+    return f"**저장됨**{' (' + saved_at + ')' if saved_at else ''}\n\n③ 광고 소재 탭과 ① 리포트 맨 아래에서 이 가설을 읽어요."
 
 
 def _hypothesis_open(index: int) -> None:
@@ -741,8 +761,7 @@ def hypothesis_render():
     # 두 칸 제목을 같은 크기(####, 페이지 제목보다 작게)로 맞춥니다. 가설 1·2·3 버튼은 왼쪽 카드 안
     # 맨 위 줄에 있어서, 왼쪽 후보 카드와 오른쪽 선택된 가설 카드의 윗선이 같은 높이에서 시작합니다.
     with selected_col:
-        with st.container(key="hypothesis-heading-selected"):
-            st.markdown("#### :material/check_circle: 지금 선택된 가설")
+        _hypothesis_selected_heading(hypothesis_selected_help(current, len(candidates)))
         st.markdown('<div class="hypothesis-heading-gap"></div>', unsafe_allow_html=True)
         with st.container(border=True, key="hypothesis-selected-card"):
             if current:
@@ -757,9 +776,7 @@ def hypothesis_render():
                 else:
                     st.markdown(f'<p class="hypothesis-callout-box">{html.escape(str(current["text"]), quote=False)}</p>',
                                 unsafe_allow_html=True)
-                saved_at = st.session_state.get("hypothesis-saved-at")
-                st.caption("아직 저장 안 됨 → 오른쪽 위 '다음으로'를 누르면 저장하고 ③ 광고 소재 탭으로 넘어가요" if current.get("pending")
-                           else f"저장됨{' (' + saved_at + ')' if saved_at else ''} · ③ 광고 소재 탭·① 리포트 맨 아래에서 읽음")
+                # 저장 상태·다음 단계 안내(예전 카드 맨 아래 한 줄)는 제목 옆 물음표 안 (hypothesis_selected_help)
             else:
                 # 빈 상태: 가운데 정렬 안내 + 고르면 채워질 If·Because·Then 자리 (예전 회색 큰 상자보다 보기 쉽게)
                 st.markdown(
