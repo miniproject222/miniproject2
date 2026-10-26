@@ -11,9 +11,9 @@ MEDIA_S3_IMAGE_MODEL = "gpt-image-1-mini"   # 사진 초안 (레퍼런스용이�
 MEDIA_S3_IMAGE_QUALITY = "low"              # low / medium / high (높을수록 비쌈)
 MEDIA_S3_TEXT_MODEL = "gpt-4.1-mini"        # 스토리보드, 프롬프트 한국어 번역
 MEDIA_S3_VIDEO_MODEL = "bytedance/seedance-2.5/text-to-video"   # 영상 초안 (Higgsfield API, 선불 잔액에서 차감)
-MEDIA_S3_VIDEO_SECONDS = 10                 # 4~30초 (길수록 비쌈). 초안 A·B 각 10초
+MEDIA_S3_VIDEO_SECONDS = 15                 # 4~15초 (Seedance 2.0 fast 최대 15초). 초안 A·B 각 15초
 MEDIA_S3_VIDEO_HOOK = 3                     # A·B가 다른 첫 장면 길이(초). 나머지 장면은 A·B 공통
-MEDIA_S3_VIDEO_RESOLUTION = "480p"          # 480p / 720p / 1080p (높을수록 비쌈·느림). 초안이라 480p (10초 30크레딧)
+MEDIA_S3_VIDEO_RESOLUTION = "480p"          # 480p / 720p / 1080p (높을수록 비쌈·느림). 초안이라 480p
 MEDIA_S3_VIDEO_ASPECT = "16:9"              # 가로 영상
 MEDIA_S3_VIDEO_AUDIO = False                # 초안이라 소리 없이
 MEDIA_S3_STORYBOARD_COLS = ["장면", "길이(초)", "화면", "움직임", "자막", "피할 것"]
@@ -22,7 +22,7 @@ MEDIA_S3_STORYBOARD_SYSTEM = """너는 독일 자사몰에 올릴 냉감패드 �
 같은 영상을 A·B 두 버전으로 만들어 자사몰에서 클릭률을 비교하는 실험용이야. 외주 영상팀이 이 표를 보고 한 번 촬영해서 두 버전으로 편집해.
 
 반드시 지킬 것
-1. 영상은 모두 10초. 맨 앞 3초만 A·B가 다르고, 그 뒤 7초(장면 2~3개)는 A·B가 똑같아.
+1. 영상은 모두 15초. 맨 앞 3초만 A·B가 다르고, 그 뒤 12초(장면 3~4개)는 A·B가 똑같아. 모든 장면 길이의 합이 정확히 15초가 되게 해.
 2. 맨 앞 두 줄의 "장면" 이름은 정확히 "1 첫 3초 · A", "1 첫 3초 · B", 길이는 둘 다 3초.
    - 먼저 가설(If·Because)에서 "손님이 몰라서 안 누르는 제품의 장점"을 하나 찾아 (예: 두께, 원단 질감).
    - A(지금 방식): 같은 자리에서 제품을 평범하게 멀리서 보여 줘. 그 장점은 보이지 않게.
