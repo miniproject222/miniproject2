@@ -11,6 +11,7 @@
 # 화면은 media_stage2_render() 안에서만 그립니다 (media_page.py가 하위 탭에서 부름).
 # 이름 규칙: 함수 media_s2_..., 위젯 key·session_state 키·CSS class media-s2-...
 # (이전 A/B 결과·판정 코드는 media_stage2_judge.py에 보관, AI 재료·호출·확인은 media_stage2_ai.py)
+import re
 from html import escape
 from pathlib import Path
 
@@ -184,6 +185,8 @@ MEDIA_S2_HELP = ("정확한 성과 측정을 위해 AI가 선정한 핵심 변�
 def _media_s2_help_dialog(variable: str) -> None:
     """제목 옆 (?) 버튼을 누르면 뜨는 설명 (✕로 닫힘)."""
     st.markdown(MEDIA_S2_HELP.format(var=variable))
+    st.markdown(f"**AI로 다듬기**: OpenAI({MEDIA_S2_OPENAI_MODEL})로 수업 형식 6줄과 리포트 규칙·독일 디자인 DB에 맞춰 "
+                "공통 부분만 다듬어요 (독립 변수·고정 요소는 그대로)")
 
 
 def media_s2_ai_header(gen: dict) -> None:
@@ -271,7 +274,9 @@ def media_s2_refine_section(gen: dict, plan: dict) -> tuple[str, str, bool]:
         with col:
             with st.container(border=True, key=f"media-s2-prompt-box-{name}"):
                 # 안쪽 div 하나로 감싸야 세로 가운데 정렬할 때 'A · 현재 (대조군) : …'가 한 줄로 이어짐
-                st.markdown(f'<div class="media-s2-sum"><div>{summary[name]}</div></div>', unsafe_allow_html=True)
+                # 한 줄로 보여 줌 (2026-10-27, 높이를 줄여 스크롤 없앰): 넘치면 …, 마우스를 올리면 전체 글(title)
+                tip = re.sub(r"<[^>]+>", "", summary[name].replace("<br>", " · "))
+                st.markdown(f'<div class="media-s2-sum" title="{tip}"><div>{summary[name]}</div></div>', unsafe_allow_html=True)
                 st.markdown(f"**프롬프트 {name} · {'대조군' if name == 'A' else '실험군'}**")
                 if editing:   # 수정 중: 입력 칸 (고치면 다른 칸 같은 부분도 같이 바뀜)
                     prompts[name] = st.text_area(f"프롬프트 {name}", key=key, height=230, label_visibility="collapsed",
@@ -291,16 +296,16 @@ def media_s2_refine_section(gen: dict, plan: dict) -> tuple[str, str, bool]:
                               args=(name, prompts[name], draft[f"slot_{name.lower()}"]),
                               help="영어 프롬프트와 한국어 번역을 팝업으로 보여 줘요 (OpenAI 번역)")
 
-    st.markdown(f'<div class="media-s2-ab-var">🎯 <span>독립 변수</span> : <b>{escape(plan["variable"])}</b></div>',
-                unsafe_allow_html=True)
-
-    # 도구 줄: 왼쪽 '리포트에서 받은 규칙 ↗' · 'AI 다듬기 목록 보러가기 ↗', 오른쪽 'A·B 다시 만들기' + 'AI로 다듬기'
+    # 도구 줄: 왼쪽 '🎯 독립 변수 : …' · '리포트에서 받은 규칙 ↗' · 'AI 다듬기 목록 보러가기 ↗', 오른쪽 'A·B 다시 만들기' + 'AI로 다듬기'
+    # (2026-10-27: 독립 변수 줄을 도구 줄과 한 줄로 합쳐 스크롤 줄임)
     rules = media_s2_report_rules()
     ready = media_s2_ai_ready()
     has_result = bool(st.session_state.get("media-s2-ai-result"))
     with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center",
                       key="media-s2-tool-row"):
         with st.container(horizontal=True, vertical_alignment="center", width="content", key="media-s2-link-btns"):
+            st.markdown(f'<div class="media-s2-ab-var">🎯 <span>독립 변수</span> : <b>{escape(plan["variable"])}</b></div>',
+                        unsafe_allow_html=True)
             st.button(f"리포트에서 받은 규칙 · 금지 표현 {len(rules['forbidden'])}개 · "
                       f"광고 표현 규칙 {len(rules['marketing_rules'])}개 ↗", key="media-s2-btn-rules", type="secondary",
                       on_click=_media_s2_rules_dialog)
@@ -314,9 +319,8 @@ def media_s2_refine_section(gen: dict, plan: dict) -> tuple[str, str, bool]:
                       help="①에서 확정한 A·B로 프롬프트를 처음부터 새로 만들어요 (지금 고친 내용은 사라져요)")
             st.button("AI로 다듬기", key="media-s2-btn-refine", type="secondary", icon=":material/auto_awesome:",
                       disabled=not ready, on_click=_media_s2_ai_refine,
-                      help=(f"OpenAI({MEDIA_S2_OPENAI_MODEL})로 수업 형식 6줄과 리포트 규칙·독일 디자인 DB에 맞춰 "
-                            "공통 부분만 다듬어요 (독립 변수·고정 요소는 그대로)" if ready
-                            else f"secrets.toml에 {MEDIA_S2_AI_KEY}를 넣어 주세요"))
+                      # 켜져 있을 때는 말풍선 없음 (누르면 AI 작업 동안 말풍선이 계속 떠 있어서, 설명은 제목 옆 (?) 창에)
+                      help=None if ready else f"secrets.toml에 {MEDIA_S2_AI_KEY}를 넣어 주세요")
 
     check = media_handoff_check(draft, prompts["A"], prompts["B"])
     if not check["ok"]:   # 통과했을 때는 따로 알리지 않음 (문제가 있을 때만 경고)

@@ -52,7 +52,7 @@ MEDIA_VARIABLE_B_MIN = 2            # 진행 가능한 메인 이미지 변수�
 MEDIA_VARIABLE_B_MAX = 3            # 변수 하나에 B로 쓸 수 있는 안 최대 수 (넘으면 앞에서부터)
 MEDIA_VARIABLE_B_RETRY = 2          # B안이 MEDIA_VARIABLE_B_MIN개보다 적을 때 다시 요청하는 횟수 (AI 하나당)
 MEDIA_VARIABLE_B_SIMILAR = 0.7      # B안 문장끼리 비슷한 정도(difflib 0~1)가 이 이상이면 뒤의 안을 뺌
-MEDIA_VARIABLE_AI_VERSION = 4       # 후보 묶음 만드는 규칙의 판. 올리면 같은 가설도 제목 줄 '불러오기'에서 새로 만듦
+MEDIA_VARIABLE_AI_VERSION = 4       # 후보 묶음 만드는 규칙의 판. 올리면 같은 가설도 다시 불러올 때 새로 만듦
 # 화면(요약 칩·변수 블럭·A/B 표)에 보이는 칸의 최대 글자 수. AI에게는 더 짧게 쓰라고 하고, 넘으면 코드가 줄임
 # (name: 괄호 설명을 빼고, 그래도 길면 종류 이름 / label: 잘라서 … / b: B로 쓰지 않음)
 MEDIA_VARIABLE_TEXT_MAX = {"name": 16, "label": 12, "b": 60}

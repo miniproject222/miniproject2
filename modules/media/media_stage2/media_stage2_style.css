@@ -583,3 +583,26 @@
 .st-key-media-s2-help {
   margin-top: 8px;
 }
+
+/* ── A·B 요약 칸 한 줄 (2026-10-27): 높이를 줄여 스크롤 없앰. 넘치면 …, 마우스를 올리면 전체 글(title) ── */
+.media-s2-sum {
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 8px 14px !important;
+  overflow: hidden !important;
+}
+.media-s2-sum > div {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-s2-sum br { display: none; }
+.media-s2-sum span::before { content: " · "; }
+
+/* 독립 변수를 도구 줄 왼쪽 맨 앞에 (따로 한 줄이던 것을 합침): 위로 올리던 여백은 없애고 줄바꿈 없이 */
+.st-key-media-s2-link-btns .media-s2-ab-var {
+  margin: 0 8px 0 0;
+  white-space: nowrap;
+}
+
