@@ -162,8 +162,8 @@
   transition: background 0.15s, color 0.15s;
 }
 .st-key-media-s3-photo-tools button:hover {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: #7B6CF2;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-color: #7B6CF2;
   color: var(--color-card);
 }
 .st-key-media-s3-photo-tools button [data-testid="stIconMaterial"] {
@@ -272,7 +272,7 @@
   color: var(--color-text) !important;
 }
 .st-key-media-root [class*="st-key-media-s3-btn-view-"] button:hover {
-  border-color: var(--color-primary);
+  border-color: #7B6CF2;
 }
 .st-key-media-s3-video-head {
   flex-wrap: nowrap;
@@ -380,8 +380,8 @@
   color: var(--color-text) !important;
 }
 [class*="st-key-media-s3-hist-tools-"] button:hover {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: #7B6CF2;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-color: #7B6CF2;
 }
 .st-key-media-root [class*="st-key-media-s3-hist-tools-"] button:hover [data-testid="stIconMaterial"] {
   color: var(--color-card) !important;
@@ -452,24 +452,6 @@
   .st-key-media-s3-hist-left > [data-testid="stElementContainer"]:has(.media-s3-hist-hypo) {
     display: none;
   }
-}
-
-/* ④ 이전/다음 줄 (media_s3_nav): 사진 → 영상 → 만든 결과 보기 → ⑤ 순서. ③ 공통 이전/다음 줄과 같은 모양 */
-[class*="st-key-media-s3-nav-"] {
-  margin-top: 0;
-  padding-top: 10px;
-  border-top: 1px solid var(--color-border);
-  align-items: center;
-}
-[class*="st-key-media-s3-nav-"] [data-testid="stElementContainer"],
-[class*="st-key-media-s3-nav-"] .stButton {
-  margin: 0;
-  padding: 0;
-}
-/* ④에서는 ③ 공통 이전/다음 줄(media_page.py, 3번째 단계 = nav-2)을 숨김 (위 줄이 대신함) */
-.st-key-media-root:has(.st-key-media-s3-sub) .st-key-media-step-nav-2,
-.st-key-media-root:has(.st-key-media-s3-sub) [data-testid="stLayoutWrapper"]:has(> .st-key-media-step-nav-2) {
-  display: none;
 }
 
 /* ⑤ 외주 정리 (media_stage3_export_render): 사진·영상 탭처럼 100% 화면에서 스크롤 없이 한 화면
@@ -926,20 +908,20 @@ div[role="dialog"]:has(.media-s3-sb-table) {
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"]:hover {
   background: transparent !important;
-  color: var(--color-primary) !important;
-  border-bottom-color: color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
+  color: #7B6CF2 !important;
+  border-bottom-color: color-mix(in srgb, #7B6CF2 35%, transparent) !important;
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"][aria-selected="true"] {
   background: transparent !important;
-  color: var(--color-primary) !important;
-  border-bottom-color: var(--color-primary) !important;
+  color: #7B6CF2 !important;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-bottom-color: #7B6CF2 !important;
   box-shadow: none !important;
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"] p {
   font-size: 13.5px;
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"][aria-selected="true"] p {
-  color: var(--color-primary) !important;
+  color: #7B6CF2 !important;
   font-weight: 700;
 }
 

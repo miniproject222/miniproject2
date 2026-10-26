@@ -10,7 +10,6 @@ import time
 from pathlib import Path
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from common.common_store import store_get
 from modules.media.media_stage3.media_stage3_hf_login import (media_s3_hf_login_start, media_s3_hf_login_status,
@@ -496,7 +495,7 @@ function next() {
 v.onended = next;
 c.onclick = () => { if (c.style.display !== 'none' && (i === -1)) next(); };
 </script>""".replace("__SEQ__", json.dumps(seq)).replace("__CARD__", str(int(MEDIA_S3_AB_CARD_SEC * 1000)))
-    components.html(page, height=430)
+    st.iframe(page, height=430)   # 예전 components v1 html (Streamlit이 없앨 예정) 대신. 같은 출처 iframe에서 스크립트 실행
 
 
 def media_s3_video_labels(names: list) -> list:
@@ -1224,29 +1223,12 @@ MEDIA_S3_SUB_TABS = ["사진 초안 제작", "영상 초안 제작", "만든 결
 
 
 def _media_s3_go(sub: str | None = None, step: str | None = None) -> None:
-    """④ 이전/다음 버튼 콜백. sub는 ④ 안의 하위 탭, step은 ③ 매체 제작의 단계 탭(media_page.py의 key="media-step")."""
+    """④ 하위 탭·단계 이동 (③ 제목 줄 '다음으로' = media_page.py _media_click_next에서 부름).
+    sub는 ④ 안의 하위 탭, step은 ③ 매체 제작의 단계 탭(media_page.py의 key="media-step")."""
     if sub:
         st.session_state["media-s3-sub"] = sub
     if step:
         st.session_state["media-step"] = step   # media_page.py의 '이전/다음 단계' 버튼과 같은 방식
-
-
-def media_s3_nav(i: int) -> None:
-    """④ 하위 탭 맨 아래 이전/다음 버튼: 사진 → 영상 → 만든 결과 보기 → ⑤ 외주 정리 순서로 이어짐.
-    ③ 공통 이전/다음 줄(media_page.py)은 ④에서 CSS로 숨기고 이 줄을 대신 씁니다 (같은 모양·같은 높이)."""
-    from modules.media.media_page import MEDIA_STEPS   # 안에서 불러옴 (media_page가 이 파일을 불러서 순환 import 방지)
-    steps = [label for label, _ in MEDIA_STEPS]
-    k = steps.index(MEDIA_S3_TAB_LABEL)
-    prev = {"sub": MEDIA_S3_SUB_TABS[i - 1]} if i > 0 else ({"step": steps[k - 1]} if k > 0 else None)
-    nxt = ({"sub": MEDIA_S3_SUB_TABS[i + 1]} if i < len(MEDIA_S3_SUB_TABS) - 1
-           else ({"step": steps[k + 1]} if k + 1 < len(steps) else None))
-    with st.container(horizontal=True, horizontal_alignment="distribute", key=f"media-s3-nav-{i}"):
-        if prev:
-            st.button(f"← {next(iter(prev.values()))}", key=f"media-s3-nav-prev-{i}", type="primary",
-                      on_click=_media_s3_go, kwargs=prev)
-        if nxt:
-            st.button(f"다음: {next(iter(nxt.values()))} →", key=f"media-s3-nav-next-{i}", type="primary",
-                      on_click=_media_s3_go, kwargs=nxt)
 
 
 def media_s3_summary_chip() -> None:
@@ -1289,12 +1271,11 @@ def media_stage3_render():
     media_s3_summary_chip()   # 탭 바 오른쪽: 독립 변수 + 목표 KPI (공통 KPI 칩 대신)
 
     # ④ 안의 하위 탭: 사진 초안 제작 / 영상 초안 제작 (영상은 스토리보드 확정 → 영상 초안 순서)
-    # on_change="rerun": 고른 탭만 그리고, 아래 '다음' 버튼으로 하위 탭을 바꿀 수 있게 (선택 상태를 기억)
+    # on_change="rerun": 고른 탭만 그리고, 제목 줄 '다음으로'로 하위 탭을 바꿀 수 있게 (선택 상태를 기억)
     tabs = st.tabs(MEDIA_S3_SUB_TABS, key="media-s3-sub", on_change="rerun")
     renders = [lambda: media_s3_photo_section(src), lambda: media_s3_video_tab(src),
                lambda: (media_s3_history_section(), media_s3_handoff_step("history"))]
-    for i, (tab, render) in enumerate(zip(tabs, renders)):
+    for tab, render in zip(tabs, renders):
         if tab.open:
             with tab:
-                render()
-                media_s3_nav(i)
+                render()   # 이동은 ③ 제목 줄 '다음으로'(media_page.py)가 사진 → 영상 → 만든 결과 보기 → ⑤ 순서로 _media_s3_go를 불러 대신함
