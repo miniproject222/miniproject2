@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 import requests
 import streamlit as st
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 import ui_theme as ui
 
@@ -28,16 +28,16 @@ HOME_CITIES = [
     {"city": "Köln", "lat": 50.94, "lon": 6.96},
     {"city": "Dresden", "lat": 51.05, "lon": 13.74},
     {"city": "Frankfurt", "lat": 50.11, "lon": 8.68},
-    {"city": "Stuttgart", "lat": 48.78, "lon": 9.18, "dy": -6},
-    {"city": "München", "lat": 48.14, "lon": 11.58, "dy": 5},
+    {"city": "Stuttgart", "lat": 48.78, "lon": 9.18},
+    {"city": "München", "lat": 48.14, "lon": 11.58},
 ]
 HOME_SAMPLE_TEMPS = [26, 31, 30, 32, 31, 30, 33]   # API 실패 시 샘플 (여름 폭염일 가정)
 HOME_WEEKDAYS = "월화수목금토일"
 
 # 구 설정: 중심(독일 중앙)에서 구 가장자리까지 실제 거리 HOME_GLOBE_CAP도
 HOME_CENTER = (10.45, 51.15)   # (경도, 위도)
-HOME_GLOBE_CAP = 12
-HOME_GLOBE_PX = 760            # 구 이미지 한 변 픽셀
+HOME_GLOBE_CAP = 6             # (2026-10-26) 12 → 6: 주변국이 너무 보여 독일이 구를 거의 채우도록 확대
+HOME_GLOBE_PX = 900            # 구 이미지 한 변 픽셀 (화면에서 더 크게 보여서 760 → 900)
 HOME_SVG_SIZE = 600            # SVG 좌표계
 HOME_GLOBE_R = 245             # SVG 안 구 반지름
 
@@ -99,8 +99,16 @@ def _home_sample(img, lon, lat):
 
 @lru_cache(maxsize=1)
 def home_globe_image():
-    """위성 사진을 구에 입힌 WebP(data URI). 처음 한 번만 계산"""
-    img = np.asarray(Image.open(HOME_EARTH_IMAGE).convert("RGB"), dtype=np.float32) / 255
+    """위성 사진에서 지형 굴곡만 뽑아 '하얀 입체 지구본'(레퍼런스 모양)으로 구에 입힌 WebP(data URI). 처음 한 번만 계산
+    독일만 연보라로 칠하고 보라 국경선을 그어 돋보이게, 주변국·바다는 하얗게"""
+    src = Image.open(HOME_EARTH_IMAGE).convert("RGB")
+    rgb = np.asarray(src, dtype=np.float32) / 255
+    # 지형 굴곡 = 살짝 흐린 밝기 - 많이 흐린 밝기 (픽셀 잡무늬는 빼고 산맥·골짜기 같은 중간 크기 굴곡만 남김)
+    gray = Image.fromarray((rgb.mean(axis=2) * 255).astype(np.uint8))
+    fine = np.asarray(gray.filter(ImageFilter.GaussianBlur(1.5)), dtype=np.float32) / 255
+    coarse = np.asarray(gray.filter(ImageFilter.GaussianBlur(10)), dtype=np.float32) / 255
+    detail = fine - coarse
+    img = np.dstack([rgb, detail])
     n = HOME_GLOBE_PX
     yy, xx = np.mgrid[0:n, 0:n]
     u = (xx + 0.5) / n * 2 - 1
@@ -116,24 +124,30 @@ def home_globe_image():
     lon = lon0 + np.arctan2(np.sin(theta) * np.sin(c) * math.cos(lat0), np.cos(c) - math.sin(lat0) * np.sin(lat))
     lon, lat = np.degrees(lon), np.degrees(lat)
 
-    color = np.clip(_home_sample(img, lon, lat) ** 0.8 * 1.3, 0, 1)
+    sampled = _home_sample(img, lon, lat)
+    sat, detail = sampled[..., :3], sampled[..., 3]
+    relief = np.clip(0.5 + detail * 4, 0, 1)[..., None]   # 0 = 골짜기(어둡게) ~ 1 = 능선(밝게)
+    water = (sat[..., 2] > sat[..., 0] + 0.02) & (sat.mean(axis=-1) < 0.3)   # 위성 사진의 짙은 파랑 = 바다·호수
 
-    # 독일만 밝게, 주변국은 어둡고 푸르게
+    # 주변국: 하얀 땅 + 옅은 지형 굴곡, 바다: 옅은 푸른 흰색 (굴곡 없음)
+    land = np.clip(0.84 + 0.16 * relief, 0, 1) * np.array([1.0, 1.0, 1.02])
+    color = np.where(water[..., None], np.array([0.88, 0.89, 0.96]), land)
+    # 독일: 연보라 + 굴곡
     mask = _home_close(_home_in_germany(lon, lat), 2)   # 주 경계 사이 틈 메우기
-    dim = color * 0.55 + np.array([0.04, 0.07, 0.16])
-    color = np.where(mask[..., None], np.clip(color * 1.15, 0, 1), dim)
+    germany = np.clip(np.array([0.72, 0.70, 0.98]) * (0.80 + 0.32 * relief), 0, 1)
+    color = np.where(mask[..., None], germany, color)
 
-    # 독일 국경선 (마스크 경계를 1px 두껍게)
+    # 독일 국경선 (마스크 경계를 1px 두껍게, 보라)
     edge = mask & ~(np.roll(mask, 1, 0) & np.roll(mask, -1, 0) & np.roll(mask, 1, 1) & np.roll(mask, -1, 1))
     edge = edge | np.roll(edge, 1, 0) | np.roll(edge, 1, 1)
-    color = np.where(edge[..., None], color * 0.15 + 0.85, color)
+    color = np.where(edge[..., None], np.array([0.48, 0.42, 0.95]), color)
 
-    # 빛(왼쪽 위) + 가장자리 대기(푸른 빛)
+    # 빛(왼쪽 위, 약하게) + 가장자리 하얀 빛
     z = np.sqrt(np.clip(1 - rc ** 2, 0, 1))
     light = np.clip(-0.45 * u + 0.5 * v + 0.74 * z, 0, 1)
-    color = color * (0.45 + 0.75 * light)[..., None]
-    rim = (rc ** 8)[..., None] * 0.6
-    color = color * (1 - rim) + np.array([0.55, 0.66, 1.0]) * rim
+    color = color * (0.80 + 0.25 * light)[..., None]
+    rim = (rc ** 6)[..., None] * 0.7
+    color = color * (1 - rim) + np.array([0.95, 0.96, 1.0]) * rim
 
     alpha = np.clip((1 - r) * n / 2, 0, 1)
     rgba = np.dstack([np.clip(color, 0, 1) * (alpha > 0)[..., None], alpha])
@@ -178,8 +192,17 @@ def home_fetch_temps():
         week_i = max(range(1, len(maxes)), key=lambda i: maxes[i])   # 내일부터 이번 주 중 가장 더운 날
         out.append({**c, "temp": float(d["current"]["temperature_2m"]), "feels": float(d["current"]["apparent_temperature"]),
                     "humidity": float(d["current"]["relative_humidity_2m"]), "tomorrow": float(maxes[1]),
-                    "week_max": float(maxes[week_i]), "week_day": HOME_WEEKDAYS[date.fromisoformat(days[week_i]).weekday()]})
+                    "week_max": float(maxes[week_i]), "week_day": HOME_WEEKDAYS[date.fromisoformat(days[week_i]).weekday()],
+                    # 7일 최고 기온 (홈 왼쪽 '7일 최고 기온 예보' 표)
+                    "daily": [{"day": HOME_WEEKDAYS[date.fromisoformat(dd).weekday()], "max": float(m)}
+                              for dd, m in zip(days, maxes)]})
     return out
+
+
+def home_sample_daily(values):
+    """샘플·시연용 7일 최고 기온 목록 (오늘 요일부터)"""
+    today = date.today().weekday()
+    return [{"day": HOME_WEEKDAYS[(today + i) % 7], "max": float(v)} for i, v in enumerate(values)]
 
 
 def home_get_temps():
@@ -188,7 +211,8 @@ def home_get_temps():
         return home_fetch_temps(), True
     except Exception:
         return [{**c, "temp": float(t), "feels": float(t), "humidity": 55.0, "tomorrow": float(t + 1),
-                 "week_max": float(t + 2), "week_day": "토"}
+                 "week_max": float(t + 2), "week_day": "토",
+                 "daily": home_sample_daily([t, t + 1, t, t + 1, t + 2, t + 1, t])}
                 for c, t in zip(HOME_CITIES, HOME_SAMPLE_TEMPS)], False
 
 
@@ -199,29 +223,41 @@ def _home_mix(c1, c2, t):
     return "#" + "".join(f"{round(x + (y - x) * t):02X}" for x, y in zip(a, b))
 
 
-def _home_temp_color(temp, lo=0, hi=35):
-    """기온 색: 차가움(파랑) → 따뜻함(주황) → 더움(빨강)"""
-    t = min(max((temp - lo) / (hi - lo), 0), 1)
-    if t < 0.5:
-        return _home_mix(HOME_TEMP_COLD, HOME_TEMP_WARM, t * 2)
-    return _home_mix(HOME_TEMP_WARM, HOME_TEMP_HOT, (t - 0.5) * 2)
+HOME_TEMP_STEPS = (20, 30)   # 기온 색 구간: 20°C 미만 시원(파랑) / 20~29°C 따뜻(주황) / 30°C 이상 더움(빨강)
+
+
+def home_temp_color(temp):
+    """기온 색 (구간별 3색). 예전엔 섞은 색이라 7~19°C가 탁한 회갈색으로 보여 또렷한 3단계로 바꿈"""
+    if temp >= HOME_TEMP_STEPS[1]:
+        return HOME_TEMP_HOT
+    return HOME_TEMP_WARM if temp >= HOME_TEMP_STEPS[0] else HOME_TEMP_COLD
+
+
+def home_heat_color(temp, lo, hi):
+    """7일 예보 표 칸 색: 이번 주 값 범위 안에서 연보라 → 진보라, 30°C 이상은 분홍빨강 (레퍼런스 표 색)"""
+    if temp >= HOME_TEMP_STEPS[1]:
+        return HOME_TEMP_HOT
+    t = (temp - lo) / (hi - lo) if hi > lo else 0.5
+    return _home_mix("#DCD8FB", "#6A5AE0", min(max(t, 0), 1))
 
 
 def home_city_layer(temps, warning_of):
-    """지구본 위 도시 기온 이름표 (HTML). 경보 도시는 빨간 표시, 마우스를 올리면 체감·습도·예보 표시
+    """지구본 위 도시 핀 (HTML, 레퍼런스 모양: 말풍선 + 점 + 퍼지는 원). 원 크기는 기온이 높을수록 큼.
+    경보 도시는 빨간 표시, 마우스를 올리면 체감·습도·예보 표시
     warning_of(도시) → ("폭염경보" / "더위 주의" / "", 기준 기온)"""
     out = []
     for p in temps:
         x, y = _home_project(p["lon"], p["lat"])
         level, _ = warning_of(p)
-        color = HOME_TEMP_HOT if level == "폭염경보" else _home_temp_color(p["temp"])
+        color = HOME_TEMP_HOT if level == "폭염경보" else home_temp_color(p["temp"])
         advice = "광고 빈도 올리기 추천" if level else "평소 빈도 유지"
         badge = f'<i class="home-city-warn">{level}</i>' if level else ""
+        halo = 22 + min(max(p["temp"], 0), 35) / 35 * 34   # 퍼지는 원 지름 (기준 화면 px)
         out.append(
             f'<div class="home-city{" home-city-alert" if level else ""}" style="left:{x / HOME_SVG_SIZE * 100:.2f}%;'
-            f'top:{y / HOME_SVG_SIZE * 100:.2f}%;--c:{color};--dy:{p.get("dy", 0)}">'
-            f'<i class="home-city-dot"></i>'
-            f'<span class="home-city-chip">{p["city"]} <b>{p["temp"]:.0f}°</b>{badge}</span>'
+            f'top:{y / HOME_SVG_SIZE * 100:.2f}%;--c:{color};--halo:{halo:.0f}">'
+            f'<i class="home-city-halo"></i><i class="home-city-dot"></i>'
+            f'<span class="home-city-chip"><b>{p["temp"]:.0f}°</b>{p["city"]}{badge}</span>'
             f'<div class="home-city-tip"><b>{p["city"]}</b>'
             f'<span>체감 {p.get("feels", p["temp"]):.0f}° · 습도 {p.get("humidity", 0):.0f}%</span>'
             f'<span>내일 최고 {p.get("tomorrow", p["temp"]):.0f}° · 이번 주 최고 {p.get("week_max", p["temp"]):.0f}° ({p.get("week_day", "")})</span>'
