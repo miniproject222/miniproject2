@@ -490,3 +490,29 @@
   border: 1px solid #7B6CF2;   /* ① 탭과 같은 밝은 보라 */
   color: #7B6CF2 !important;
 }
+
+/* 후보에서 빠진 ① 핵심 문제: 카드 아래 작은 물음표 아이콘 (누르면 이유) */
+.st-key-hypothesis-skipped button {
+  min-height: 0;
+  padding: 2px 4px;
+  color: var(--color-sub);
+}
+
+.st-key-hypothesis-skipped button span[data-testid="stIconMaterial"] {
+  font-size: 18px;
+  color: #7B6CF2;
+}
+
+/* ① 리포트가 판정한 ③ 탭 연결 배지: 가능 = 초록, 안 됨 = 회색 (마우스를 올리면 이유) */
+.hypothesis-badge-s3 {
+  background: color-mix(in srgb, #3CC58A 16%, var(--color-card));
+  color: #1f8a5c;
+  border: 1px solid #3CC58A;
+}
+
+.hypothesis-badge-s3.off {
+  background: var(--color-card);
+  color: var(--color-sub);
+  border: 1px solid var(--color-border);
+}
+
