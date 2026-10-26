@@ -18,6 +18,7 @@ from modules.hypothesis.hypothesis_scenario import (
 
 HYPOTHESIS_MAX_CANDIDATES = 3   # "가설 1/2/3" 하부 탭 개수 상한
 HYPOTHESIS_LOADED_KEY = "hypothesis-loaded"     # 이번 접속에서 '불러오기'를 눌렀는지 (① 탭과 같은 방식: 누르기 전에는 기본 틀만)
+HYPOTHESIS_OPEN_KEY = "hypothesis-open"   # 지금 보고 있는 가설 후보 번호 (카드 맨 위 가설 1·2·3 버튼)
 HYPOTHESIS_PENDING_KEY = "hypothesis-pending"   # '선택하기'로 고른 가설 (아직 저장 전, '저장하기'를 눌러야 저장)
 HYPOTHESIS_LOAD_MIN_SEC = 1.0                   # 불러오기 로딩 표시 최소 시간 (초)
 
@@ -503,7 +504,13 @@ def hypothesis_render_skeleton(report: dict | None) -> None:
             st.markdown('<p class="hypothesis-callout-box hypothesis-callout-empty">불러오기 전</p>', unsafe_allow_html=True)
 
 
-def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, saved: dict | None) -> None:
+def _hypothesis_open(index: int) -> None:
+    """카드 맨 위 '가설 1·2·3' 버튼: 보여 줄 후보를 바꿉니다 (예전 위쪽 탭 줄 대신)."""
+    st.session_state[HYPOTHESIS_OPEN_KEY] = index
+
+
+def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, saved: dict | None,
+                                 total: int = 1) -> None:
     """가설 후보 1개(탭)를 그립니다. 제목 줄(오른쪽 끝에 작은 선택 버튼) → "🧪 실행 방법"
     메인 표(실행 방법을 보고 가설을 비교·선택할 수 있도록, If·Because·Then보다 먼저) →
     If·Because·Then 가설 카드 → 근거·출처 토글 순서입니다. 선택 여부와 관계없이 모든 후보를
@@ -529,15 +536,12 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
         badge_label = (f"⚠️ 외부 요인 · {group}" if group else "⚠️ 외부 요인") if is_external else "🏷️ 내부 요인"
         badge_class = "hypothesis-badge-external" if is_external else "hypothesis-badge-internal"
         source = html.escape(str(problem.get("report_rank_label") or ""), quote=False)   # ① 몇 순위 문제인지
-        title_col, button_col = st.columns([5, 1])
-        with title_col:
-            st.markdown(
-                f'<p class="hypothesis-factor-line">'
-                + (f'<span class="hypothesis-badge hypothesis-badge-source">{source}</span> ' if source else "")
-                + f'<span class="hypothesis-badge {badge_class}">{badge_label}</span>'
-                f' <b>{html.escape(str(problem.get("title", "")), quote=False)}</b></p>',
-                unsafe_allow_html=True,
-            )
+        # 맨 위 줄: 가설 1·2·3 고르기(예전 카드 위 탭 줄을 카드 안으로) + 오른쪽 끝 선택하기
+        pick_col, button_col = st.columns([5, 1], vertical_alignment="center")
+        with pick_col, st.container(horizontal=True, gap="small", key="hypothesis-pick"):
+            for k in range(total):
+                st.button(f"가설 {k + 1}", key=f"hypothesis-btn-pick-{k}", type="primary" if k == index else "secondary",
+                          on_click=_hypothesis_open, args=(k,))
         with button_col:
             # media, home 탭이 읽을 수 있게 "hypothesis" 키에 가설 1개만 저장 (가설 1/2/3 중
             # 사용자가 "선택"한 1개만 최종 저장됨 — 다른 후보를 선택하면 이 값이 바뀜).
@@ -549,6 +553,13 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
                 args=(problem, text, ibt),
                 type="primary" if not is_saved else "secondary",
             )
+        st.markdown(
+            f'<p class="hypothesis-factor-line">'
+            + (f'<span class="hypothesis-badge hypothesis-badge-source">{source}</span> ' if source else "")
+            + f'<span class="hypothesis-badge {badge_class}">{badge_label}</span>'
+            f' <b>{html.escape(str(problem.get("title", "")), quote=False)}</b></p>',
+            unsafe_allow_html=True,
+        )
 
         # 가설 후보 탭 안에서는 "실행 방법"만 보여주고 If·Because·Then 카드는 그리지 않습니다
         # — 선택하면 어차피 맨 위 "지금 선택된 가설" 칸에 카드로 뜨니, 탭 안에서 또 보여주는
@@ -641,14 +652,12 @@ def hypothesis_render():
     st.markdown('<div class="hypothesis-top-gap"></div>', unsafe_allow_html=True)
     candidates_col, selected_col = st.columns([3, 1.6], gap="medium")   # 오른쪽 '지금 선택된 가설'은 조금 좁게
 
-    # 두 칸 제목을 같은 크기(####, 페이지 제목보다 작게)로 맞추고, 오른쪽엔 왼쪽 "가설 1/2/3"
-    # 탭 줄 높이만큼 빈칸(hypothesis-tab-spacer)을 둬서 왼쪽 후보 카드와 오른쪽 선택된 가설
-    # 카드의 윗선이 같은 높이에서 시작하게 합니다.
+    # 두 칸 제목을 같은 크기(####, 페이지 제목보다 작게)로 맞춥니다. 가설 1·2·3 버튼은 왼쪽 카드 안
+    # 맨 위 줄에 있어서, 왼쪽 후보 카드와 오른쪽 선택된 가설 카드의 윗선이 같은 높이에서 시작합니다.
     with selected_col:
         with st.container(key="hypothesis-heading-selected"):
             st.markdown("#### :material/check_circle: 지금 선택된 가설")
         st.markdown('<div class="hypothesis-heading-gap"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="hypothesis-tab-spacer"></div>', unsafe_allow_html=True)
         with st.container(border=True, key="hypothesis-selected-card"):
             if current:
                 # 고른 가설(저장 전이면 고른 값)을 If·Because·Then 카드로 보여줍니다.
@@ -680,10 +689,9 @@ def hypothesis_render():
             st.markdown('<span class="hypothesis-reveal"></span>', unsafe_allow_html=True)
         # 제목 줄은 그대로 두고 그 아래 탭·박스만 내림 (오른쪽에도 같은 간격을 둬 윗선 정렬 유지)
         st.markdown('<div class="hypothesis-heading-gap"></div>', unsafe_allow_html=True)
-        tabs = st.tabs([f"가설 {i + 1}" for i in range(len(candidates))], key="hypothesis-candidate-tabs", on_change="rerun")
-        for i, (tab, problem) in enumerate(zip(tabs, candidates)):
-            with tab:
-                _hypothesis_render_candidate(i, problem, sqp, saved)
+        opened = st.session_state.get(HYPOTHESIS_OPEN_KEY, 0)
+        opened = opened if isinstance(opened, int) and 0 <= opened < len(candidates) else 0
+        _hypothesis_render_candidate(opened, candidates[opened], sqp, saved, total=len(candidates))
         # ① 핵심 문제 중 가설 재료가 없어 후보에서 빠진 것 (왜 ① 순위와 가설 번호가 다를 수 있는지)
         cand_titles = {c.get("title") for c in candidates}
         skipped = [f"① {i}순위 '{k.get('title')}' ({k.get('plan_none') or '가설 재료 없음'})"
@@ -692,6 +700,5 @@ def hypothesis_render():
         if skipped:
             st.caption("후보에서 빠진 ① 핵심 문제: " + " · ".join(skipped))
 
-    # 오른쪽 끝 아이콘 줄: 열린 가설 탭 것만, 하부 탭·칸 바깥에 (화면에 고정)
-    opened = next((i for i, tab in enumerate(tabs) if getattr(tab, "open", False)), 0)
+    # 오른쪽 끝 아이콘 줄: 열린 가설 것만, 칸 바깥에 (화면에 고정)
     hypothesis_render_side(opened, candidates[opened], sqp, saved)
