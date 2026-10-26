@@ -141,10 +141,38 @@ def report_stage3_check(data):
         plan, fix = p.get("plan") or {}, linked.get(p["title"])
         if not plan:
             p["stage3"] = {"ok": False, "why": f"② 가설 재료 없음 ({p.get('plan_none') or '데이터 없음'})"}
+        elif plan.get("variants") and fix and fix["kind"] in REPORT_IMAGE_STAGE3_KINDS:
+            p["stage3"] = {"ok": True, "why": f"{fix['kind']} B안 {len(plan['variants'])}개(② 가설로 나뉨)로 ③에서 제작"}
         elif fix and fix["kind"] in REPORT_IMAGE_STAGE3_KINDS:
             p["stage3"] = {"ok": True, "why": f"{fix['kind']} B안으로 ③에서 제작 ({plan.get('material', '')})"}
         elif fix:
             p["stage3"] = {"ok": False, "why": f"해결이 {fix['kind']}라 ③(메인 이미지 제작)이 아닌 문구 수정으로 개선"}
         else:
             p["stage3"] = {"ok": False, "why": f"해결에 이미지가 필요 없음 (준비할 것: {plan.get('material') or '-'})"}
+
+
+def report_image_brief(data):
+    """③ 탭이 가설로 이미지를 만들 때 쓸 재료 p["image_brief"] (메인 이미지 가설에만, 데이터에서만 만듦).
+    {product, type, listing_title, now_image, now_issue, must_show[], keep, avoid[], why}. ②가 B안별로 must_show를 좁혀 ③에 넘김."""
+    from modules.report.report_plan import report_plan_issue_aspects
+    sqp = data.get("sqp_store") or {}
+    listing = sqp.get("listing") or report_image_listing() or {}
+    profile = data.get("seori_profile") or {}
+    forbidden = list((data.get("ad_claims") or {}).get("forbidden") or [])
+    for p in data["problems"]:
+        plan = p.get("plan") or {}
+        if not plan.get("visual") or not listing.get("main_image"):
+            continue
+        p["image_brief"] = {
+            "product": profile.get("product") or listing.get("title"),
+            "type": profile.get("type"),
+            "listing_title": listing.get("title"),          # 독일어 상품명 (크기·소재)
+            "now_image": listing.get("main_image"),          # A안 = 지금 메인 이미지
+            "now_issue": listing.get("main_image_issue"),    # 지금 사진에서 안 보이는 것
+            "must_show": report_plan_issue_aspects(listing.get("main_image_issue")),
+            "keep": plan.get("fixed"),                       # 고정 요소 (흰 배경 실제 사진·가격·사진에 냉감 수치 없음 등)
+            "avoid": forbidden + ["메인 이미지에 글자·로고·인증 마크·냉감 수치 넣지 않음 (아마존 메인 이미지 규칙·① 규제)"],
+            "why": plan.get("because"),                      # 데이터 근거 (클릭 뒤 장바구니 비율·가격 차)
+        }
+    data["image_brief"] = next((p["image_brief"] for p in data["problems"] if p.get("image_brief")), None)
 

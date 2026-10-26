@@ -471,3 +471,125 @@
   line-height: 1.5;
   color: var(--color-text);
 }
+
+/* ── 한 화면에 들어오게 (2026-10-26, 1782×790 기준 넘침 295px → 0): 여백·간격·막대 줄 간격을 줄임 ── */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(5)[aria-selected="true"]) {
+    padding-bottom: 1rem !important;
+  }
+}
+
+.st-key-weather-root {
+  gap: 1rem;
+}
+
+.st-key-weather-main,
+.st-key-weather-side {
+  gap: 1rem;
+}
+
+.weather-kpis {
+  margin-bottom: 12px;   /* 글 블록의 아래 -1rem 여백 때문에 0이면 아래 카드와 붙음 */
+}
+
+[class*="st-key-weather-card-"] {
+  padding: 14px 18px !important;
+}
+
+.weather-alloc {
+  padding: 3px 0;
+}
+
+.weather-gap {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.weather-results {
+  padding-top: 12px;
+}
+
+.weather-field-gap {
+  padding-top: 12px;
+}
+
+/* 제목 줄 오른쪽: 폭염 시나리오 토글 + 데이터 출처 물음표 */
+.st-key-weather-head-right .stPopover button {
+  min-height: 0;
+  padding: 2px 4px;
+}
+
+
+/* 권역 카드 위아래 여백 조금 더 줄임 (한 화면) */
+.weather-kpi {
+  padding: 10px 18px;
+}
+
+/* ── 더 줄이기 (2026-10-26 2차): 작은 화면에서도 스크롤 없이. 제목·권역 카드·카드 안 여백·글자 크기 축소 ── */
+.weather-title { font-size: 22px; }
+.weather-subtitle { margin-top: 2px; font-size: 12px; }
+.weather-kpi { gap: 2px; padding: 8px 14px; }
+.weather-kpi-head { font-size: 14px; }
+.weather-kpi-head em { font-size: 12px; }
+.weather-kpi-emoji { width: 26px; height: 26px; border-radius: 8px; font-size: 16px; }
+.weather-kpi-temp { font-size: 22px; }
+.weather-kpi-temp small { font-size: 12px; }
+.weather-kpi-chip { font-size: 11px; padding: 1px 8px; }
+.weather-kpi-cities { padding-top: 4px; font-size: 11px; }
+.weather-kpis { margin-bottom: 10px; }
+[class*="st-key-weather-card-"] { padding: 10px 16px !important; }
+.st-key-weather-main, .st-key-weather-side { gap: 0.75rem; }
+.st-key-weather-root { gap: 0.75rem; }
+.weather-card-title { font-size: 14px; }
+.weather-card-desc, .weather-note { font-size: 11.5px; }
+.weather-channel-head { margin-bottom: 4px; font-size: 13px; }
+.weather-alloc { padding: 1px 0; font-size: 12px; }
+.weather-gap { margin-top: 6px; padding-top: 6px; }
+.weather-results { padding-top: 8px; gap: 8px; }
+.weather-result { padding: 7px 12px; }
+.weather-result b { font-size: 15px; }
+.weather-result span, .weather-result em { font-size: 11px; }
+
+/* ── 가운데 두 카드 줄이기 (2026-10-26 3차): 오른쪽 '이번 주 광고 예산'의 간격을 줄이면
+   두 카드가 같은 높이로 함께 줄어 왼쪽 '추천 집행 액션' 아래 빈칸도 사라짐 ── */
+.st-key-weather-card-budget { gap: 0.4rem; }
+.weather-range-note { margin: 0 0 4px; }
+.st-key-weather-budget-week { margin-top: -4px; }
+.st-key-weather-card-budget .weather-results { margin-top: 0; padding-top: 8px; margin-bottom: 0.75rem; }
+.st-key-weather-card-channel { gap: 0.4rem; }
+
+/* 경쟁사 분석 줄 (추천 집행 액션 카드 아래): 이름 · 현재가 · 90일 평균 대비 · 평점·리뷰·판매 순위 */
+.weather-rival {
+  display: grid;
+  grid-template-columns: 76px 64px auto 1fr;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 12px;
+  color: var(--color-text);
+}
+
+.weather-rival small {
+  text-align: right;
+  color: var(--color-sub);
+  font-size: 11px;
+}
+
+/* 재고 카드 맨 아래: 품절 시 ASIN 타겟 한 줄 */
+.weather-asin-line {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border);
+  font-size: 11.5px;
+  color: var(--color-sub);
+}
+
+
+/* 경쟁사 분석·재고 카드 줄 간격 조금 더 (카드 안 넘침 6px 해소) */
+.weather-rival { padding: 0; }
+.st-key-weather-card-stock .weather-row { padding: 6px 0; }
+.weather-asin-line { margin-top: 4px; padding-top: 4px; }
+
+/* 카드 마지막 줄 아래 여백: Streamlit 글 블록의 아래 -1rem 여백 때문에 마지막 줄이 카드 끝에 잘리던 것 */
+.weather-asin-line { margin-bottom: 1rem; }
+.weather-rival:last-child { margin-bottom: 1rem; }

@@ -15,7 +15,8 @@ from modules.report.report_data import report_load_data, report_utm_rows
 from modules.report.report_review import report_shop_reviews
 from modules.report.report_download import report_download_pdf
 from modules.report.report_keepa import (
-    report_keepa_can_fetch, report_keepa_detail, report_keepa_estimate, report_keepa_fetch_and_save, report_keepa_usage,
+    report_keepa_can_fetch, report_keepa_detail, report_keepa_estimate, report_keepa_fetch_and_save, report_keepa_health,
+    report_keepa_health_text, report_keepa_usage,
 )
 from modules.report.report_sqp import report_sqp_kpis
 from modules.report.report_sqp_view import report_sqp_show
@@ -24,9 +25,10 @@ REPORT_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경�
 
 REPORT_LEVEL_DOTS = {"높음": "●●●", "중간": "●●○", "낮음": "●○○"}
 REPORT_LEVEL_CLASS = {"높음": "high", "중간": "mid", "낮음": "low"}
-REPORT_TOP_HEIGHT = 560   # 본문 50:50 두 카드 높이(px): 왼쪽 1순위·오른쪽 2순위 자세히 카드를 같게 (넘치면 카드 안 스크롤)
+REPORT_TOP_HEIGHT = 560   # (참고용) 1순위·2순위 카드 높이는 report_style.css의 clamp(화면 높이 기준)로 정함
 
 
+REPORT_HELP_ABOUT = "Keepa·경쟁사 DB·검색어 분석으로 서리의 내부·외부 문제를 찾아 위험도 순으로 정리해요."
 REPORT_HELP_RULE = ("**순위 기준**: ② 가설로 만들어 ③ 탭에서 바로 제작할 수 있는 문제(지금 ③은 메인 이미지)를 먼저, "
                     "그다음 이미지(서브·광고 배너 문구)로 고칠 수 있는 문제, 같은 조건 안에서는 위험도 → 심각도 순. 3순위부터는 다른 문제여도 됨")
 REPORT_LOAD_MIN_SEC = 1.0   # 불러오기 로딩 표시 최소 시간 (초): 너무 빨리 끝나도 '불러오는 느낌'이 나게
@@ -37,9 +39,10 @@ def report_render():
     """'1. 분석 리포트' 탭을 열 때마다 실행됩니다. 화면은 전부 이 함수 안에서 그립니다.
     처음에는 비어 있고, 오른쪽 위 '불러오기'를 누르면 분석해서 화면을 채우고, '저장하기'를 누르면 ② 탭이 읽을 리포트로 저장."""
     loaded = st.session_state.get(REPORT_LOADED_KEY, False)
+    report_tab_click()   # ① '다음으로' 직후: 브라우저도 ② 탭을 눌러 둠 (③ 등에서 다시 그려도 ②에 머물게)
     with st.container(horizontal=True, vertical_alignment="center", key="report-head"):
         with st.container(key="report-head-title"):
-            ui.page_header("1. 문제 분석", "Keepa·경쟁사 DB·검색어 분석으로 서리의 내부·외부 문제를 찾아 위험도 순으로 정리해요.")
+            ui.page_header("1. 문제 분석")   # 설명 한 줄(REPORT_HELP_ABOUT)은 옆 물음표 안으로 (한 화면에 들어오게)
         with st.container(key="report-help"):   # 안내 문구는 화면에 늘어놓지 않고 이 물음표 하나에 모음 (내용은 아래에서 채움)
             help_box = st.popover("", icon=":material/help:", type="tertiary", help="순위 기준 · 저장 상태 안내")
         st.button("불러오기", icon=":material/download:", key="report-btn-load", on_click=report_click_load,
@@ -116,12 +119,11 @@ def report_show_empty(help_box):
     left, right = st.columns(2, gap="medium")
     for col, rank in ((left, 1), (right, 2)):
         # 결과를 모르니 내부·외부·위험도는 쓰지 않고, 색도 기본색(report-skeleton) - 불러오면 실제 값과 색으로 바뀜
-        with col, st.container(border=True, height=REPORT_TOP_HEIGHT, key=f"report-card-rank{rank}"):
-            st.markdown(f':material/flag: **{rank}순위 문제**<span class="report-skeleton"></span>', unsafe_allow_html=True)
-            st.markdown(report_row_html(f'<span class="report-level">{rank}순위</span>', "", blank, blank,
+        with col, st.container(border=True, key=f"report-card-rank{rank}"):
+            st.markdown('<span class="report-skeleton"></span>' + report_row_html(f'<span class="report-level">{rank}순위</span>', "", blank, blank,
                                         f'<div class="report-row-q">{blank}</div>'), unsafe_allow_html=True)
     with help_box:
-        st.markdown(f"**아직 불러오지 않음** → 오른쪽 위 '불러오기'를 누르면 분석 결과가 채워져요\n\n{last}\n\n" + REPORT_HELP_RULE)
+        st.markdown(f"{REPORT_HELP_ABOUT}\n\n**아직 불러오지 않음** → 오른쪽 위 '불러오기'를 누르면 분석 결과가 채워져요\n\n{last}\n\n" + REPORT_HELP_RULE)
 
 
 @st.dialog("핵심 문제 전체 · 리포트 다운로드", width="large", icon=":material/picture_as_pdf:")
@@ -255,7 +257,8 @@ def report_build_payload(data, summary, worst, utm_rows, utm_worst):
         "ab_test": report_store_home_ab(data["ab_upload"]),   # 홈: A/B 결과 (직접 올린 파일이 있을 때만)
         # ── 다른 탭에서 쓰도록 준비한 키 ──
         "key_problems": data["key_problems"],          # 가설: 핵심 문제 Top 3 + 가설 질문(question)
-        "image_fixes": data.get("image_fixes") or [],  # 가설·광고 소재: 이미지로 고칠 수 있는 문제 (title, detail, action, use, rank_label)
+        "image_fixes": data.get("image_fixes") or [],
+        "image_brief": data.get("image_brief"),        # 광고 소재: 메인 이미지 생성 재료 (제품·지금 사진·꼭 보여 줄 것·고정·피할 것·근거)  # 가설·광고 소재: 이미지로 고칠 수 있는 문제 (title, detail, action, use, rank_label)
         "opportunities": [{"title": f["title"], "level": f["level"], "detail": f["detail"]}
                           for f in data["external"] if f["kind"] == "기회"],
         "seori_profile": report_store_profile(data["seori_profile"], data["ad_claims"]),   # 광고 소재: 서리 제품·가격·인증·시험
@@ -337,6 +340,38 @@ def report_goto_tab(code: str) -> None:
     tab = next((t for t in LAYOUT_TABS if t["code"] == code), None)
     if tab:
         st.session_state["main_tabs"] = f"{tab['icon']} {tab['label'].replace(' ', chr(160))}"
+        st.session_state["report-tab-click"] = LAYOUT_TABS.index(tab)   # 다음 화면에서 브라우저도 이 탭을 누름 (report_tab_click)
+
+
+# 버튼으로 탭을 옮긴 뒤 브라우저에서도 그 탭을 한 번 눌러 줌: app.py의 큰 탭 줄은 탭을 고를 때 서버에 알리지 않아서(on_change 없음),
+# 코드로만 옮기면 다음에 화면을 다시 그릴 때(예: ③ '가설 불러오기'의 st.rerun) 사용자가 마지막으로 직접 누른 탭으로 돌아감.
+# 홈 탭의 HOME_NAV_JS와 같은 방식 (보이지 않는 components.html에서 부모 화면의 탭을 클릭)
+REPORT_TAB_CLICK_JS = """
+<script>
+// 화면 그리기가 끝난 뒤에 한 번만 누름: 그리는 중에 누르면 새로 그리기가 시작돼, ③이 AI로 가설을 불러오던 중이면 그 작업이 끊김
+const doc = window.parent.document;
+let idle = 0, waited = 0;
+const timer = setInterval(() => {
+  waited += 300;
+  idle = doc.querySelector('[data-testid="stStatusWidget"]') ? 0 : idle + 1;
+  if (idle >= 3 || waited > 120000) {
+    clearInterval(timer);
+    const list = doc.querySelector('[data-testid="stTabs"] [role="tablist"]');
+    const tab = list && list.querySelectorAll('[role="tab"]')[__INDEX__];
+    if (tab && tab.getAttribute("aria-selected") === "true") tab.click();
+  }
+}, 300);
+</script>
+"""
+
+
+def report_tab_click() -> None:
+    """report_goto_tab로 탭을 옮긴 직후 한 번: 브라우저에서도 그 탭을 눌러 둠 (보이지 않는 칸)."""
+    index = st.session_state.pop("report-tab-click", None)
+    if isinstance(index, int):
+        import streamlit.components.v1 as components
+        with st.container(key="report-tab-click-box"):
+            components.html(REPORT_TAB_CLICK_JS.replace("__INDEX__", str(index)), height=0)
 
 
 def report_problem_html(p):
@@ -359,19 +394,19 @@ def report_row_html(badge, tag, title, detail, extra=""):
 
 def report_show_rank_card(data, k, rank):
     """N순위 문제 1개를 자세히: 근거 전체 · 심각도 · ③ 이미지로 고치기 · ② 가설 재료(행동·KPI·테스트) · 가설 탭 질문."""
-    with st.container(border=True, height=REPORT_TOP_HEIGHT, key=f"report-card-rank{rank}"):
-        st.markdown(f':material/flag: **{rank}순위 문제**<span class="report-loaded-mark"></span>' + report_reveal_mark(data),
-                    unsafe_allow_html=True)
+    with st.container(border=True, key=f"report-card-rank{rank}"):
+        # 'N순위 문제' 머리줄은 없앰 (아래 배지에 'N순위 · 내부/외부'가 있어 같은 내용, 한 화면에 들어오게)
+        marks = '<span class="report-loaded-mark"></span>' + report_reveal_mark(data)   # 배지 줄과 같은 칸에 (따로 두면 카드 위에 빈 줄이 생김)
         if not k:
-            st.markdown('<div class="report-desc">이 순위에 들어갈 문제가 없어요</div>', unsafe_allow_html=True)
+            st.markdown(marks + '<div class="report-desc">이 순위에 들어갈 문제가 없어요</div>', unsafe_allow_html=True)
             return
         sev = k.get("severity") or {}
+        tip = f' title="심각도 {sev["score"]:.2f} = {sev["basis"]}"' if sev else ""   # 심각도는 배지에 마우스를 올리면 (한 화면에 들어오게)
         st.markdown(
-            f'<div class="report-detail-head"><span class="report-level report-level-{REPORT_LEVEL_CLASS[k["level"]]}">{rank}순위 · {k["type"]}</span>'
+            f'<div class="report-detail-head"><span class="report-level report-level-{REPORT_LEVEL_CLASS[k["level"]]}"{tip}>{rank}순위 · {k["type"]}</span>'
             f'<span class="report-tag">{k["group"]}</span></div>'
             f'<div class="report-detail-title">{k["title"]}</div>'
-            f'<div class="report-desc"><b>근거</b> {k["detail"]}</div>'
-            + (f'<div class="report-desc">심각도 {sev["score"]:.2f} = {sev["basis"]}</div>' if sev else ""),
+            f'<div class="report-desc"><b>근거</b> {k["detail"]}</div>' + marks,   # 표시용 span은 맨 뒤 (앞에 두면 빈 줄이 생김)
             unsafe_allow_html=True)
         fix = k.get("image_fix")
         if fix:
@@ -388,7 +423,9 @@ def report_show_rank_card(data, k, rank):
         if plan:
             unit = plan.get("unit") or ""
             rows = [("행동", plan.get("action")), ("KPI", f'{plan.get("kpi")} {plan.get("now")}{unit} → {plan.get("goal")}{unit}'),
-                    ("테스트", plan.get("test")), ("기간·표본", plan.get("period"))]
+                    ("테스트", plan.get("test")), ("기간·표본", plan.get("period")),
+                    ("B안 후보", " / ".join(v["label"] for v in plan.get("variants") or []) + (" → ② 가설로 나뉨" if plan.get("variants") else "")),
+                    ("함께 개선", " · ".join(plan.get("related") or []))]
             st.markdown('<div class="report-detail-box"><div class="report-detail-label">② 가설 재료</div>'
                         + "".join(f'<div class="report-detail-row"><span>{a}</span><div>{b}</div></div>' for a, b in rows if b)
                         + "</div>", unsafe_allow_html=True)
@@ -400,7 +437,8 @@ def report_fill_help(help_box, data):
     saved_text = (f"**저장됨**{' (' + st.session_state['report-saved-at'] + ')' if st.session_state.get('report-saved-at') else ''} · ② 가설 탭에서 확인 가능"
                   if data.get("saved") else "**아직 저장 안 됨** → 오른쪽 위 '다음으로'를 누르면 저장하고 ② 가설 탭으로 넘어가요")
     rest = len(data["key_problems"]) - 2
-    lines = [saved_text] + ([data["compare"]] if data.get("compare") else []) \
+    # 하루 한 번 Keepa API 키·연결 확인 (토큰 상태 조회라 토큰을 쓰지 않음)
+    lines = [REPORT_HELP_ABOUT, saved_text, report_keepa_health_text(report_keepa_health(date.today().isoformat()))] + ([data["compare"]] if data.get("compare") else []) \
         + ([f"3순위부터 {rest}개는 오른쪽 PDF 아이콘"] if rest > 0 else []) + [REPORT_HELP_RULE]
     with help_box:
         st.markdown("\n\n".join(lines))
@@ -411,7 +449,9 @@ def report_show_stage3_table(data):
     rows = [{"③": "✅" if (p.get("stage3") or {}).get("ok") else "—", "문제": p["title"],
              "② 가설": "가능" if p.get("plan") else "불가", "이유": (p.get("stage3") or {}).get("why", "")} for p in data["problems"]]
     ok = sum(r["③"] == "✅" for r in rows)
-    st.markdown(f"**① → ② → ③ 연결 분석** · 전체 {len(rows)}개 중 ② 가설 {sum(r['② 가설'] == '가능' for r in rows)}개, ③까지 {ok}개")
+    variants = sum(len((p.get("plan") or {}).get("variants") or []) for p in data["problems"] if (p.get("stage3") or {}).get("ok"))
+    st.markdown(f"**① → ② → ③ 연결 분석** · 전체 {len(rows)}개 중 ② 가설 {sum(r['② 가설'] == '가능' for r in rows)}개, ③까지 {ok}개"
+                + (f" (② 가설로 B안 {variants}개)" if variants else ""))
     st.dataframe(rows, hide_index=True, width="stretch", key="report-table-stage3")
 
 
@@ -657,6 +697,7 @@ def report_show_keepa_fetch():
     left = usage["budget"] - usage["used"]
     with st.expander(f":material/refresh: Keepa 최신값 조회 (남은 한도 {left}/{usage['budget']}토큰)", expanded=False):
         ok, reason = report_keepa_can_fetch()
+        st.caption(report_keepa_health_text(report_keepa_health(date.today().isoformat())) + " · 매일 첫 화면에서 자동 확인 (토큰 사용 없음)")
         st.caption(f"이번 조회 예상 사용량: 약 {report_keepa_estimate()}토큰 · 꼭 필요할 때만 조회하세요.")
         if not ok:
             st.caption(f"조회 불가: {reason}")

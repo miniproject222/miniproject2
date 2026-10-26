@@ -16,8 +16,9 @@ from modules.hypothesis.hypothesis_scenario import (
     hypothesis_scenario_table,
 )
 
-HYPOTHESIS_MAX_CANDIDATES = 3   # "가설 1/2/3" 하부 탭 개수 상한
+HYPOTHESIS_MAX_CANDIDATES = 3   # 가설 후보 개수 (한 화면에 3개를 나란히, 많으면 고르기 헷갈림 · ③ 가능 가설 먼저)
 HYPOTHESIS_LOADED_KEY = "hypothesis-loaded"     # 이번 접속에서 '불러오기'를 눌렀는지 (① 탭과 같은 방식: 누르기 전에는 기본 틀만)
+HYPOTHESIS_PICKED_KEY = "hypothesis-picked"   # 이번 접속에서 이용자가 '선택하기'를 눌렀는지 (안 눌렀으면 저장값이 있어도 선택 안 됨)
 HYPOTHESIS_OPEN_KEY = "hypothesis-open"   # 지금 보고 있는 가설 후보 번호 (카드 맨 위 가설 1·2·3 버튼)
 HYPOTHESIS_PENDING_KEY = "hypothesis-pending"   # '선택하기'로 고른 가설 (아직 저장 전, '저장하기'를 눌러야 저장)
 HYPOTHESIS_LOAD_MIN_SEC = 1.0                   # 불러오기 로딩 표시 최소 시간 (초)
@@ -205,11 +206,12 @@ def hypothesis_build_sentence(problem: dict) -> str:
 
 
 def hypothesis_generic_detail_section(problem: dict) -> None:
-    """가설 후보 탭 안의 "실행 방법" 표 (전부 report plan의 값)."""
-    st.markdown("**:material/science: 실행 방법**")
-    st.markdown(hypothesis_scenario_table(hypothesis_generic_execution_rows(problem)))
+    """가설 후보 카드 안의 "실행 방법" 표 (전부 report plan의 값). 목표 근거는 표 제목 줄 옆에 (한 화면에 들어오게)."""
     basis = (hypothesis_plan(problem) or {}).get("goal_basis")
-    st.caption(f"목표 근거: {basis}" if basis else "① 문제 분석 데이터로 만든 실행 방법이에요.")
+    st.markdown('<div class="hypothesis-detail-head">실행 방법'
+                + (f'<span>목표 근거: {html.escape(str(basis), quote=False)}</span>' if basis else "") + "</div>",
+                unsafe_allow_html=True)
+    st.markdown(hypothesis_scenario_table(hypothesis_generic_execution_rows(problem)))
 
 
 def hypothesis_generic_execution_rows(problem: dict) -> list[tuple[str, str]]:
@@ -311,7 +313,7 @@ def hypothesis_pick_candidates(report: dict | None, limit: int = HYPOTHESIS_MAX_
     sqp = report.get("sqp") if isinstance(report.get("sqp"), dict) else None
 
     valid: list[dict] = []
-    seen_titles: set[str] = set()
+    seen_titles: set[tuple] = set()
     for item in problems:
         if not isinstance(item, dict) or not item.get("title"):
             continue
@@ -323,11 +325,23 @@ def hypothesis_pick_candidates(report: dict | None, limit: int = HYPOTHESIS_MAX_
         # 고정 문구·고정 개선율을 쓰지 않으므로, report가 데이터로 가설 재료(plan)를 준 문제만 후보
         if not hypothesis_plan(item):
             continue
-        title = item["title"]
-        if title in seen_titles:   # 같은 제목이 중복으로 와도 같은 가설 후보를 두 번 보여주지 않음
-            continue
-        seen_titles.add(title)
-        valid.append(dict(item))   # 복사본에 화면용 값(report_rank_label)을 붙임 - ① 리포트 원본은 바꾸지 않음
+        # ①이 B안을 원인별로 나눠 준 문제(plan.variants, ③ 메인 이미지로 이어짐)는 B안마다 가설 후보 하나
+        plan = hypothesis_plan(item)
+        variants = [v for v in plan.get("variants") or [] if isinstance(v, dict) and str(v.get("action") or "").strip()]
+        for v in variants or [None]:
+            cand = dict(item)   # 복사본에 화면용 값(report_rank_label)을 붙임 - ① 리포트 원본은 바꾸지 않음
+            if v:
+                cand["plan"] = {**plan, "action": v["action"]}
+                cand["variant_label"] = str(v.get("label") or "")
+                aspect = cand["variant_label"].split("·", 1)[-1].strip()
+                brief = item.get("image_brief") if isinstance(item.get("image_brief"), dict) else None
+                if brief and aspect in (brief.get("must_show") or []):   # 'B안 · 두께' → 꼭 보여 줄 것 = 두께
+                    cand["image_brief"] = {**brief, "must_show": [aspect]}
+            ident = (item["title"], hypothesis_plan(cand)["action"])
+            if ident in seen_titles:   # 같은 제목·같은 행동이 중복으로 와도 같은 가설 후보를 두 번 보여주지 않음
+                continue
+            seen_titles.add(ident)
+            valid.append(cand)
 
     # ① 문제 분석의 순서(위험도 → 심각도)를 그대로 따릅니다. (예전에는 사진·영상 소재가 필요한 가설을 앞으로 옮겨
     # ① 1순위와 ② 가설 1이 달라 보였음 — "① 데이터를 못 가져오는 것처럼 보인다"는 지적으로 변경)
@@ -368,6 +382,24 @@ def hypothesis_pick_problem(report: dict | None) -> dict | None:
     return candidates[0] if candidates else None
 
 
+def hypothesis_image_brief_text(brief: dict) -> str:
+    """이미지 제작 재료를 한 줄 글로 (③ 1단계 AI가 읽는 문제 설명 칸에 붙임)."""
+    parts = [("제품", brief.get("listing_title") or brief.get("product")), ("지금 사진", brief.get("now_image")),
+             ("지금 사진 문제", brief.get("now_issue")), ("꼭 보여 줄 것", " · ".join(brief.get("must_show") or [])),
+             ("고정", brief.get("keep")), ("피할 것", " / ".join(brief.get("avoid") or []))]
+    return "[이미지 제작 재료] " + " | ".join(f"{k}: {v}" for k, v in parts if v)
+
+
+def hypothesis_problem_for_media(problem: dict) -> dict:
+    """③에 넘기는 문제: ①이 만든 이미지 제작 재료(image_brief)가 있으면 문제 설명(detail) 끝에 한 줄로도 붙임
+    (③ 1단계 AI는 문제의 title·detail·target·metric을 읽으므로, ③ 코드를 고치지 않고 재료가 전달됨)."""
+    out = copy.deepcopy(problem)
+    brief = out.get("image_brief")
+    if isinstance(brief, dict):
+        out["detail"] = (str(out.get("detail") or "") + "\n" + hypothesis_image_brief_text(brief)).strip()
+    return out
+
+
 def _hypothesis_handle_save(problem: dict, text: str, ibt: dict) -> None:
     """'가설 저장' 버튼의 on_click 콜백. media, solution, home 탭이 읽을 수 있게 'hypothesis' 키에
     가설 1개만 저장합니다. "hypothesis" 키는 home_data.py가 이미 기대하는 이름이라 같이 넣습니다.
@@ -388,7 +420,7 @@ def _hypothesis_handle_save(problem: dict, text: str, ibt: dict) -> None:
         {
             "report": report,
             "selected": {
-                "problem": copy.deepcopy(problem),
+                "problem": hypothesis_problem_for_media(problem),
                 "if": ibt.get("if", ""),
                 "because": ibt.get("because", ""),
                 "then": ibt.get("then", ""),
@@ -433,16 +465,19 @@ def _hypothesis_select(problem: dict, text: str, ibt: dict) -> None:
     """'선택하기': 가설을 고르기만 합니다 (저장은 오른쪽 위 '저장하기', ① 탭과 같은 방식)."""
     st.session_state[HYPOTHESIS_PENDING_KEY] = {"problem": copy.deepcopy(problem), "text": text, "ibt": dict(ibt),
                                                  "problem_title": problem.get("title")}
+    st.session_state[HYPOTHESIS_PICKED_KEY] = True
 
 
 def hypothesis_current(saved: dict | None) -> dict | None:
-    """지금 고른 가설: 저장 전에 고른 값이 있으면 그것, 없으면 저장된 값. 모양 {text, problem_title, if, because, then, pending}."""
+    """지금 고른 가설: 저장 전에 고른 값이 있으면 그것, 없으면 (이번 접속에서 이용자가 고른 뒤) 저장된 값.
+    이용자가 아직 '선택하기'를 누르지 않았으면 예전에 저장된 가설이 있어도 None (자동으로 '선택됨'이 되지 않게).
+    모양 {text, problem_title, if, because, then, pending}."""
     pending = st.session_state.get(HYPOTHESIS_PENDING_KEY)
     if isinstance(pending, dict) and pending.get("text"):
         ibt = pending.get("ibt") or {}
         return {"text": pending["text"], "problem_title": pending.get("problem_title"),
                 "if": ibt.get("if", ""), "because": ibt.get("because", ""), "then": ibt.get("then", ""), "pending": True}
-    if saved and str(saved.get("text") or "").strip():
+    if st.session_state.get(HYPOTHESIS_PICKED_KEY) and saved and str(saved.get("text") or "").strip():
         return {"text": saved["text"], "problem_title": saved.get("problem_title"), "if": saved.get("if_text", ""),
                 "because": saved.get("because_text", ""), "then": saved.get("then_text", ""), "pending": False}
     return None
@@ -463,12 +498,28 @@ def _hypothesis_click_load() -> None:
 
 def _hypothesis_click_store() -> None:
     """'다음으로': 고른 가설을 store("hypothesis")와 ① 리포트 맨 아래에 저장하고 ③ 광고 소재 탭으로 넘어감."""
+    # 이미 저장된 가설을 그대로 쓸 때도 ③으로 넘어가게 함 (예전에는 저장할 것이 없으면 버튼이 꺼져 ③으로 못 감)
     pending = st.session_state.pop(HYPOTHESIS_PENDING_KEY, None)
     if isinstance(pending, dict) and pending.get("text"):
         _hypothesis_handle_save(pending["problem"], pending["text"], pending.get("ibt") or {})
         st.session_state["hypothesis-saved-at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
-        st.session_state["hypothesis-saved-toast"] = True
-        hypothesis_goto_tab("media")
+        st.session_state["hypothesis-saved-toast"] = "가설을 저장하고 ③ 광고 소재 탭으로 넘어왔어요"
+    else:
+        st.session_state["hypothesis-saved-toast"] = "저장된 가설 그대로 ③ 광고 소재 탭으로 넘어왔어요"
+    hypothesis_auto_load_media()
+    hypothesis_goto_tab("media")
+
+
+def hypothesis_auto_load_media() -> None:
+    """③ 탭이 넘어오자마자 가설을 불러오게: ③ '가설 불러오기' 버튼(media_variable._media_variable_start_load)이 켜는
+    표시(media-hypo-loading)를 같이 켜고, ③ 하위 탭을 첫 단계(가설에서 변수 도출)로. ③ 코드는 고치지 않음.
+    같은 가설이면 ③이 AI를 다시 부르지 않음 (media_variable_load)."""
+    st.session_state["media-hypo-loading"] = True
+    try:
+        from modules.media.media_page import MEDIA_STEPS   # ③ 하위 탭 이름 (읽기만)
+        st.session_state["media-step"] = MEDIA_STEPS[0][0]
+    except Exception:   # ③ 모양이 바뀌어도 ② 저장·이동은 그대로
+        pass
 
 
 def hypothesis_goto_tab(code: str) -> None:
@@ -477,6 +528,38 @@ def hypothesis_goto_tab(code: str) -> None:
     tab = next((t for t in LAYOUT_TABS if t["code"] == code), None)
     if tab:
         st.session_state["main_tabs"] = f"{tab['icon']} {tab['label'].replace(' ', chr(160))}"
+        st.session_state["hypothesis-tab-click"] = LAYOUT_TABS.index(tab)   # 다음 화면에서 브라우저도 이 탭을 누름 (hypothesis_tab_click)
+
+
+# 버튼으로 탭을 옮긴 뒤 브라우저에서도 그 탭을 한 번 눌러 줌: app.py의 큰 탭 줄은 탭을 고를 때 서버에 알리지 않아서(on_change 없음),
+# 코드로만 옮기면 다음에 화면을 다시 그릴 때(예: ③ '가설 불러오기'의 st.rerun) 사용자가 마지막으로 직접 누른 탭으로 돌아감.
+# 홈 탭의 HOME_NAV_JS와 같은 방식 (보이지 않는 components.html에서 부모 화면의 탭을 클릭)
+HYPOTHESIS_TAB_CLICK_JS = """
+<script>
+// 화면 그리기가 끝난 뒤에 한 번만 누름: 그리는 중에 누르면 새로 그리기가 시작돼, ③이 AI로 가설을 불러오던 중이면 그 작업이 끊김
+const doc = window.parent.document;
+let idle = 0, waited = 0;
+const timer = setInterval(() => {
+  waited += 300;
+  idle = doc.querySelector('[data-testid="stStatusWidget"]') ? 0 : idle + 1;
+  if (idle >= 3 || waited > 120000) {
+    clearInterval(timer);
+    const list = doc.querySelector('[data-testid="stTabs"] [role="tablist"]');
+    const tab = list && list.querySelectorAll('[role="tab"]')[__INDEX__];
+    if (tab && tab.getAttribute("aria-selected") === "true") tab.click();
+  }
+}, 300);
+</script>
+"""
+
+
+def hypothesis_tab_click() -> None:
+    """hypothesis_goto_tab로 탭을 옮긴 직후 한 번: 브라우저에서도 그 탭을 눌러 둠 (보이지 않는 칸)."""
+    index = st.session_state.pop("hypothesis-tab-click", None)
+    if isinstance(index, int):
+        import streamlit.components.v1 as components
+        with st.container(key="hypothesis-tab-click-box"):
+            components.html(HYPOTHESIS_TAB_CLICK_JS.replace("__INDEX__", str(index)), height=0)
 
 
 def hypothesis_render_skeleton(report: dict | None) -> None:
@@ -506,73 +589,63 @@ def hypothesis_render_skeleton(report: dict | None) -> None:
 
 
 def _hypothesis_open(index: int) -> None:
-    """카드 맨 위 '가설 1·2·3' 버튼: 보여 줄 후보를 바꿉니다 (예전 위쪽 탭 줄 대신)."""
+    """아래 '실행 방법' 표에 보여 줄 후보를 바꿉니다 (카드를 고르면 그 카드)."""
     st.session_state[HYPOTHESIS_OPEN_KEY] = index
 
 
-def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, saved: dict | None,
-                                 total: int = 1) -> None:
-    """가설 후보 1개(탭)를 그립니다. 제목 줄(오른쪽 끝에 작은 선택 버튼) → "🧪 실행 방법"
-    메인 표(실행 방법을 보고 가설을 비교·선택할 수 있도록, If·Because·Then보다 먼저) →
-    If·Because·Then 가설 카드 → 근거·출처 토글 순서입니다. 선택 여부와 관계없이 모든 후보를
-    똑같은 구성으로 그립니다(예전에는 이미 선택된 후보만 카드를 생략했는데, "선택 안 한
-    가설들도 실행 방법이 위에 뜨면 좋겠다"는 요청으로 전부 통일). index는 위젯 key를
-    후보마다 다르게 만드는 데만 씁니다."""
+def hypothesis_candidate_text(problem: dict, sqp: dict | None) -> tuple[dict, str]:
     ibt = hypothesis_resolve_ibt(problem, sqp)
-    text = f"만약 {ibt['if']}, {ibt['because']} {ibt['then']}."
-    current = hypothesis_current(saved)   # 고른 가설 (저장 전이면 고른 값, 아니면 저장된 값)
-    is_saved = bool(current) and current.get("text") == text and current.get("problem_title") == problem.get("title")
+    return ibt, f"만약 {ibt['if']}, {ibt['because']} {ibt['then']}."
 
-    # key="hypothesis-card-{index}"를 주면 Streamlit이 .st-key-hypothesis-card-{index} 클래스를
-    # 붙여줘서, hypothesis_style.css가 (와일드카드 선택자로) 이 카드들만 정확히 골라 스타일을 고칩니다.
+
+def hypothesis_badges_html(problem: dict) -> str:
+    """③ 연결 · B안 이름 · ① 몇 순위 · 내부/외부 배지 한 줄."""
+    out = ""
+    stage3 = problem.get("stage3") if isinstance(problem.get("stage3"), dict) else None
+    if stage3:   # ① 리포트가 판정한 ③ 탭 연결 (마우스를 올리면 이유)
+        why = html.escape(str(stage3.get("why") or ""), quote=True)
+        out += (f'<span class="hypothesis-badge hypothesis-badge-s3{"" if stage3.get("ok") else " off"}" title="{why}">'
+                + ("③ 이미지 제작 가능" if stage3.get("ok") else "③ 연결 안 됨") + "</span> ")
+    variant = html.escape(str(problem.get("variant_label") or ""), quote=False)
+    if variant:   # ①이 원인별로 나눈 메인 이미지 B안
+        out += f'<span class="hypothesis-badge hypothesis-badge-variant">{variant}</span> '
+    source = html.escape(str(problem.get("report_rank_label") or ""), quote=False)   # ① 몇 순위 문제인지
+    if source:
+        out += f'<span class="hypothesis-badge hypothesis-badge-source">{source}</span> '
+    # 외부 요인 뒤에는 report가 준 실제 분류(경쟁사·규제·날씨 등)
+    group = html.escape(str(problem.get("group") or "").strip(), quote=False)
+    is_external = problem.get("type") == "외부"
+    label = (f"⚠️ 외부 요인 · {group}" if group else "⚠️ 외부 요인") if is_external else "🏷️ 내부 요인"
+    return out + f'<span class="hypothesis-badge {"hypothesis-badge-external" if is_external else "hypothesis-badge-internal"}">{label}</span>'
+
+
+def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, saved: dict | None,
+                                 total: int = 1, skipped: list[str] | None = None) -> None:
+    """가설 후보 1개(카드): 맨 위 줄 = 가설 1·2·3 버튼 (+ 빠진 ① 문제 물음표) · 오른쪽 끝 '선택하기',
+    그 아래 배지·제목, 실행 방법 표. index는 위젯 key를 후보마다 다르게 만드는 데 씁니다."""
+    ibt, text = hypothesis_candidate_text(problem, sqp)
+    current = hypothesis_current(saved)   # 이용자가 고른 가설 (고르기 전이면 None)
+    is_saved = bool(current) and current.get("text") == text and current.get("problem_title") == problem.get("title")
+    # key="hypothesis-card-{index}" → .st-key-hypothesis-card-{index} (hypothesis_style.css)
     with st.container(border=True, key=f"hypothesis-card-{index}"):
-        is_external = problem.get("type") == "외부"
-        # 배지 + 제목 줄 오른쪽 끝에 작은 선택 버튼을 바로 붙입니다 — 예전에는 맨 아래에
-        # 가로로 꽉 찬 "이 가설 선택하기" 버튼 + "✅ 선택됨" 안내 박스가 따로 있었는데,
-        # "선택됨 박스는 지우고 이 위치 오른쪽 끝에 조그맣게 선택 버튼만 넣어 달라"는
-        # 요청으로 제목 줄에 통합했습니다.
-        # 외부 요인 뒤에는 report가 준 실제 분류(경쟁사·규제·날씨 등)를 붙임 — 예전엔 외부면 무조건
-        # "경쟁사"라고 붙여서 규제(UWG) 문제도 "외부 요인 · 경쟁사"로 잘못 보였음
-        group = html.escape(str(problem.get("group") or "").strip(), quote=False)
-        badge_label = (f"⚠️ 외부 요인 · {group}" if group else "⚠️ 외부 요인") if is_external else "🏷️ 내부 요인"
-        badge_class = "hypothesis-badge-external" if is_external else "hypothesis-badge-internal"
-        source = html.escape(str(problem.get("report_rank_label") or ""), quote=False)   # ① 몇 순위 문제인지
-        # 맨 위 줄: 가설 1·2·3 고르기(예전 카드 위 탭 줄을 카드 안으로) + 오른쪽 끝 선택하기
         pick_col, button_col = st.columns([5, 1], vertical_alignment="center")
-        with pick_col, st.container(horizontal=True, gap="small", key="hypothesis-pick"):
+        with pick_col, st.container(horizontal=True, gap="small", vertical_alignment="center", key="hypothesis-pick"):
             for k in range(total):
                 st.button(f"가설 {k + 1}", key=f"hypothesis-btn-pick-{k}", type="primary" if k == index else "secondary",
                           on_click=_hypothesis_open, args=(k,))
+            if skipped:   # 후보에서 빠진 ① 핵심 문제: 평소에는 작은 물음표만, 누르면 이유
+                with st.container(key="hypothesis-skipped", width="content"):
+                    with st.popover("", icon=":material/help:", type="tertiary", help="후보에서 빠진 ① 핵심 문제 보기"):
+                        st.markdown("**후보에서 빠진 ① 핵심 문제**")
+                        st.markdown("\n".join(f"- {x}" for x in skipped))
         with button_col:
-            # media, home 탭이 읽을 수 있게 "hypothesis" 키에 가설 1개만 저장 (가설 1/2/3 중
-            # 사용자가 "선택"한 1개만 최종 저장됨 — 다른 후보를 선택하면 이 값이 바뀜).
-            st.button(
-                "✓ 선택됨" if is_saved else "선택하기",
-                key=f"hypothesis-btn-save-{index}",
-                disabled=is_saved,
-                on_click=_hypothesis_select,
-                args=(problem, text, ibt),
-                type="primary" if not is_saved else "secondary",
-            )
-        stage3 = problem.get("stage3") if isinstance(problem.get("stage3"), dict) else None
-        stage3_badge = ""
-        if stage3:   # ① 리포트가 판정한 ③ 탭 연결 (마우스를 올리면 이유)
-            why = html.escape(str(stage3.get("why") or ""), quote=True)
-            stage3_badge = (f'<span class="hypothesis-badge hypothesis-badge-s3{"" if stage3.get("ok") else " off"}" title="{why}">'
-                            + ("③ 이미지 제작 가능" if stage3.get("ok") else "③ 연결 안 됨") + "</span> ")
-        st.markdown(
-            f'<p class="hypothesis-factor-line">' + stage3_badge
-            + (f'<span class="hypothesis-badge hypothesis-badge-source">{source}</span> ' if source else "")
-            + f'<span class="hypothesis-badge {badge_class}">{badge_label}</span>'
-            f' <b>{html.escape(str(problem.get("title", "")), quote=False)}</b></p>',
-            unsafe_allow_html=True,
-        )
-
-        # 가설 후보 탭 안에서는 "실행 방법"만 보여주고 If·Because·Then 카드는 그리지 않습니다
-        # — 선택하면 어차피 맨 위 "지금 선택된 가설" 칸에 카드로 뜨니, 탭 안에서 또 보여주는
-        # 건 중복이라는 지적을 반영했습니다. ibt 자체는 선택 시 저장할 값으로는 계속 씁니다.
-        hypothesis_generic_detail_section(problem)   # 모든 유형 같은 표 (report plan 값)
-
+            # media, home 탭이 읽을 수 있게 "hypothesis" 키에 가설 1개만 저장 (고른 1개만 최종 저장 — 다른 후보를 고르면 바뀜)
+            st.button("✓ 선택됨" if is_saved else "선택하기", key=f"hypothesis-btn-save-{index}", disabled=is_saved,
+                      on_click=_hypothesis_select, args=(problem, text, ibt),
+                      type="primary" if not is_saved else "secondary")
+        st.markdown(f'<p class="hypothesis-factor-line">{hypothesis_badges_html(problem)} '
+                    f'<b>{html.escape(str(problem.get("title", "")), quote=False)}</b></p>', unsafe_allow_html=True)
+        hypothesis_generic_detail_section(problem)   # 실행 방법 표 (report plan 값)
 
 
 def hypothesis_render_side(index: int, problem: dict, sqp: dict | None, saved: dict | None) -> None:
@@ -605,19 +678,21 @@ def hypothesis_render():
     ① 탭과 같은 방식: 처음에는 기본 틀만, 오른쪽 위 '불러오기'로 ① 저장 리포트를 읽어 가설 후보를 만들고,
     '선택하기'로 고른 가설을 '저장하기'로 저장 (홈·③ 탭과 ① 리포트 맨 아래에 반영)."""
     loaded = st.session_state.get(HYPOTHESIS_LOADED_KEY, False)
+    hypothesis_tab_click()   # ② '다음으로'·'불러오기'로 탭을 옮긴 직후: 브라우저도 그 탭을 눌러 둠 (③ st.rerun 뒤에도 ③에 머물게)
     saved = store_get("hypothesis")
     saved = saved if isinstance(saved, dict) else None
     current = hypothesis_current(saved)
     with st.container(horizontal=True, vertical_alignment="center", key="hypothesis-head"):
         with st.container(key="hypothesis-head-title"):
-            ui.page_header("2. 가설 수립", "1번 분석 리포트의 상위 문제로 가설 후보를 자동으로 만들고, 그중 하나를 골라 저장해요.")
+            ui.page_header("2. 가설 세우기", "① 문제 분석의 상위 문제로 가설 후보를 자동으로 만들고, 그중 하나를 골라 ③ 광고 소재로 넘겨요.")
         st.button("불러오기", icon=":material/download:", key="hypothesis-btn-load", on_click=_hypothesis_click_load,
                   help="① 탭에서 저장한 리포트로 가설 후보를 만듭니다 (저장된 리포트가 없으면 ① 탭으로 이동)")
         st.button("다음으로", icon=":material/arrow_forward:", key="hypothesis-btn-store", type="primary",
-                  disabled=not (loaded and current and current.get("pending")),
-                  on_click=_hypothesis_click_store, help="고른 가설을 저장하고 ③ 광고 소재 탭으로 넘어갑니다")
-    if st.session_state.pop("hypothesis-saved-toast", False):
-        st.toast("가설을 저장하고 ③ 광고 소재 탭으로 넘어왔어요", icon=":material/check_circle:")
+                  disabled=not (loaded and current),
+                  on_click=_hypothesis_click_store, help="고른 가설을 저장하고(이미 저장됐으면 그대로) ③ 광고 소재 탭으로 넘어갑니다")
+    toast = st.session_state.pop("hypothesis-saved-toast", None)
+    if toast:
+        st.toast(toast if isinstance(toast, str) else "가설을 저장하고 ③ 광고 소재 탭으로 넘어왔어요", icon=":material/check_circle:")
 
     # report/problems 모양이 아직 안 정해졌거나 다른 탭이 예상과 다르게 저장해도
     # 화면이 깨지지 않도록, dict/list가 아니면 전부 "없음"으로 취급합니다.
@@ -682,33 +757,34 @@ def hypothesis_render():
                 st.caption("아직 저장 안 됨 → 오른쪽 위 '다음으로'를 누르면 저장하고 ③ 광고 소재 탭으로 넘어가요" if current.get("pending")
                            else f"저장됨{' (' + saved_at + ')' if saved_at else ''} · ③ 광고 소재 탭·① 리포트 맨 아래에서 읽음")
             else:
+                # 빈 상태: 가운데 정렬 안내 + 고르면 채워질 If·Because·Then 자리 (예전 회색 큰 상자보다 보기 쉽게)
                 st.markdown(
-                    '<p class="hypothesis-callout-box hypothesis-callout-empty">'
-                    "아직 선택한 가설이 없어요. 왼쪽 가설 1·2·3 중 하나를 고르고 "
-                    "'선택하기'를 눌러 주세요.</p>",
+                    '<div class="hypothesis-callout-box hypothesis-empty-state">'
+                    '<div class="hypothesis-empty-icon">👈</div>'
+                    '<b>아직 선택한 가설이 없어요</b>'
+                    f"<span>왼쪽 가설 1~{len(candidates)} 중 하나를 보고 '선택하기'를 누르면<br>여기에 If · Because · Then으로 정리돼요</span>"
+                    '<div class="hypothesis-empty-steps"><i class="if">If</i><i class="because">Because</i><i class="then">Then</i></div>'
+                    '</div>',
                     unsafe_allow_html=True,
                 )
 
     with candidates_col:
         with st.container(key="hypothesis-heading-candidates"):
-            st.markdown("#### :material/science: 가설 후보")
-        if reveal:   # 불러오기 직후 한 번: 글자가 차례로 나타남 (hypothesis_style.css .hypothesis-reveal)
-            st.markdown('<span class="hypothesis-reveal"></span>', unsafe_allow_html=True)
+            # 불러오기 직후 한 번: 글자가 차례로 나타남 (.hypothesis-reveal). 제목과 같은 칸에 넣어야
+            # 왼쪽에만 빈 칸이 하나 더 생겨 오른쪽 카드보다 아래로 밀리지 않음 (예전 위치 어긋남의 원인)
+            st.markdown("#### :material/science: 가설 후보" + ('<span class="hypothesis-reveal"></span>' if reveal else ""),
+                        unsafe_allow_html=True)
         # 제목 줄은 그대로 두고 그 아래 탭·박스만 내림 (오른쪽에도 같은 간격을 둬 윗선 정렬 유지)
         st.markdown('<div class="hypothesis-heading-gap"></div>', unsafe_allow_html=True)
         opened = st.session_state.get(HYPOTHESIS_OPEN_KEY, 0)
         opened = opened if isinstance(opened, int) and 0 <= opened < len(candidates) else 0
-        _hypothesis_render_candidate(opened, candidates[opened], sqp, saved, total=len(candidates))
-        # ① 핵심 문제 중 가설 재료가 없어 후보에서 빠진 것 (왜 ① 순위와 가설 번호가 다를 수 있는지)
+        # ① 핵심 문제 중 후보에서 빠진 것과 이유 (가설 재료가 없거나, ③으로 이어지는 가설을 먼저 3개 보여 줘서)
         cand_titles = {c.get("title") for c in candidates}
-        skipped = [f"① {i}순위 '{k.get('title')}' ({k.get('plan_none') or '가설 재료 없음'})"
+        skipped = [f"① {i}순위 '{k.get('title')}' ("
+                   + (k.get("plan_none") or "③ 이미지로 이어지는 가설을 먼저 보여 줘서 후보 3개에서 빠짐") + ")"
                    for i, k in enumerate(report.get("key_problems") or [], 1)
                    if isinstance(k, dict) and k.get("title") not in cand_titles]
-        if skipped:   # 평소에는 작은 물음표 아이콘만, 누르면 이유가 보임
-            with st.container(key="hypothesis-skipped"):
-                with st.popover("", icon=":material/help:", type="tertiary", help="후보에서 빠진 ① 핵심 문제 보기"):
-                    st.markdown("**후보에서 빠진 ① 핵심 문제**")
-                    st.markdown("\n".join(f"- {s}" for s in skipped))
+        _hypothesis_render_candidate(opened, candidates[opened], sqp, saved, total=len(candidates), skipped=skipped)
 
     # 오른쪽 끝 아이콘 줄: 열린 가설 것만, 칸 바깥에 (화면에 고정)
     hypothesis_render_side(opened, candidates[opened], sqp, saved)

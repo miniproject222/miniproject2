@@ -234,3 +234,35 @@ def report_keepa_parse(product):
         "rank": pick(cur, 3),                             # 카테고리 판매 순위
         "in_stock": price is not None,
     }
+
+
+@st.cache_data(show_spinner=False)
+def report_keepa_health(day: str) -> dict:
+    """하루 한 번 Keepa API 키·연결 확인 (day가 바뀌면 다시 확인). 토큰 상태 조회(/token)는 토큰을 쓰지 않습니다.
+    돌려주는 값: {ok, checked, tokens_left, refill_in, message}. 오류 문구에 키가 들어가지 않게 짧은 메시지만."""
+    key = report_keepa_secret("KEEPA_API_KEY")
+    checked = datetime.now().strftime("%Y-%m-%d %H:%M")
+    if not key:
+        return {"ok": False, "checked": checked, "tokens_left": None, "refill_in": None, "message": "Keepa 키가 없음 (secrets의 KEEPA_API_KEY)"}
+    try:
+        resp = requests.get("https://api.keepa.com/token", params={"key": key}, timeout=15)
+    except requests.RequestException as err:
+        return {"ok": False, "checked": checked, "tokens_left": None, "refill_in": None, "message": f"연결 오류 ({type(err).__name__})"}
+    if resp.status_code != 200:
+        return {"ok": False, "checked": checked, "tokens_left": None, "refill_in": None, "message": f"응답 오류 (HTTP {resp.status_code})"}
+    body = resp.json()
+    if body.get("error"):
+        return {"ok": False, "checked": checked, "tokens_left": None, "refill_in": None,
+                "message": str((body.get("error") or {}).get("message") or "Keepa 오류")[:80]}
+    return {"ok": True, "checked": checked, "tokens_left": body.get("tokensLeft"),
+            "refill_in": body.get("refillIn"), "message": "정상"}
+
+
+def report_keepa_health_text(health: dict) -> str:
+    """'Keepa 연결 확인 10/26 09:00 · 정상 (남은 토큰 N)' 한 줄."""
+    when = str(health.get("checked") or "")[5:].replace("-", "/")
+    if health.get("ok"):
+        left = health.get("tokens_left")
+        return f"Keepa 연결 확인 {when} · 정상" + (f" (남은 토큰 {left:,})" if isinstance(left, int) else "")
+    return f"Keepa 연결 확인 {when} · 문제 있음: {health.get('message')}"
+

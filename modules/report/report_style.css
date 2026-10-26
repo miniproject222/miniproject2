@@ -287,7 +287,7 @@
 @media (min-width: 768px) {
   [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2)[aria-selected="true"]) {
     max-width: 1720px !important;
-    padding: 1rem 3.5rem 3rem !important;
+    padding: 1rem 3.5rem 1rem !important;   /* 아래 여백 3rem → 1rem (작은 화면에서도 스크롤 없게) */
   }
 }
 
@@ -483,4 +483,38 @@
 .st-key-report-card-rank1:has(.report-skeleton) .report-level,
 .st-key-report-card-rank2:has(.report-skeleton) .report-level { background: var(--color-primary); color: var(--color-card); }
 .st-key-report-btn-side-image:hover::after { content: "이미지로 고칠 수 있는 문제 전체"; }
+
+/* 탭을 옮긴 직후 브라우저에서도 탭을 눌러 주는 보이지 않는 칸 (report_tab_click) - 자리를 차지하지 않게 */
+.st-key-report-tab-click-box {
+  display: none;
+}
+
+/* 1순위 | 2순위 카드: 화면 높이에 맞춰 (제목 줄을 뺀 나머지 높이, 너무 작거나 크지 않게) → 한 화면에 들어오게 */
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 {
+  height: clamp(360px, calc(100vh - 215px), 640px) !important;   /* 'N순위 문제' 머리줄을 없앤 만큼 카드 위치가 올라감 */
+}
+
+/* ① 탭을 연 동안 페이지 아래 기본 여백(약 6rem)을 줄여 작은 화면에서도 스크롤이 생기지 않게 */
+[data-testid="stMainBlockContainer"]:has(.st-key-report-card-rank1) {
+  padding-bottom: 1rem !important;
+}
+
+
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 {
+  overflow-y: auto;   /* 화면이 아주 낮으면 카드 안에서만 스크롤 */
+  flex: 0 0 auto !important;
+}
+
+/* 1·2순위 카드 안 배경을 흰색으로 → 안쪽 하늘색(③ 이미지로 고치기)·보라(② 가설 재료) 상자가 잘 보이게 */
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 {
+  background: var(--color-card, #fff) !important;
+}
+
+.st-key-report-card-rank1 .report-detail-head,
+.st-key-report-card-rank2 .report-detail-head {
+  margin-top: 0;
+}
 

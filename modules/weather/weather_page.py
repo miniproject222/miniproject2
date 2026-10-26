@@ -57,14 +57,17 @@ def _weather_header():
     c1, c2 = st.columns([4, 1.2], vertical_alignment="center")
     with c1:
         _weather_html(
-            '<div class="weather-title">날씨 광고 타이밍</div>'
+            '<div class="weather-title">4. 광고 타이밍</div>'   # 왼쪽 탭 이름과 같게 (①·② 탭 제목처럼 번호)
             '<div class="weather-subtitle">독일 4개 권역 예보와 경쟁사 재고로 이번 주 아마존 광고 예산을 날짜별로 나눕니다</div>'
         )
-    with c2:
-        return st.toggle(
+    with c2, st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center", key="weather-head-right"):
+        on = st.toggle(
             "폭염 시나리오(샘플)", key="weather-toggle-sample", value=True,   # 처음부터 켜짐 (끄면 실제 예보)
             help="실제 예보 대신 여름 폭염 샘플 데이터로 화면과 보고서를 확인합니다. 끄면 Open-Meteo 실제 예보.",
         )
+        # 데이터 출처(예전 화면 맨 아래 한 줄)는 이 물음표 안에 (한 화면에 들어오게) - 내용은 weather_render 끝에서 채움
+        src = st.popover("", icon=":material/info:", type="tertiary", help="데이터 출처")
+    return on, src
 
 
 def _weather_region_tiles(regions, failed):
@@ -151,21 +154,29 @@ def _weather_channel_card(plan):
             f'background:{weather_temp_color(r["max7"])}"></span></span>'
             f'<b>{weather_eur(r["week"])}</b>{diff_html}</div>'
         )
-    asin = "".join(f'<span class="weather-pill">{escape(c["competitor"])} ASIN 타겟 ON</span>' for c in plan["soldout"])
-    if not plan["soldout"]:
-        msg = "품절 경쟁사 없음 · ASIN 타겟 광고는 대기"
-        checked = weather_stock_checked(plan["competitors"])
-        if checked:
-            msg += f" (Keepa {checked} 확인)"
-        asin = f'<span class="weather-note">{escape(msg)}</span>'
+    # 경쟁사 분석 (예전 '경쟁사 ASIN 타겟' 칸 → 품절일 때만 쓰는 ASIN 타겟은 '경쟁사 재고 시그널' 카드 한 줄로 옮김)
+    rivals = []
+    for c in plan["competitors"][:2]:
+        if c.get("price") is None:
+            continue
+        ch = c.get("change")
+        ch_html = (f'<em class="weather-diff{" up" if ch > 0 else ""}">90일 평균 대비 {ch * 100:+.0f}%</em>'
+                   if isinstance(ch, (int, float)) and ch else '<em class="weather-diff">90일 평균과 같음</em>')
+        meta = " · ".join(x for x in (
+            f"★{c['rating']:.1f} ({c['reviews']:,})" if c.get("rating") and c.get("reviews") else "",
+            f"판매 순위 {c['sales_rank']:,}위" if c.get("sales_rank") else "") if x)
+        rivals.append(f'<div class="weather-rival"><b>{escape(c["competitor"])}</b><span>{weather_eur(c["price"])}</span>{ch_html}'
+                      f'<small>{escape(meta)}</small></div>')
+    checked = weather_stock_checked(plan["competitors"])
+    rival_html = "".join(rivals) or '<span class="weather-note">Keepa 값이 있는 경쟁사가 없어요</span>'
     with st.container(border=True, key="weather-card-channel"):
         _weather_html(
             '<div class="weather-card-title">추천 집행 액션<span class="weather-chip">7일 합계</span></div>'
-            f'<div class="weather-channel-head"><span>🛒 아마존 · 권역별 비중</span><b>{weather_eur(plan["amazon"])}</b></div>'
-            '<div class="weather-note" style="margin-bottom:6px">더운 권역에 더 배정 (지역 타겟 기준 · 균등 대비 %)</div>'
+            f'<div class="weather-channel-head"><span title="더운 권역에 더 배정 (지역 타겟 기준 · 균등 대비 %)">🛒 아마존 · 권역별 비중</span><b>{weather_eur(plan["amazon"])}</b></div>'
+
             f'{"".join(rows)}'
-            f'<div class="weather-channel-head weather-gap"><span>🎯 경쟁사 ASIN 타겟</span>'
-            f'<b>{len(plan["soldout"])}곳</b></div><div class="weather-pills">{asin}</div>'
+            f'<div class="weather-channel-head weather-gap"><span>🔎 경쟁사 분석</span>'
+            f'<b class="weather-note">Keepa {escape(checked) or "샘플"}</b></div>{rival_html}'
         )
 
 
@@ -187,7 +198,7 @@ def _weather_amazon_chart(plan):
         hovertemplate="%{customdata[0]}<br>4개 권역 중 최고 %{customdata[1]:.0f}°<br>아마존 예산 %{text}<extra></extra>",
     ))
     fig.update_layout(
-        height=250, margin=dict(l=4, r=4, t=26, b=4), bargap=0.34,
+        height=112, margin=dict(l=4, r=4, t=14, b=18), bargap=0.34,   # 한 화면에 들어오게 낮춤 (예전 250)
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family=WEATHER_FONT_FAMILY, color=T["text"]),
         hoverlabel=dict(bgcolor=T["card"], bordercolor=T["line"], font=dict(color=T["text"])),
@@ -205,7 +216,8 @@ def _weather_forecast_section(plan):
     with st.container(border=True, key="weather-card-chart-amazon"):
         _weather_html(
             f'<div class="weather-chart-head"><div class="weather-card-title">아마존 7일 예산 · 전국'
-            f'<span>{WEATHER_HOT_C}°C 이상 예보일 {hot_days}일에 더 배정 · 막대 색 = 그날 4개 권역 중 최고기온</span></div>'
+            f'<span>{f"{WEATHER_HOT_C}°C 이상 예보일 {hot_days}일에 더 배정" if hot_days else f"{WEATHER_HOT_C}°C 이상 예보 없음 · 날짜별 고르게"}'
+            ' · 막대 색 = 그날 4개 권역 중 최고기온</span></div>'
             f'<div class="weather-chart-total">주간 <b>{weather_eur(plan["amazon"])}</b></div></div>'
         )
         st.plotly_chart(_weather_amazon_chart(plan), config={"displayModeBar": False}, key="weather-chart-amazon", width="stretch")
@@ -226,7 +238,11 @@ def weather_save_store(plan, is_sample_weather=False):
                "text": f"④ 광고 타이밍 · {i['text'].split('.')[0]}", "detail": f"{i['text']} ({i['tag']}){sample}",
                "when": "오늘"} for i in items[:1]]
     payload = {"ad_multiplier": mult, "reason": reason, "alerts": alerts,
-               "channel": "amazon", "amazon": plan["amazon"], "amazon_daily": plan["amazon_daily"], "dates": plan["dates"]}
+               "channel": "amazon", "amazon": plan["amazon"], "amazon_daily": plan["amazon_daily"], "dates": plan["dates"],
+               # 홈이 같은 날씨로 보이게: 폭염 시나리오(샘플)인지와 도시별 지금·7일 최고 기온
+               "sample": bool(is_sample_weather),
+               "cities": {c["city"]: {"now": c["now"], "max7": c["max7"]}
+                          for r in plan["regions"] for c in r.get("cities", []) if "now" in c and "max7" in c}}
     if st.session_state.get("weather-stored-payload") != payload:
         first = "weather-stored-payload" not in st.session_state
         store_set("weather", payload)
@@ -262,6 +278,9 @@ def _weather_stock_card(plan, is_sample_stock):
             f'<div class="weather-card-title">경쟁사 재고 시그널{chip}</div>'
             f'<div class="weather-stock-summary" style="grid-template-columns:repeat({len(keys)}, 1fr)">{summary}</div>'
             f'{"".join(rows)}'
+            f'<div class="weather-asin-line" title="경쟁사가 품절되면 그 상품 검색 결과에 우리 광고(ASIN 타겟)를 켜요">🎯 품절 시 ASIN 타겟 · '
+            + (" · ".join(f"<b>{escape(c['competitor'])}</b> 품절 → 그 상품 ASIN 타겟 광고 ON" for c in plan["soldout"])
+               or "품절 없음 → 대기") + '</div>'
         )
 
 
@@ -297,7 +316,7 @@ def _weather_reco_card(plan, is_sample_weather, is_sample_stock):
 def weather_render():
     """'4. 날씨 광고 타이밍' 탭을 열 때마다 실행됩니다. 화면은 전부 이 함수 안에서 그립니다."""
     with st.container(key="weather-root"):
-        is_sample_weather = _weather_header()
+        is_sample_weather, src_box = _weather_header()
 
         if is_sample_weather:
             regions = weather_sample_regions()
@@ -334,5 +353,6 @@ def weather_render():
         source = "폭염 시나리오 샘플 데이터 (실제 예보 아님)" if is_sample_weather else "Weather data by Open-Meteo.com"
         stock = ("샘플 데이터" if is_sample_stock
                  else f"경쟁사 DB 상위 경쟁사 + Keepa 마지막 조회값 ({weather_stock_checked(competitors)}, report 탭에서 갱신)")
-        st.caption(f"날씨: {source} · 기준 {plan['regions'][0]['updated'].replace('T', ' ')} · 권역 기온은 3개 도시 평균"
-                   f" · 경쟁사 재고: {stock}")
+        with src_box:
+            st.markdown(f"**데이터 출처**\n\n- 날씨: {source} · 기준 {plan['regions'][0]['updated'].replace('T', ' ')} · 권역 기온은 3개 도시 평균"
+                        f"\n- 경쟁사 재고: {stock}")

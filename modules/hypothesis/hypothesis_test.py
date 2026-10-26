@@ -114,7 +114,10 @@ def test_core_flow() -> None:
     at.button(key="hypothesis-btn-load").click().run()
     check(not at.exception, "[핵심] 불러오기 후 예외 없음")
     # ① 저장 리포트가 없으면 ② 불러오기 → ① 탭으로 이동, ①은 분석을 불러온 상태('다음으로'를 바로 누를 수 있게)
-    check(at.session_state["main_tabs"] == "① 문제 분석", f"[핵심] ① 리포트 없으면 ① 탭으로 이동 ({at.session_state['main_tabs']!r})")
+    from common.common_layout import LAYOUT_TABS   # 탭 아이콘은 PM이 바꿀 수 있어 탭 목록에서 이름을 만듦
+    report_tab = next(t for t in LAYOUT_TABS if t["code"] == "report")
+    report_label = f"{report_tab['icon']} {report_tab['label'].replace(' ', chr(160))}"
+    check(at.session_state["main_tabs"] == report_label, f"[핵심] ① 리포트 없으면 ① 탭으로 이동 ({at.session_state['main_tabs']!r})")
     check(at.session_state["report-loaded"] is True, "[핵심] ① 탭은 불러오기 누른 상태로")
     check(not at.session_state["hypothesis-loaded"] if "hypothesis-loaded" in at.session_state else True, "[핵심] ② 는 아직 불러오기 전")
     check(not any("아직 분석된 문제가 없어요" in m.value for m in at.markdown), "[핵심] 따로 빈 화면(예시 데이터 버튼)은 없음")
@@ -145,7 +148,9 @@ def test_core_flow() -> None:
     check(not at.button(key="hypothesis-btn-store").disabled, "[핵심] 고르면 저장하기 활성")
     check(any("아직 저장 안 됨" in c.value for c in at.caption), "[핵심] 저장 전 안내")
     at.button(key="hypothesis-btn-store").click().run()
-    check(at.button(key="hypothesis-btn-store").disabled, "[핵심] 저장 후 저장하기 다시 비활성")
+    check(not at.button(key="hypothesis-btn-store").disabled, "[핵심] 저장 후에도 '다음으로'는 켜짐 (저장된 가설 그대로 ③으로)")
+    check(str(at.session_state["main_tabs"]).endswith("광고 소재·솔루션"), f"[핵심] 저장하면 ③ 탭으로 ({at.session_state['main_tabs']!r})")
+    check(at.session_state["media-hypo-loading"] is True, "[핵심] '다음으로' → ③이 가설을 바로 불러오도록 표시")
     check(any("저장됨" in c.value for c in at.caption), "[핵심] 저장 후 '저장됨' 표시")
     saved = at.session_state["store-hypothesis"]
     check(saved.get("text") == hypothesis_build_sentence(cands[0]), "[핵심] 저장 문장 = 화면 후보 문장")
@@ -285,7 +290,7 @@ def test_candidate_action_diversity() -> None:
         problem("인증 미표시", p=plan("인증 마크 이미지")),
         problem("품절 임박", p=plan("재입고 알림", visual=False)),
     ]}
-    cands = hypothesis_pick_candidates(report)
+    cands = hypothesis_pick_candidates(report, limit=3)   # 서로 다른 행동이 상한만큼 있으면 겹치는 문제는 빠짐
     keys = [hypothesis_action_key(p) for p in cands]
     check(len(set(keys)) == len(keys) == 3, f"[다양성] 후보 3개의 행동이 모두 다름 ({keys})")
     check([c["title"] for c in cands] == ["장바구니 이탈률 71%", "인증 미표시", "품절 임박"], "[다양성] 겹치는 문제만 건너뜀")
@@ -386,7 +391,10 @@ def test_real_report() -> None:
         rows = dict(hypothesis_execution_rows(p))
         check(all(rows.get(k) for k in ("목표 KPI", "준비할 소재", "테스트 방법")), f"{label} 실행 방법 표가 채워짐")
     planned = [p["title"] for p in rep["problems"] if p.get("plan") and "가설 없이" not in str(p.get("detail"))]
-    check([c["title"] for c in cands] == planned[:len(cands)], "[실제 ①] 후보 순서 = ① 문제 순서 (가설 재료 있는 문제만)")
+    titles = list(dict.fromkeys(c["title"] for c in cands))   # ①이 B안을 나눈 문제는 같은 제목으로 여러 후보
+    check(titles == planned[:len(titles)], "[실제 ①] 후보 순서 = ① 문제 순서 (가설 재료 있는 문제만)")
+    check(all(c.get("variant_label") for c in cands if (c["plan"] or {}).get("variants")), "[실제 ①] B안 후보마다 이름(variant_label)")
+    check(len({c["plan"]["action"] for c in cands}) == len(cands), "[실제 ①] 후보마다 행동(B안)이 다름")
     tops = [k["title"] for k in rep["key_problems"]]
     for c in cands:
         if c["title"] in tops:
@@ -401,7 +409,25 @@ def test_real_report() -> None:
           or not any(c.get("sqp_type") == "소재 개선" for c in cands[:1]), "[실제 ①] 검색어 소재 개선 후보는 판단 기준 아이콘 활성")
 
 
+# ─────────────────────────────────────────────
+# 12. 이용자가 고를 때만 선택: 예전에 저장된 가설이 있어도 자동으로 '선택됨'이 되지 않음
+# ─────────────────────────────────────────────
+def test_user_pick_only() -> None:
+    at = _new_apptest()
+    at.session_state["store-report"] = copy.deepcopy(SAMPLE_REPORT)
+    first = hypothesis_pick_candidates(SAMPLE_REPORT)[0]
+    at.session_state["store-hypothesis"] = {"text": hypothesis_build_sentence(first), "problem_title": first["title"]}
+    at.run()
+    check(not at.exception, "[직접 선택] 예외 없음")
+    check(at.button(key="hypothesis-btn-save-0").label == "선택하기", "[직접 선택] 예전 저장값이 있어도 '선택됨' 자동 표시 안 함")
+    check(at.button(key="hypothesis-btn-store").disabled, "[직접 선택] 고르기 전에는 '다음으로' 꺼짐")
+    check(any("아직 선택한 가설이 없어요" in m.value for m in at.markdown), "[직접 선택] '지금 선택된 가설'도 비어 있음")
+    at.button(key="hypothesis-btn-save-0").click().run()
+    check(at.button(key="hypothesis-btn-save-0").label == "✓ 선택됨", "[직접 선택] 직접 고르면 '선택됨'")
+
+
 if __name__ == "__main__":
+    test_user_pick_only()
     test_core_flow()
     test_defensive()
     test_no_fixed_values()
