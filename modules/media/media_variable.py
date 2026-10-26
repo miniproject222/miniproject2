@@ -175,7 +175,7 @@ def media_variable_parts(hypo: dict) -> list[str] | None:
 
 
 def media_variable_goal_text(plan: dict, hypo: dict) -> str:
-    """요약 카드의 목표 KPI 한 줄. 리포트 숫자가 있으면 그 숫자, 없으면 가설의 Then을 짧게 (숫자를 화살표로)."""
+    """요약 칩의 목표 KPI 한 줄. 리포트 숫자가 있으면 그 숫자, 없으면 가설의 Then을 짧게 (숫자를 화살표로)."""
     parts = media_variable_parts(hypo)
     if media_variable_has_goal(plan) or not parts:
         return media_variable_kpi_text(plan)
@@ -183,7 +183,7 @@ def media_variable_goal_text(plan: dict, hypo: dict) -> str:
 
 
 def media_variable_hypo_tip(hypo: dict) -> str:
-    """요약 카드 ⓘ에 보일 2번 탭 가설 (If / Because / Then 원문, 나눌 수 없으면 문장 그대로)."""
+    """요약 칩 ⓘ에 보일 2번 탭 가설 (If / Because / Then 원문, 나눌 수 없으면 문장 그대로)."""
     parts = media_variable_parts(hypo)
     body = ("\n".join(f"- **{name}**: {p.strip().rstrip(',')}" for name, p in zip(("If", "Because", "Then"), parts))
             if parts else media_variable_kpi_name(hypo["text"]))
@@ -341,7 +341,7 @@ def media_variable_has_goal(plan: dict) -> bool:
 
 
 def media_variable_kpi_text(plan: dict) -> str:
-    """요약 카드·칩에 보일 KPI 한 줄. 숫자가 없으면 지표 이름과 '목표는 가설의 Then'만 보여 줍니다."""
+    """요약 칩·목표 KPI 칩에 보일 KPI 한 줄. 숫자가 없으면 지표 이름과 '목표는 가설의 Then'만 보여 줍니다."""
     if media_variable_has_goal(plan):
         return f"{plan['kpi']} {plan['kpi_now']:g}배 → **{plan['kpi_goal']:g}배 이상**"
     return f"{plan['kpi']} · 목표는 가설의 Then"
@@ -372,23 +372,27 @@ def media_variable_kpi_chip() -> None:
     if defaults:
         tip.append(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
     with st.container(key="media-kpi-chip"):
-        # 앞 배지로 칩이 무엇인지 알려 줌 (하위 탭 ① 요약 카드의 :green-badge[KPI]와 같은 색)
+        # 앞 배지로 칩이 무엇인지 알려 줌 (하위 탭 ① 요약 칩의 :green-badge[KPI]와 같은 색)
         label = f" · :gray[{MEDIA_VARIABLE_SQP_LABEL}]" if media_variable_has_goal(plan) else ""
         st.markdown(f":green-badge[🎯 A/B 목표 KPI] {media_variable_kpi_text(plan)}{label}", help="\n\n".join(tip))
 
 
-def media_variable_hypothesis_step(plan: dict, cands: dict, hypo: dict):
-    """핵심 요약 카드(독립 변수 + 목표 KPI) + 2번 탭 가설이 바뀌었을 때 경고 (media_variable_step()의 윗부분).
-    가설 문장은 카드 ⓘ에서 봅니다."""
+def media_variable_summary_chip(plan: dict, cands: dict, hypo: dict):
+    """하위 탭 ①의 요약 칩 '[독립 변수] … · [🎯 목표 KPI] …' (ⓘ에 2번 탭 가설).
+    ②~④의 목표 KPI 칩과 같은 모양·자리 (넓은 화면은 하위 탭 바와 같은 줄 오른쪽 끝, media_style.css).
+    칩은 탭 패널 기준으로 띄우므로 나타나는 애니메이션 상자(media-hypo-box) 밖에서 부릅니다."""
     picked, chosen = cands["picked"], cands["variable"]
     variable = f"{plan['variable']} ({media_variable_label(picked)})" if picked else (plan["variable"] or "없음")
-    if chosen and not chosen["ok"]:   # 고른 변수가 진행할 수 없는 변수: 카드에도 표시 (이유는 아래 오른쪽 경고)
+    if chosen and not chosen["ok"]:   # 고른 변수가 진행할 수 없는 변수: 칩에도 표시 (이유는 아래 오른쪽 경고)
         variable += " :orange-badge[⚠️ 진행 불가]"
-    # 넓은 화면: 하위 탭 바 오른쪽 빈자리(탭 바와 같은 줄)에 띄움 (media_style.css)
     with st.container(key="media-hypo-summary"):
-        st.markdown(f":violet-badge[독립 변수] {variable}\n\n"
+        st.markdown(f":violet-badge[독립 변수] {variable} · "
                     f":green-badge[🎯 목표 KPI] {media_variable_goal_text(plan, hypo)}",
                     help=media_variable_hypo_tip(hypo))
+
+
+def media_variable_hypothesis_step(hypo: dict):
+    """2번 탭 가설이 바뀌었을 때 경고 + 규칙 후보 안내 (media_variable_step()의 윗부분)."""
     if media_variable_is_stale(hypo):
         st.warning("2번 가설 탭에서 고른 가설이 바뀌었어요. 오른쪽 위 '다시 불러오기'를 눌러야 새 가설로 변수를 도출해요.",
                    icon="🔄")
@@ -447,7 +451,7 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             st.caption("이 가설의 후보 목록이 아직 없어요.")
     with c2:
         # 표에는 A·B만 (스크롤 없이 한 화면에 보이도록, 변수 표와 높이도 맞춤).
-        # 독립·종속 변수는 위 요약 카드에 있고, 통제 변수·안전장치·B로 못 쓰는 안·가설에 딸린 참고 설명(note)은
+        # 독립·종속 변수는 위 요약 칩에 있고, 통제 변수·안전장치·B로 못 쓰는 안·가설에 딸린 참고 설명(note)은
         # 제목 옆 ⓘ에서 보임 (화면에서만 빠지고 2단계로 넘기는 plan에는 그대로 있음)
         note = cands["set"].get("note")
         broken = "\n".join(f"- {o['label']}: {o['rule_break']} → {o.get('fallback') or '서브 이미지'}"
@@ -581,7 +585,7 @@ def _media_variable_start_load() -> None:
 
 
 def media_variable_step():
-    """하위 탭 '가설에서 변수 도출': 오른쪽 위 '가설 불러오기' 버튼 → 요약 카드(독립 변수·목표 KPI) → 후보 걸러내기·단일 변수 선정.
+    """하위 탭 '가설에서 변수 도출': 오른쪽 위 '가설 불러오기' 버튼 → 요약 칩(독립 변수·목표 KPI) → 후보 걸러내기·단일 변수 선정.
     반드시 media_render() 안에서 부릅니다."""
     loading = st.session_state.pop("media-hypo-loading", False)
     loaded = loading or st.session_state.get("media-hypo-loaded", False)
@@ -611,8 +615,9 @@ def media_variable_step():
     # key="media-hypo-box": media_style.css의 나타나는 애니메이션(.st-key-media-hypo-box)
     plan, price, defaults = media_variable_plan()
     cands = media_variable_candidates()
+    media_variable_summary_chip(plan, cands, hypo)
     with st.container(key="media-hypo-box"):
-        media_variable_hypothesis_step(plan, cands, hypo)
+        media_variable_hypothesis_step(hypo)
         # key="media-hypo-divider": media_style.css가 구분선 위아래 기본 여백(2em)을 줄여 윗줄 바로 아래에 붙임
         with st.container(key="media-hypo-divider"):
             st.divider()

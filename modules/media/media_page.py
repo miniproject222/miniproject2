@@ -90,7 +90,7 @@ def media_render():
                     if i > 0 and not media_variable_can_leave(warn=False):   # ①에서 확정 전: 내용 대신 잠금 안내
                         media_variable_locked_step()
                         break
-                    if i > 0:   # 하위 탭 바 오른쪽에 목표 KPI 칩 (하위 탭 ①은 요약 카드에 KPI가 이미 있음)
+                    if i > 0:   # 하위 탭 바 오른쪽에 목표 KPI 칩 (하위 탭 ①은 요약 칩에 KPI가 이미 있음)
                         media_variable_kpi_chip()
                     render()
                     media_step_nav(i)

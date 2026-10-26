@@ -138,7 +138,7 @@
 }
 
 /* 넓은 화면: '가설 불러오기' 버튼을 페이지 제목 줄 오른쪽 끝으로 올리고,
-   요약 카드·빈 카드는 하위 탭 바와 같은 줄(위쪽 끝 맞춤) 오른쪽 자리만큼만 차지
+   빈 카드는 하위 탭 바와 같은 줄(위쪽 끝 맞춤) 오른쪽 자리만큼만 차지
    (--media-tabbar-w = 하위 탭 바가 차지할 최대 폭. 탭 이름이 길어져도 탭 바는 이 폭 안에서 가로 스크롤되어
     오른쪽 카드와 겹치지 않음. 음수 여백은 실제 화면에서 잰 값. 제목이 바뀌면 맞춰야 함) */
 @media (min-width: 768px) {
@@ -177,37 +177,12 @@
   }
 }
 
-/* 불러온 뒤: 요약 카드(독립 변수·목표 KPI)를 하위 탭 바와 같은 줄 오른쪽 자리로 끌어올리고, 오른쪽 끝을 '다시 불러오기' 버튼에 맞춤.
-   그보다 좁으면 오른쪽 자리에서 글자가 꺾이므로 탭 바 아래 왼쪽 그대로 (1280px은 실제 화면에서 잰 값) */
-@media (min-width: 1280px) {
-  .st-key-media-hypo-summary {
-    max-width: calc(100% - var(--media-tabbar-w) - 24px);   /* 글자가 길어도 탭 바와 겹치지 않음 (넘치면 줄바꿈) */
-    margin-left: auto;
-    margin-top: -70px;   /* 위쪽 끝을 하위 탭 바와 맞춤 (실제 화면에서 잰 값) */
-  }
-}
-
-/* 가설 핵심 요약 카드 - 독립 변수 / 목표 KPI 두 줄, ⓘ에 2번 탭 가설. 카드 폭은 글자 폭만큼 */
-.st-key-media-hypo-summary {
-  width: fit-content !important;   /* 남는 폭보다 길면 남는 폭까지만 늘고 줄바꿈 */
-  padding: 10px 14px;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-}
-
-.st-key-media-hypo-summary p {
-  font-size: 14px;
-  line-height: 1.9;
-  margin: 0;
-}
-
-/* 요약 카드 바로 아래 구분선 (media_variable.py key="media-hypo-divider") - 기본 hr 여백 2em 제거 */
+/* 요약 칩 바로 아래 구분선 (media_variable.py key="media-hypo-divider") - 기본 hr 여백 2em 제거 */
 .st-key-media-hypo-divider hr {
   margin: 0 0 4px;
 }
 
-/* 후보 변수 블럭 (media_variable.py media_variable_cards) - 요약 카드와 같은 흰 카드, 블럭 사이 8px
+/* 후보 변수 블럭 (media_variable.py media_variable_cards) - 흰 카드, 블럭 사이 8px
    블럭 key: media-variable-card-<번호> / 고른 블럭은 media-variable-card-on-<번호> */
 .st-key-media-variable-candidates {
   gap: 8px !important;
@@ -305,8 +280,10 @@
   text-align: center;
 }
 
-/* 목표 KPI 칩 (media_variable.py의 media_variable_kpi_chip, 하위 탭 ②~④) - 작은 알약형 */
-.st-key-media-kpi-chip {
+/* 목표 KPI 칩 (media_variable.py의 media_variable_kpi_chip, 하위 탭 ②~④) - 작은 알약형
+   하위 탭 ①의 요약 칩(media_variable_summary_chip, key media-hypo-summary)도 같은 모양·자리 */
+.st-key-media-kpi-chip,
+.st-key-media-hypo-summary {
   width: fit-content !important;
   margin-left: auto;
   padding: 6px 14px;
@@ -315,7 +292,8 @@
   border-radius: 999px;
 }
 
-.st-key-media-kpi-chip p {
+.st-key-media-kpi-chip p,
+.st-key-media-hypo-summary p {
   font-size: 14px;
   white-space: nowrap;
 }
@@ -340,4 +318,33 @@
   .st-key-media-kpi-chip {
     pointer-events: auto;
   }
+}
+
+/* ①의 요약 칩(독립 변수 · 목표 KPI)은 ②~④ 칩보다 길어서(약 520px) 더 넓은 화면에서만 같은 자리로 올림.
+   그보다 좁으면 탭 바 아래 줄 오른쪽 그대로 (1440px은 실제 화면에서 잰 값. 1280px에서는 ⓘ가 아랫줄로 꺾임).
+   독립 변수 이름(AI가 만듦, B안을 고르면 B안 이름도 붙음)이 길면 탭 바를 덮지 않고 남는 폭에서 두 줄로 꺾음 */
+@media (min-width: 1440px) {
+  [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-summary) {
+    position: absolute;
+    top: -41px;
+    right: 0;
+    z-index: 1;
+    width: auto !important;
+    max-width: calc(100% - var(--media-tabbar-w) - 16px);
+    pointer-events: none;
+  }
+
+  .st-key-media-hypo-summary {
+    pointer-events: auto;
+  }
+}
+
+/* ①의 요약 칩: 독립 변수 이름이 길면 (어느 화면 폭이든) 칩 밖으로 넘치지 않고 두 줄로 꺾음.
+   모서리 20px: 한 줄이면 알약 그대로(높이의 절반 이상), 두 줄이면 둥근 상자 */
+.st-key-media-hypo-summary {
+  border-radius: 20px;
+}
+
+.st-key-media-hypo-summary p {
+  white-space: normal;
 }
