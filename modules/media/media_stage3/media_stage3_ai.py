@@ -184,6 +184,9 @@ def media_s3_translate(text: str) -> str:
         res = _media_s3_client().chat.completions.create(
             model=MEDIA_S3_TEXT_MODEL, temperature=0,
             messages=[{"role": "system", "content": "다음 이미지·영상 생성 프롬프트를 자연스러운 한국어로 번역해. "
+                                                    "영어뿐 아니라 독일어 등 다른 외국어(예: 자막)도 모두 한국어로 옮겨. "
+                                                    "자막처럼 따옴표 안의 외국어 문장은 원문을 두고 바로 뒤 괄호에 한국어 뜻을 붙여 "
+                                                    "(예: „Über 26 °C im Schlafzimmer?\" (침실이 26°C를 넘나요?)). "
                                                     "줄 바꿈과 번호는 그대로 두고, 이미 한국어인 부분은 그대로 둬. 번역문만 답해."},
                       {"role": "user", "content": text}])
         return res.choices[0].message.content.strip()

@@ -155,6 +155,16 @@
 .home-first-why b { color: var(--home-red); }
 .home-first-foot { flex-wrap: wrap; }
 
+/* 아래 큰 카드(④ 광고 타이밍): 위 ① 카드와 같은 크기, 색만 주황 · 깜빡이는 테두리 없음 */
+.home-second {
+  margin-top: calc(10 * var(--u));
+  border-color: color-mix(in srgb, var(--home-orange) 55%, transparent);
+  box-shadow: 0 calc(12 * var(--u)) calc(30 * var(--u)) color-mix(in srgb, var(--home-orange) 14%, transparent);
+}
+.home-second::before { display: none; }
+.home-second .home-num-first { background: var(--home-orange); }
+.home-second .home-first-why b { color: var(--home-orange); }
+
 /* 2번부터: 한 줄씩, 누르면 이유 펼침 */
 .home-todo { margin-top: calc(6 * var(--u)); }
 .home-todo summary { justify-content: flex-start; gap: calc(10 * var(--u)); }

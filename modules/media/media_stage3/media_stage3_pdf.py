@@ -116,10 +116,10 @@ def media_s3_build_pdf(src: dict, group: dict, storyboard: list, photos: list, v
         pdf.box(group["hypothesis"], size=9)
     pdf.set_y(pdf.get_y() + 2)
     pdf.table_rows([("구분", "내용"),
-                    ("A와 B에서 바꾸는 것 (단일 변수)", src["variable"]),
-                    ("A안", src["slot_a"]),
-                    ("B안", src["slot_b"])], widths=(32, 68))
-    pdf.text_at(L, pdf.get_y() + 1.5, W, "A와 B는 위 한 가지만 다르고 나머지(조명·배경·보정·제품)는 똑같아야 "
+                    ("두 사진에서 바꾸는 것", group.get("variable") or src["variable"]),
+                    ("지금 사진 (지금 아마존에 올라간 것)", group.get("a") or src["slot_a"]),
+                    ("새로 찍을 사진", group.get("b") or src["slot_b"])], widths=(32, 68))
+    pdf.text_at(L, pdf.get_y() + 1.5, W, "두 사진은 위 한 가지만 다르고 나머지(조명·배경·보정·제품)는 똑같아야 "
                 "어느 쪽이 더 잘 팔리는지 정확히 비교할 수 있습니다.", size=8, color="muted")
 
     # 2. 촬영 지시

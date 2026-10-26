@@ -14,7 +14,9 @@ from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import FancyBboxPatch, Rectangle  # noqa: E402
 
 import ui_theme as ui  # noqa: E402
-from modules.weather.weather_data import (  # noqa: E402
+from modules.weather.weather_data import (
+    weather_amazon_days,
+    weather_reco_items,
     WEATHER_HOT_C,
     WEATHER_STOCK_LABEL,
     weather_checked_label,
@@ -116,40 +118,8 @@ class _WeatherSheet:
 
 
 def _weather_recommendations(plan):
-    """권고 사항 문장 (번호 목록)."""
-    items = []
-    for r in plan["hot_regions"][:3]:
-        peak = max(r["days"], key=lambda d: d["tmax"])
-        diff = f"균등 배분({weather_eur(plan['even'])})보다 {r['vs_even']}% 많은 금액입니다." if r["vs_even"] > 0 else ""
-        items.append(
-            f"{r['name']}({r['city']}) 메타 광고에 주간 {weather_eur(r['week'])}를 배정합니다. "
-            f"7일 중 {len(r['hot_days'])}일이 {WEATHER_HOT_C}°C 이상이며, 최고 {peak['tmax']:.0f}°C"
-            f"({weather_short_date(peak['date'])})로 예보되었습니다. {diff}"
-        )
-    if not plan["hot_regions"]:
-        items.append(f"7일 동안 {WEATHER_HOT_C}°C 이상 예보된 권역이 없어, 메타 예산 {weather_eur(plan['meta'])}를 "
-                     "기온에 따라 권역별로 고르게 운영합니다.")
-
-    amazon = (f"아마존은 전국 단위로 {weather_eur(plan['amazon'])}(전체의 {plan['amazon_share'] * 100:.0f}%)를 집행합니다.")
-    if plan["soldout"]:
-        c = plan["soldout"][0]
-        state = (f"{c['days']}일째 품절" if c.get("days")
-                 else f"품절 상태({weather_checked_label(c['checked'])} Keepa 확인)" if c.get("checked") else "품절")
-        amazon += (f" {c['competitor']} {c['product']}가 {state}이므로 해당 ASIN({c['asin']}) "
-                   "타겟 광고를 함께 운영합니다.")
-    elif plan["low"] and not plan["share_manual"]:
-        c = plan["low"][0]
-        amazon += f" {c['competitor']} {c['product']} 재고가 낮아 아마존 비중을 5%p 높였습니다."
-    if plan["share_manual"]:
-        amazon += (f" 채널 비중은 담당자가 직접 정했습니다"
-                   f"(추천: 아마존 {plan['recommended_share'] * 100:.0f}%).")
-    items.append(amazon)
-
-    cool = [r for r in plan["regions"] if not r["hot_days"]]
-    if plan["hot_regions"] and cool:
-        items.append("·".join(r["name"] for r in cool) + f"는 7일 내내 {WEATHER_HOT_C}°C 미만으로 예보되어 기본 금액"
-                     f"(권역별 {weather_eur(min(r['week'] for r in cool))} 안팎)으로 운영합니다.")
-    return items
+    """권고 사항 문장 (번호 목록, 아마존만) - 화면 '오늘의 추천'과 같은 내용."""
+    return [i["text"] for i in weather_reco_items(plan)]
 
 
 def weather_make_pdf(plan, is_sample_weather, is_sample_stock):
@@ -178,7 +148,7 @@ def _weather_draw(plan, is_sample_weather, is_sample_stock):
     info = [
         ("작성일", f"{now:%Y-%m-%d}"),
         ("집행 기간", period),
-        ("대상", "독일 4개 권역 · 메타, 아마존"),
+        ("대상", "아마존 전국 · 독일 4개 권역 예보"),
         ("날씨 기준", "샘플 시나리오" if is_sample_weather else f"{regions[0]['updated'].replace('T', ' ')}"),
     ]
     cw = W / len(info)
@@ -190,13 +160,18 @@ def _weather_draw(plan, is_sample_weather, is_sample_stock):
     s.y -= 0.06
 
     # ── 핵심 수치 4칸
+    adays = weather_amazon_days(plan)
+    hot_eur = sum(d["eur"] for d in adays if d["hot_regions"])
+    peak = max(adays, key=lambda d: d["eur"]) if adays else None
     kpis = [
         ("주간 총예산", weather_eur(plan["budget"]), "7일 합계"),
-        ("메타 · 지역 타겟", weather_eur(plan["meta"]), f"전체의 {(1 - plan['amazon_share']) * 100:.0f}%"),
-        ("아마존 · 전국", weather_eur(plan["amazon"]), f"전체의 {plan['amazon_share'] * 100:.0f}%"),
-        (f"{WEATHER_HOT_C}°C 이상 권역 배정", weather_eur(plan["hot_total"]),
-         f"메타의 {plan['hot_total'] / plan['meta'] * 100:.0f}%" if plan["meta"] else "-"),
+        ("아마존 · 전국", weather_eur(plan["amazon"]), "주간 예산 전부"),
+        (f"{WEATHER_HOT_C}°C 이상 예보일 배정", weather_eur(hot_eur),
+         f"{sum(1 for d in adays if d['hot_regions'])}일 · 전체의 {hot_eur / plan['amazon'] * 100:.0f}%" if plan["amazon"] else "-"),
+        ("가장 많이 쓰는 날", weather_eur(peak["eur"]) if peak else "-",
+         f"{weather_short_date(peak['date'])} · 최고 {peak['tmax']:.0f}°C" if peak else "-"),
     ]
+    plan = {**plan, "hot_total": hot_eur}   # 아래 강조색 기준
     gap = 0.012
     kw = (W - gap * 3) / 4
     for i, (k, v, sub) in enumerate(kpis):
@@ -216,12 +191,13 @@ def _weather_draw(plan, is_sample_weather, is_sample_stock):
         s.y -= 0.002
 
     # ── 2. 권역별 예산 배분
-    s.section(2, "권역별 메타 예산 배분")
-    rows = [[r["name"], f"{r['city']} 외 {len(r.get('cities', [])) - 1}" if len(r.get("cities", [])) > 1 else r["city"], f"{r['now']:.0f}°C", f"{r['max7']:.0f}°C", f"{len(r['hot_days'])}일",
-             weather_eur(r["week"]), (f"+{r['vs_even']}%" if r["vs_even"] > 0 else f"{r['vs_even']}%")]
-            for r in sorted(regions, key=lambda r: -r["week"])]
+    s.section(2, "권역별 아마존 예산 비중 (지역 타겟 기준)")
+    ordered = sorted(regions, key=lambda r: -r["week"])
+    rows = [[r["name"], f"{r['city']} 외 {len(r.get('cities', [])) - 1}" if len(r.get("cities", [])) > 1 else r["city"],
+             f"{r['now']:.0f}°C", f"{r['max7']:.0f}°C", f"{len(r['hot_days'])}일",
+             weather_eur(r["week"]), (f"+{r['vs_even']}%" if r["vs_even"] > 0 else f"{r['vs_even']}%")] for r in ordered]
     rows.append(["합계", "", "", "", "", weather_eur(sum(r["week"] for r in regions)), ""])
-    hot = {(i, 4) for i, r in enumerate(sorted(regions, key=lambda r: -r["week"])) if r["hot_days"]}
+    hot = {(i, 4) for i, r in enumerate(ordered) if r["hot_days"]}
     s.table(["권역", "도시", "현재 기온", "7일 최고", f"{WEATHER_HOT_C}°C 이상", "주간 배정액", "균등 대비"],
             rows, [0.1, 0.16, 0.13, 0.13, 0.14, 0.18, 0.16],
             ["center", "left", "right", "right", "center", "right", "right"], hot, bold_last=True)
@@ -229,23 +205,20 @@ def _weather_draw(plan, is_sample_weather, is_sample_stock):
     # ── 3. 일별 집행 계획
     s.section(3, "일별 집행 계획")
     head = ["구분"] + [weather_short_date(d) for d in dates] + ["합계"]
-    plan_rows, hot_cells = [], set()
-    for ri, r in enumerate(plan["hot_regions"]):
-        plan_rows.append([f"메타 {r['name']}"] + [weather_eur(v) for v in r["daily"]] + [weather_eur(r["week"])])
-        hot_cells |= {(ri, ci + 1) for ci, d in enumerate(r["days"]) if d["tmax"] >= WEATHER_HOT_C}
-    plan_rows.append(["아마존 전국"] + [weather_eur(v) for v in plan["amazon_daily"]] + [weather_eur(plan["amazon"])])
+    plan_rows = [["4개 권역 최고"] + [f"{d['tmax']:.0f}°C" for d in adays] + [""],
+                 ["아마존 전국"] + [weather_eur(d["eur"]) for d in adays] + [weather_eur(plan["amazon"])]]
+    hot_cells = {(ri, ci + 1) for ri in (0, 1) for ci, d in enumerate(adays) if d["hot_regions"]}
     n = len(dates)
     s.table(head, plan_rows, [0.15] + [0.7 / n] * n + [0.15], ["left"] + ["right"] * (n + 1), hot_cells)
     s.y += 0.004
-    note = (f"색칠한 칸은 최고기온 {WEATHER_HOT_C}°C 이상 예보일입니다. "
-            if hot_cells else f"{WEATHER_HOT_C}°C 이상 권역이 없어 메타 권역별 일정은 생략했습니다. ")
-    s.para(note + "나머지 권역은 2번 표의 주간 배정액을 7일에 나누어 집행합니다.", 7.5, C_MUTED, limit=90, gap=0.014)
+    note = (f"색칠한 칸은 4개 권역 중 한 곳이라도 최고기온 {WEATHER_HOT_C}°C 이상인 예보일입니다."
+            if hot_cells else f"7일 동안 {WEATHER_HOT_C}°C 이상 예보가 없어 날짜별로 고르게 집행합니다.")
+    s.para(note, 7.5, C_MUTED, limit=90, gap=0.014)
     s.y -= 0.004
 
     # ── 4. 경쟁사 재고 현황
     s.section(4, "경쟁사 재고 현황" + (" (샘플 데이터)" if is_sample_stock else ""))
-    action = {"soldout": "ASIN 타겟 광고 운영", "low": "-" if plan["share_manual"] else "아마존 비중 +5%p",
-              "normal": "-"}
+    action = {"soldout": "ASIN 타겟 광고 운영", "low": "품절 대비 ASIN 타겟 준비", "normal": "-"}
     s.table(["경쟁사", "상품", "ASIN", "상태", "지속" if is_sample_stock else "확인 시점", "대응"],
             [[c["competitor"], c["product"], c["asin"], WEATHER_STOCK_LABEL.get(c["status"], c["status"]),
               f"{c['days']}일" if c.get("days") else weather_checked_label(c["checked"]) if c.get("checked") else "-",
@@ -255,12 +228,9 @@ def _weather_draw(plan, is_sample_weather, is_sample_stock):
     # ── 5. 산정 기준
     s.section(5, "산정 기준")
     for line in (
-        ("채널 비중: 담당자 직접 설정 (메타 {:.0f}%, 아마존 {:.0f}%). 추천 기준은 아마존 기본 40%, "
-         "경쟁사 재고 낮음 45%, 품절 50%입니다.").format((1 - plan["amazon_share"]) * 100, plan["amazon_share"] * 100)
-        if plan["share_manual"] else
-        "채널 비중: 아마존 기본 40%, 경쟁사 재고 낮음 45%, 품절 50%. 나머지는 메타입니다.",
-        f"메타 배분: 60%는 4개 권역·7일에 똑같이 나누고, 40%는 {WEATHER_HOT_C}°C 이상 예보일에만 "
-        "(최고기온 - 29)점에 비례해 추가로 나눕니다. 예) 30°C = 1점, 35°C = 6점.",
+        "채널: 아마존만 운영 (주간 예산 전부 아마존, 메타는 운영하지 않음). 경쟁사 품절이면 그 ASIN 타겟 광고를 켭니다.",
+        f"폭염 점수: {WEATHER_HOT_C}°C 이상인 날 (최고기온 - 29)점. 예) 30°C = 1점, 35°C = 6점.",
+        f"권역 비중: 아마존 예산의 60%는 4개 권역·7일에 똑같이, 40%는 {WEATHER_HOT_C}°C 이상 예보일에만 폭염 점수에 비례해 추가 (지역 타겟 기준).",
         "권역 기온: 권역별 3개 도시 평균 (북부 Hamburg·Bremen·Kiel, 서부 Köln·Düsseldorf·Dortmund, "
         "동부 Berlin·Leipzig·Dresden, 남부 München·Stuttgart·Nürnberg)",
         "아마존 배분: 전국 단위로, 날짜별 가중치 1 + 0.1 × (그날 4개 권역 점수 합)에 비례해 나눕니다.",

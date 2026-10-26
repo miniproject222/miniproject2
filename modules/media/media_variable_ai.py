@@ -2,9 +2,11 @@
 # 화면(표·버튼)은 media_variable.py에서 그립니다. '가설 불러오기'를 누를 때만 부릅니다.
 # - 어떤 가설이 와도 후보 묶음을 돌려줍니다: AI(Gemini/OpenAI)로 만들고, 키가 없거나 실패하면 규칙으로 만듭니다.
 # - 묶음 모양은 예시 파일 data/media_variable_candidates.json의 한 묶음과 같습니다 {"kpi", "note", "variables"}.
+#   AI 묶음에는 가설 콜아웃에 보일 짧은 If·Because("short")가 더 붙습니다 (규칙 묶음은 빈 dict).
 # - AI 답은 믿지 않고 코드로 다시 확인합니다 (변수 종류, B안 모양, 메인 이미지 규칙에 걸리는 말).
 # - 키는 secrets.toml의 GEMINI_API_KEY / OPENAI_API_KEY를 함수 안에서만 읽습니다 (2단계와 같은 키). 새 라이브러리 없이 requests로 부릅니다.
 import json
+import re
 from pathlib import Path
 
 import requests
@@ -18,6 +20,7 @@ MEDIA_VARIABLE_AI_PROVIDERS = {"Gemini": "GEMINI_API_KEY", "OpenAI": "OPENAI_API
 # AI에게 모양을 보여 줄 예시 묶음 (예전 냉감패드 메인 이미지 가설의 후보, 손으로 쓴 것)
 MEDIA_VARIABLE_AI_EXAMPLE_FILE = Path(__file__).resolve().parent / "data" / "media_variable_candidates.json"
 MEDIA_VARIABLE_AI_RULE_SOURCE = "규칙"   # AI 없이 만든 묶음의 출처 이름
+MEDIA_VARIABLE_SHORT_MAX = 30   # 가설 콜아웃에 보일 짧은 If·Because 최대 글자 수 (넘으면 AI 답을 버리고 규칙으로 줄임)
 
 # 변수 종류: kind → (표에 보일 이름, 가설 If에서 찾을 말). 위에서부터 먼저 맞는 종류로 봅니다.
 # 메인 이미지는 '이미지'만으로도 걸리므로, '상세 이미지'처럼 메인이 아닌 이미지 종류를 먼저 둡니다.
@@ -49,7 +52,14 @@ MEDIA_VARIABLE_AI_SYSTEM = """너는 amazon.de(독일)에서 냉감패드를 파
    아마존 메인 이미지 규칙에 어긋나는 안은 b 대신 rule_break(어긴 규칙)와 fallback(대신 쓸 곳)을 써.
 5. kpi에는 가설의 Then이 말하는 측정 지표 이름만 짧게 써.
 6. 가설·문제·리포트에 없는 수치, 인증, 효과를 지어내지 마.
-7. JSON만 답해. 형식은 [예시]와 같아: {"kpi": "...", "note": "...", "variables": [...]}"""
+7. short에는 화면에 보일 짧은 If와 Because를 써. 가설 문장을 옮기거나 잘라 붙이지 말고, 읽자마자 이해되는 한 줄로 새로 써. 각각 25자 안쪽.
+   - if: "{바꿀 곳} → {바꾼 모습}" 모양 하나. 대상, 괄호 설명, "B안", "지금 ~의 문제", "만약", "~을 적용한다면"은 빼.
+     예: "메인 이미지 → 펼친 패드 사진"
+   - because: 바꾸면 고객에게 무엇이 좋아지는지(가설의 이유)를 쉬운 말 한 문장으로, "~할 수 있음"·"~이 보임" 같은 명사형 끝맺음.
+     근거 숫자(점유율, 비율, 가격 차이)는 옮기지 말고 그 숫자가 말하는 뜻만 써. "때문에"로 끝내지 마.
+     예: "첫인상에서 가격이 합리적이라 판단할 수 있음"
+   - 가설에 없는 사실·효과·숫자는 넣지 마.
+8. JSON만 답해. 형식은 [예시]와 같고 short를 더해: {"kpi": "...", "note": "...", "short": {"if": "...", "because": "..."}, "variables": [...]}"""
 
 
 # ─────────────────────────────────────────────
@@ -138,9 +148,24 @@ def media_variable_rule_break(text: str) -> tuple[str, str] | None:
     return None
 
 
-def media_variable_clean_set(raw) -> dict | None:
+def media_variable_clean_short(raw, source: str) -> dict:
+    """AI가 줄인 If·Because {"if", "because"}. 칸마다 MEDIA_VARIABLE_SHORT_MAX자를 넘거나
+    원문(source)에 없는 숫자가 들어 있으면 그 칸은 버립니다 (화면이 규칙으로 줄인 모양을 대신 씀)."""
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for k in ("if", "because"):
+        text = str(raw.get(k) or "").strip().rstrip(".")
+        numbers = re.findall(r"\d+(?:[.,]\d+)?", text)
+        if text and len(text) <= MEDIA_VARIABLE_SHORT_MAX and all(n in source for n in numbers):
+            out[k] = text
+    return out
+
+
+def media_variable_clean_set(raw, source: str = "") -> dict | None:
     """후보 묶음(dict 또는 AI 답 문자열)을 정리합니다. 변수가 하나도 안 남으면 None.
-    kind는 정해진 종류로만, B안은 이름 + (b 또는 rule_break)가 있는 것만, 메인 이미지 B안은 규칙에 걸리는 말이 있으면 rule_break로 바꿈."""
+    kind는 정해진 종류로만, B안은 이름 + (b 또는 rule_break)가 있는 것만, 메인 이미지 B안은 규칙에 걸리는 말이 있으면 rule_break로 바꿈.
+    short(짧은 If·Because)는 원문 source와 맞춰 본 것만 남김 (source가 없으면 빈 dict)."""
     if isinstance(raw, str):
         start, end = raw.find("{"), raw.rfind("}")
         try:
@@ -169,7 +194,8 @@ def media_variable_clean_set(raw) -> dict | None:
                           "b_options": options})
     if not variables:
         return None
-    return {"kpi": str(raw.get("kpi") or "").strip(), "note": str(raw.get("note") or "").strip(), "variables": variables}
+    return {"kpi": str(raw.get("kpi") or "").strip(), "note": str(raw.get("note") or "").strip(),
+            "short": media_variable_clean_short(raw.get("short"), source) if source else {}, "variables": variables}
 
 
 def media_variable_kind(text: str) -> str:
@@ -207,7 +233,8 @@ def media_variable_generate(hypo: dict, listing: dict) -> tuple[dict, str, str]:
         if not media_variable_ai_secret(key_name):
             continue
         try:
-            cset = media_variable_clean_set(media_variable_ai_call(provider, media_variable_ai_message(hypo, listing)))
+            source = " ".join(str(hypo.get(k) or "") for k in ("text", "if", "because", "then"))
+            cset = media_variable_clean_set(media_variable_ai_call(provider, media_variable_ai_message(hypo, listing)), source)
         except RuntimeError as err:
             errors.append(str(err))
             continue

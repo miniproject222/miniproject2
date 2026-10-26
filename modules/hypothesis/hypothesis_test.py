@@ -69,6 +69,7 @@ def _new_apptest(loaded: bool = True) -> AppTest:
 
 def select_and_store(at: AppTest, index: int) -> None:
     """'선택하기'(고르기만) → 오른쪽 위 '저장하기'(store에 저장)."""
+    at.button(key=f"hypothesis-btn-pick-{index}").click().run()   # 카드 맨 위 '가설 N'으로 열기
     at.button(key=f"hypothesis-btn-save-{index}").click().run()
     at.button(key="hypothesis-btn-store").click().run()
 
@@ -109,24 +110,32 @@ def test_core_flow() -> None:
     check(not at.exception, "[핵심] 1차 실행에 예외 없음")
     check(any("아직 불러오지 않음" in c.value for c in at.caption), "[핵심] 불러오기 전에는 기본 틀만 (안내 문구)")
     check(at.button(key="hypothesis-btn-store").disabled, "[핵심] 불러오기 전에는 저장하기 비활성")
-    check(not [t for t in at.tabs if t.label.startswith("가설")], "[핵심] 불러오기 전에는 가설 탭 없음")
+    check(not [b for b in at.button if (b.key or "").startswith("hypothesis-btn-pick-")], "[핵심] 불러오기 전에는 가설 1·2·3 버튼 없음")
     at.button(key="hypothesis-btn-load").click().run()
     check(not at.exception, "[핵심] 불러오기 후 예외 없음")
-    check(any("불러올 ① 리포트가 없어요" in c.value for c in at.caption), "[핵심] ① 저장 리포트 없으면 기본 틀 + 안내 한 줄")
+    # ① 저장 리포트가 없으면 ② 불러오기 → ① 탭으로 이동, ①은 분석을 불러온 상태('다음으로'를 바로 누를 수 있게)
+    check(at.session_state["main_tabs"] == "① 문제 분석", f"[핵심] ① 리포트 없으면 ① 탭으로 이동 ({at.session_state['main_tabs']!r})")
+    check(at.session_state["report-loaded"] is True, "[핵심] ① 탭은 불러오기 누른 상태로")
+    check(not at.session_state["hypothesis-loaded"] if "hypothesis-loaded" in at.session_state else True, "[핵심] ② 는 아직 불러오기 전")
     check(not any("아직 분석된 문제가 없어요" in m.value for m in at.markdown), "[핵심] 따로 빈 화면(예시 데이터 버튼)은 없음")
-    at.session_state["store-report"] = SAMPLE_REPORT   # ① 탭에서 저장했다고 가정
-    at.run()
+    at.session_state["store-report"] = SAMPLE_REPORT   # ① 탭에서 '다음으로'(저장)했다고 가정
+    at.button(key="hypothesis-btn-load").click().run()
 
     check(not at.exception, "[핵심] 샘플 클릭 후 예외 없음")
-    # 사진·영상 소재가 필요한 plan(visual=True)이 먼저: 경쟁사 가격 인하 → 장바구니 이탈 → 배송 지연 리뷰
+    # ① 문제 분석 순서 그대로 (예전에는 사진·영상 소재가 필요한 가설을 앞으로 옮겼음)
     cands = hypothesis_pick_candidates(SAMPLE_REPORT)
-    check([c["title"] for c in cands] == ["경쟁사 가격 인하", "장바구니 이탈 증가", "배송 지연 리뷰"],
-          f"[핵심] 소재가 필요한 가설이 먼저 (실제: {[c['title'] for c in cands]})")
-    check([t.label for t in at.tabs] == ["가설 1", "가설 2", "가설 3"], "[핵심] 샘플 3문제가 가설 1/2/3 탭으로 뜸")
+    check([c["title"] for c in cands] == ["경쟁사 가격 인하", "배송 지연 리뷰", "장바구니 이탈 증가"],
+          f"[핵심] ① 순서 그대로 (실제: {[c['title'] for c in cands]})")
+    check([b.label for b in at.button if (b.key or "").startswith("hypothesis-btn-pick-")] == ["가설 1", "가설 2", "가설 3"],
+          "[핵심] 샘플 3문제가 카드 안 가설 1/2/3 버튼으로 뜸")
     check(any("아직 선택한 가설이 없어요" in m.value for m in at.markdown), "[핵심] 처음엔 '지금 선택된 가설' 비어 있음")
     check(sum("hypothesis-ibt-box" in m.value for m in at.markdown) == 0, "[핵심] 선택 전에는 If·Because·Then 카드 없음")
-    check([b.label for b in at.button if b.key and b.key.startswith("hypothesis-btn-save-")] == ["선택하기"] * 3,
-          "[핵심] 후보마다 '선택하기' 버튼 1개")
+    check([b.label for b in at.button if b.key and b.key.startswith("hypothesis-btn-save-")] == ["선택하기"],
+          "[핵심] 열린 후보 카드에 '선택하기' 버튼 1개")
+    at.button(key="hypothesis-btn-pick-2").click().run()
+    check("hypothesis-btn-save-2" in {b.key for b in at.button} and "hypothesis-btn-save-0" not in {b.key for b in at.button},
+          "[핵심] '가설 3'을 누르면 가설 3 카드로 바뀜")
+    at.button(key="hypothesis-btn-pick-0").click().run()
 
     check(at.button(key="hypothesis-btn-store").disabled, "[핵심] 고르기 전에는 저장하기 비활성")
     at.button(key="hypothesis-btn-save-0").click().run()
@@ -146,6 +155,7 @@ def test_core_flow() -> None:
 
     select_and_store(at, 1)
     check(at.button(key="hypothesis-btn-save-1").label == "✓ 선택됨", "[핵심] 가설 2 선택 → 가설 2가 '선택됨'")
+    at.button(key="hypothesis-btn-pick-0").click().run()
     check(at.button(key="hypothesis-btn-save-0").label == "선택하기", "[핵심] 가설 1은 '선택됨'에서 풀림")
     check(at.session_state["store-hypothesis"].get("text") == hypothesis_build_sentence(cands[1]), "[핵심] 최종 저장은 항상 1개")
 
@@ -324,9 +334,11 @@ def test_hypothesis_pdf() -> None:
     at = _new_apptest()
     at.session_state["store-report"] = copy.deepcopy(SAMPLE_REPORT)
     at.run()
-    check("hypothesis-btn-side-pdf-0" not in {b.key for b in at.button}, "[PDF] 선택 전에는 다운로드 아이콘 없음")
+    check(at.button(key="hypothesis-btn-side-pdf-0").disabled, "[PDF] 선택 전에는 다운로드 아이콘 흐리게(비활성)")
+    check({"hypothesis-btn-side-judge-0", "hypothesis-btn-side-evidence-0"} <= {b.key for b in at.button},
+          "[아이콘] 오른쪽 아이콘 3개는 항상 같은 자리")
     select_and_store(at, 0)
-    check("hypothesis-btn-side-pdf-0" in {b.key for b in at.button}, "[PDF] 선택 후 다운로드 아이콘")
+    check(not at.button(key="hypothesis-btn-side-pdf-0").disabled, "[PDF] 선택 후 다운로드 아이콘 활성")
     at.button(key="hypothesis-btn-side-pdf-0").click().run()
     check(not at.exception, "[PDF] 다운로드 창 예외 없음")
     pdf = hypothesis_build_pdf(at.session_state["store-hypothesis"], "2026-10-25")
@@ -345,7 +357,10 @@ def test_badge_group() -> None:
         problem("분류 없는 외부 문제", "외부", p=plan("환율 안내")),
     ]}
     at.run()
-    md = "".join(m.value for m in at.markdown)
+    md = ""
+    for k in range(3):   # 카드는 열린 가설 1개만 그려지므로 가설 1·2·3을 차례로 열어 배지를 모음
+        at.button(key=f"hypothesis-btn-pick-{k}").click().run()
+        md += "".join(m.value for m in at.markdown if "hypothesis-factor-line" in m.value)
     check(not at.exception, "[배지] 예외 없음")
     check("외부 요인 · 규제" in md and "외부 요인 · 경쟁사" in md, "[배지] 규제·경쟁사 분류 표시")
     check(md.count("외부 요인 · 경쟁사") == 1, "[배지] 경쟁사가 아닌 외부 문제에 '경쟁사'를 붙이지 않음")
@@ -370,14 +385,20 @@ def test_real_report() -> None:
         check(pct is None or f"{abs(pct):.0f}%" in s, f"{label} 변화율 {pct}이 지금·목표 값 계산과 같음")
         rows = dict(hypothesis_execution_rows(p))
         check(all(rows.get(k) for k in ("목표 KPI", "준비할 소재", "테스트 방법")), f"{label} 실행 방법 표가 채워짐")
+    planned = [p["title"] for p in rep["problems"] if p.get("plan") and "가설 없이" not in str(p.get("detail"))]
+    check([c["title"] for c in cands] == planned[:len(cands)], "[실제 ①] 후보 순서 = ① 문제 순서 (가설 재료 있는 문제만)")
+    tops = [k["title"] for k in rep["key_problems"]]
+    for c in cands:
+        if c["title"] in tops:
+            check(c.get("report_rank_label") == f"① {tops.index(c['title']) + 1}순위", f"[실제 ①] '{c['title'][:12]}' 배지 = ① 순위")
     excluded = [p for p in rep["problems"] if not p.get("plan")]
     check(all(p.get("plan_none") for p in excluded), "[실제 ①] 후보에서 빠진 문제는 모두 이유(plan_none) 있음")
     at = _new_apptest()
     at.session_state["store-report"] = rep
     at.run()
     check(not at.exception, "[실제 ①] 화면 예외 없음")
-    check("hypothesis-btn-side-judge-0" in {b.key for b in at.button}
-          or not any(c.get("sqp_type") == "소재 개선" for c in cands[:1]), "[실제 ①] 검색어 소재 개선 후보는 판단 기준 아이콘")
+    check(not at.button(key="hypothesis-btn-side-judge-0").disabled
+          or not any(c.get("sqp_type") == "소재 개선" for c in cands[:1]), "[실제 ①] 검색어 소재 개선 후보는 판단 기준 아이콘 활성")
 
 
 if __name__ == "__main__":
