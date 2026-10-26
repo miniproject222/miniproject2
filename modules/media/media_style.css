@@ -177,18 +177,19 @@
   }
 }
 
-/* 불러온 뒤: 요약 카드(독립 변수·목표 KPI)를 하위 탭 바와 같은 줄 오른쪽 자리로 끌어올림 (빈 카드와 같은 자리).
-   그보다 좁으면 오른쪽 자리에서 글자가 꺾이므로 탭 바 아래 전체 폭 그대로 (1280px은 실제 화면에서 잰 값) */
+/* 불러온 뒤: 요약 카드(독립 변수·목표 KPI)를 하위 탭 바와 같은 줄 오른쪽 자리로 끌어올리고, 오른쪽 끝을 '다시 불러오기' 버튼에 맞춤.
+   그보다 좁으면 오른쪽 자리에서 글자가 꺾이므로 탭 바 아래 왼쪽 그대로 (1280px은 실제 화면에서 잰 값) */
 @media (min-width: 1280px) {
   .st-key-media-hypo-summary {
-    width: calc(100% - var(--media-tabbar-w) - 24px) !important;
+    max-width: calc(100% - var(--media-tabbar-w) - 24px);   /* 글자가 길어도 탭 바와 겹치지 않음 (넘치면 줄바꿈) */
     margin-left: auto;
     margin-top: -70px;   /* 위쪽 끝을 하위 탭 바와 맞춤 (실제 화면에서 잰 값) */
   }
 }
 
-/* 가설 핵심 요약 카드 - 독립 변수 / 목표 KPI 두 줄, ⓘ에 2번 탭 가설 */
+/* 가설 핵심 요약 카드 - 독립 변수 / 목표 KPI 두 줄, ⓘ에 2번 탭 가설. 카드 폭은 글자 폭만큼 */
 .st-key-media-hypo-summary {
+  width: fit-content !important;   /* 남는 폭보다 길면 남는 폭까지만 늘고 줄바꿈 */
   padding: 10px 14px;
   background: var(--color-card);
   border: 1px solid var(--color-border);
