@@ -14,6 +14,7 @@
 #   store_get("weather")    = {"ad_multiplier": 2.0, "reason": "...",
 #                              "alerts": [{"level": "high", "text": "...", "detail": "..."}]}   # level: high(팝업) / info
 from common.common_store import store_get
+from modules.home.home_globe import home_sample_daily
 
 # 작업 단계 (모듈 코드 순서 = 왼쪽 탭 순서)
 HOME_STEPS = ["report", "hypothesis", "media", "weather"]
@@ -63,8 +64,9 @@ def home_heat_scenario(temps):
     out = []
     for p in temps:
         now, feels, tomorrow, week = HOME_HEAT_SCENARIO.get(p["city"], (p["temp"],) * 4)
+        daily = home_sample_daily([now, tomorrow, (tomorrow + week) / 2, week - 1, week, week - 1, (tomorrow + week) / 2])
         out.append({**p, "temp": float(now), "feels": float(feels), "tomorrow": float(tomorrow),
-                    "week_max": float(week), "week_day": "토"})
+                    "week_max": float(week), "week_day": daily[4]["day"], "daily": daily})
     return out
 
 
