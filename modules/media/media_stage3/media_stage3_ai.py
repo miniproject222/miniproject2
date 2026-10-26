@@ -1,4 +1,4 @@
-# 3. 매체 제작 > 3단계 ④: AI로 사진 초안·스토리보드(OpenAI), 영상 초안(Higgsfield Seedance 2.5) 만들기
+# 3. 매체 제작 > 3단계 ④: AI로 사진 초안·스토리보드(OpenAI), 영상 초안(Higgsfield: 로그인 시 Seedance 2.0 fast, API 잔액이면 Seedance 2.5) 만들기
 # 키는 .streamlit/secrets.toml의 OPENAI_API_KEY, HF_KEY("키ID:키시크릿") ([connections.supabase] 줄 위)에서 함수 안에서 읽습니다.
 # 화면 코드는 media_stage3.py가 이 파일의 함수만 부릅니다. 모델을 바꾸려면 아래 상수만 고칩니다.
 import base64
@@ -11,23 +11,32 @@ MEDIA_S3_IMAGE_MODEL = "gpt-image-1-mini"   # 사진 초안 (레퍼런스용이�
 MEDIA_S3_IMAGE_QUALITY = "low"              # low / medium / high (높을수록 비쌈)
 MEDIA_S3_TEXT_MODEL = "gpt-4.1-mini"        # 스토리보드, 프롬프트 한국어 번역
 MEDIA_S3_VIDEO_MODEL = "bytedance/seedance-2.5/text-to-video"   # 영상 초안 (Higgsfield API, 선불 잔액에서 차감)
-MEDIA_S3_VIDEO_SECONDS = 5                  # 4~30초 (길수록 비쌈)
-MEDIA_S3_VIDEO_RESOLUTION = "720p"          # 480p / 720p / 1080p (높을수록 비쌈)
+MEDIA_S3_VIDEO_SECONDS = 10                 # 4~30초 (길수록 비쌈). 초안 A·B 각 10초
+MEDIA_S3_VIDEO_HOOK = 3                     # A·B가 다른 첫 장면 길이(초). 나머지 장면은 A·B 공통
+MEDIA_S3_VIDEO_RESOLUTION = "480p"          # 480p / 720p / 1080p (높을수록 비쌈·느림). 초안이라 480p (10초 30크레딧)
 MEDIA_S3_VIDEO_ASPECT = "16:9"              # 가로 영상
 MEDIA_S3_VIDEO_AUDIO = False                # 초안이라 소리 없이
 MEDIA_S3_STORYBOARD_COLS = ["장면", "길이(초)", "화면", "움직임", "자막", "피할 것"]
 
-MEDIA_S3_STORYBOARD_SYSTEM = """너는 amazon.de(독일)에서 파는 냉감패드의 상품 영상 스토리보드 작가야.
-외주 영상팀이 보고 촬영할 15~20초 스토리보드를 만들어.
+MEDIA_S3_STORYBOARD_SYSTEM = """너는 독일 자사몰에 올릴 냉감패드 상품 영상의 스토리보드 작가야.
+같은 영상을 A·B 두 버전으로 만들어 자사몰에서 클릭률을 비교하는 실험용이야. 외주 영상팀이 이 표를 보고 한 번 촬영해서 두 버전으로 편집해.
 
 반드시 지킬 것
-1. 장면은 4~6개, 순서는 문제 → 해결 → 증거 → 신뢰 → 마무리 흐름을 따라.
-2. 사진 프롬프트 A(지금 사진)와 B(바꿀 사진)의 구도를 해결·증거 장면에 그대로 써.
-3. 넣을 것은 아래 "허용 장면"과 "쓸 수 있는 문구", "서리 강점"에 있는 것만 써. 수치·인증·효과를 지어내지 마.
-4. "금지 표현"과 "찍지 말 것"에 걸리는 연출·자막은 쓰지 마. (예: 얼음·서리 연출, 체온을 낮춘다, 친환경 포괄 표현)
-5. 자막은 독일어 존댓말(Sie)로, 쓸 수 있는 문구를 그대로 쓰거나 비워 둬.
-6. 각 장면의 "피할 것"에는 그 장면에서 촬영팀이 실수하기 쉬운 금지 연출을 한국어로 적어.
-7. JSON만 답해. 형식: {"scenes": [{"장면": "1 문제", "길이(초)": 3, "화면": "...", "움직임": "...", "자막": "...", "피할 것": "..."}]}
+1. 영상은 모두 10초. 맨 앞 3초만 A·B가 다르고, 그 뒤 7초(장면 2~3개)는 A·B가 똑같아.
+2. 맨 앞 두 줄의 "장면" 이름은 정확히 "1 첫 3초 · A", "1 첫 3초 · B", 길이는 둘 다 3초.
+   - 먼저 가설(If·Because)에서 "손님이 몰라서 안 누르는 제품의 장점"을 하나 찾아 (예: 두께, 원단 질감).
+   - A(지금 방식): 같은 자리에서 제품을 평범하게 멀리서 보여 줘. 그 장점은 보이지 않게.
+   - B(가설): 같은 자리·같은 길이로, 그 장점을 손·카메라 동작으로 눈에 바로 보이게 (예: 손으로 원단 쓸기, 모서리를 들어 두께 클로즈업).
+   - A와 B는 이 차이 하나만 달라. 배경·조명·인물·제품 모양은 같게. 첫 3초 A·B에는 자막을 넣지 마 (차이가 화면에만 있게).
+   - 가설·분석 문장(클릭률, 가격 차이, 장바구니 비율 등)은 실험 이유일 뿐이야. 자막·화면에 절대 쓰지 마.
+3. 공통 장면 이름은 "2 공통 …", "3 공통 …"처럼 쓰고, 마지막은 제품과 자사몰 구매 안내로 끝내.
+4. 사진 A/B의 '접힌 패드 vs 펼친 패드' 비교를 영상에 옮기지 마. 영상은 움직이는 장면으로 이유를 보여 줘.
+5. 넣을 것은 "가설", "허용 장면", "쓸 수 있는 문구", "서리 강점"에 있는 것만. 수치·인증·효과를 지어내지 마.
+6. "금지 표현"과 "찍지 말 것"에 걸리는 연출·자막은 쓰지 마. (예: 얼음·서리 연출, 체온을 낮춘다, 친환경 포괄 표현)
+7. 소리 없이 자동 재생되는 영상이야. 자막은 독일어 존댓말(Sie)로 짧게, 쓸 수 있는 문구를 그대로 쓰거나 비워 둬.
+   수치(Q-max, °C)를 쓰면 그 문구의 필수 표기(완제품·시험 조건 등)를 줄이지 말고 그대로 써. 길면 수치를 빼고 인증·제품명만 써.
+8. 각 장면의 "피할 것"에는 그 장면에서 촬영팀이 실수하기 쉬운 금지 연출을 한국어로 적어.
+9. JSON만 답해. 형식: {"scenes": [{"장면": "1 첫 3초 · A", "길이(초)": 3, "화면": "...", "움직임": "...", "자막": "...", "피할 것": "..."}]}
 """
 
 
@@ -93,29 +102,41 @@ def media_s3_edit_image(base: bytes, change: str, prompt: str) -> bytes:
         raise MediaS3AIError(f"사진 B를 만들지 못했어요: {err}") from err
 
 
-def media_s3_storyboard_message(src: dict, report: dict) -> str:
-    """스토리보드 AI에게 보내는 재료 (2단계 프롬프트 + 리포트 값)."""
+def media_s3_storyboard_message(src: dict, report: dict, hypo: dict | None = None) -> str:
+    """스토리보드 AI에게 보내는 재료: 2번 탭 가설(If·Because·Then) + 리포트 값(광고 문구·허용 장면·금지 표현).
+    사진 프롬프트 A·B는 넣지 않습니다 (사진의 '접힘 vs 펼침'이 영상에 그대로 옮겨져 어색했음)."""
     claims = report.get("ad_claims") or {}
     strength = (report.get("seori_profile") or {}).get("strength", "")
-    lines = [f"[단일 변수] {src['variable']}",
-             f"[사진 프롬프트 A] {src['prompt_a']}",
-             f"[사진 프롬프트 B] {src['prompt_b']}",
+    listing = ((report.get("sqp") or {}).get("listing") or {})
+    hypo = hypo or {}
+    lines = [f"[가설 문장] {hypo.get('text') or '-'}",
+             f"[가설 If] {hypo.get('if') or '-'}",
+             f"[가설의 이유 Because → B의 첫 3초에 보이게] {hypo.get('because') or '-'}",
+             f"[가설 Then] {hypo.get('then') or '-'}",
+             f"[제품] {listing.get('title') or 'SEORI 냉감패드 90×200 cm'} (사진 A와 같은 색·원단·누빔)",
              f"[허용 장면] {claims.get('allowed_scenes', '')}",
              "[쓸 수 있는 문구]", *[f"- {c.get('topic', '')}: {c.get('de', '')} (필수 표기: {c.get('must', '')})"
                                     for c in claims.get("claims") or []],
              f"[서리 강점] {strength}",
              "[금지 표현]", *[f"- {f}" for f in claims.get("forbidden") or []],
-             "[찍지 말 것]", *[f"- {a}" for a in src.get("avoid") or []]]
+             "[찍지 말 것]", *[f"- {a}" for a in media_s3_video_avoid(src)]]
     return "\n".join(lines)
 
 
-def media_s3_make_storyboard(src: dict, report: dict) -> list:
-    """리포트 값으로 스토리보드 장면 목록을 만듭니다. 형식이 틀리면 오류."""
+def media_s3_video_avoid(src: dict) -> list:
+    """2단계 '찍지 말 것' 중 영상에도 맞는 것만. 아마존 메인 사진 전용 규칙(손·인물·텍스트·로고·메인 이미지)은 뺌
+    (영상은 손으로 원단을 쓸고 자막을 넣어야 해서)."""
+    photo_only = ("손", "인물", "텍스트", "로고", "워터마크", "소품", "메인 이미지", "hand", "text", "logo")
+    return [a for a in src.get("avoid") or [] if not any(w in str(a) for w in photo_only)]
+
+
+def media_s3_make_storyboard(src: dict, report: dict, hypo: dict | None = None) -> list:
+    """가설·리포트 값으로 A·B 영상 스토리보드(첫 3초 A·B + 공통 장면)를 만듭니다. 형식이 틀리면 오류."""
     try:
         res = _media_s3_client().chat.completions.create(
             model=MEDIA_S3_TEXT_MODEL, response_format={"type": "json_object"}, temperature=0.4,
             messages=[{"role": "system", "content": MEDIA_S3_STORYBOARD_SYSTEM},
-                      {"role": "user", "content": media_s3_storyboard_message(src, report)}])
+                      {"role": "user", "content": media_s3_storyboard_message(src, report, hypo)}])
         scenes = json.loads(res.choices[0].message.content)["scenes"]
     except MediaS3AIError:
         raise
@@ -132,7 +153,18 @@ def media_s3_make_storyboard(src: dict, report: dict) -> list:
             rows.append(row)
     if not rows:
         raise MediaS3AIError("AI가 장면을 돌려주지 않았어요. 다시 눌러 주세요.")
+    hooks = [r["장면"] for r in rows if media_s3_scene_version(r) in ("A", "B")]
+    if sorted(media_s3_scene_version({"장면": h}) for h in hooks) != ["A", "B"]:
+        raise MediaS3AIError("AI가 첫 3초 A·B 장면을 제대로 나누지 않았어요. 다시 눌러 주세요.")
     return rows
+
+
+def media_s3_scene_version(row: dict) -> str:
+    """스토리보드 한 줄이 어느 버전인지: '1 첫 3초 · A' → "A", '… · B' → "B", 공통 장면 → ""."""
+    name = str(row.get("장면") or "").strip()
+    if "첫" in name and name[-1:] in ("A", "B"):
+        return name[-1]
+    return ""
 
 
 def media_s3_forbidden_hits(rows: list, report: dict) -> list:
