@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 import requests
 import streamlit as st
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 HOME_DIR = Path(__file__).resolve().parent
 HOME_COUNTRIES = HOME_DIR / "data" / "home_europe_countries_ne50m.geojson"
@@ -27,7 +27,9 @@ HOME_CITIES = [
     {"region": "남부", "city": "München", "ko": "뮌헨", "lat": 48.14, "lon": 11.58, "pop": 1505036},
 ]
 HOME_POP_SOURCE = "도시 인구: 2025-12-31 (Zensus 2022 기준 주 통계청 추계)"
-HOME_HALO_MAX = 96             # 가장 큰 도시(베를린) 원 지름 (기준 화면 px). 원 넓이가 인구에 비례하게 지름 = 최대 × √(인구 ÷ 최대 인구)
+# 가장 큰 도시(베를린) 원 지름 (기준 화면 px). 원 넓이가 인구에 비례하게 지름 = 최대 × √(인구 ÷ 최대 인구)
+# (2026-10-26 PM: 가장 큰 원 = 예전 서부(쾰른) 원 크기 96 × √(1,025,523 ÷ 3,700,577) ≈ 51, 나머지는 같은 비율로 작아짐)
+HOME_HALO_MAX = 51
 # 지도에 이름을 보여 줄 이웃 나라 (이름이 들어갈 자리의 경도, 위도)
 HOME_NEIGHBORS = [
     ("프랑스", 4.2, 47.6), ("폴란드", 18.6, 52.3), ("체코", 15.4, 49.75), ("오스트리아", 14.6, 47.55),
@@ -44,17 +46,13 @@ HOME_GLOBE_PX = 1000           # 구 이미지 한 변 픽셀
 HOME_SVG_SIZE = 600            # SVG 좌표계
 HOME_GLOBE_R = 250             # SVG 안 구 반지름 (바깥에 레퍼런스 같은 하얀 테두리를 둘 자리)
 
-# 지도 색 (레퍼런스처럼 하얀 지구본: 흰 땅 · 옅은 회보라 바다 · 회색 국경 + 연보라 독일)
+# 지도 색 (2026-10-26 PM: 흰 석고 입체 지구본 사진처럼 · 국경선 없이 흰 땅이 살짝 솟은 질감 + 연보라 독일, 독일 테두리 없음)
 HOME_MAP_BBOX = {"lon": (-12, 36), "lat": (34, 66)}
 HOME_MAP_RES = 60              # 지도 그림: 1도당 60px
-HOME_MAP_SEA = (222, 224, 236)
-HOME_MAP_LAND = (246, 246, 250)
-HOME_MAP_BORDER = (212, 214, 226)
-HOME_MAP_DE = (189, 178, 248)
-HOME_MAP_DE_SIDE = (128, 112, 222)     # 독일 판의 옆면 (아래·오른쪽으로 두께가 보이게)
-HOME_MAP_DE_BORDER = (123, 108, 242)
-HOME_MAP_SHADOW = (205, 207, 222)      # 나라가 바다 위에 살짝 뜬 그림자
-HOME_MAP_DE_SHADOW = (168, 170, 186)   # 독일 판이 이웃 나라 위에 드리운 그림자
+HOME_MAP_SEA = (234, 235, 241)         # 바다: 아주 옅은 회색 석고
+HOME_MAP_LAND = (252, 252, 254)        # 땅: 흰 석고
+HOME_MAP_DE = (204, 195, 250)          # 독일: 연보라 (테두리 없이 색만)
+HOME_RELIEF_SEED = 7                   # 석고 잔 질감 무늬 (값을 바꾸면 무늬만 달라짐)
 # 도시 핀 색: 평소 보라, 더위 주의 주황, 폭염경보 빨강 (경고일 때만 색이 튐)
 HOME_PIN, HOME_PIN_WARN, HOME_PIN_HOT = "#7B6CF2", "#F9A65A", "#F2546B"
 
@@ -64,38 +62,52 @@ def _home_map_xy(lon, lat):
     return (lon - lon_min) * HOME_MAP_RES, (lat_max - lat) * HOME_MAP_RES
 
 
+def _home_blur(arr, radius):
+    """0~1 배열 흐리게 (PIL 가우시안)"""
+    img = Image.fromarray(np.clip(arr * 255, 0, 255).astype(np.uint8), "L")
+    return np.asarray(img.filter(ImageFilter.GaussianBlur(radius)), dtype=np.float32) / 255
+
+
 @lru_cache(maxsize=1)
 def home_map_image():
-    """경도/위도 평면에 그린 지도 → numpy 배열 (0~1). 입체감: 나라는 바다 위에 살짝 뜬 그림자,
-    독일은 두께(옆면)가 보이는 솟아오른 판 + 이웃 나라 위로 드리운 그림자"""
+    """경도/위도 평면에 그린 지도 → numpy 배열 (0~1). 흰 석고 입체 지구본 느낌:
+    국경선 없이 땅 전체를 하나로 보고, 해안에서 안쪽으로 살짝 솟은 높이 + 잔잔한 울퉁불퉁 무늬를 만든 뒤
+    왼쪽 위에서 빛을 비춰 음영(밝은 면·그늘)을 넣음. 바다에는 땅이 드리운 옅은 그림자. 독일은 연보라 색만 (테두리 없음).
+    실제 산 높이 데이터는 쓰지 않고 땅 모양으로 흉내 냄 (PM 결정)"""
     (lon_min, lon_max), (lat_min, lat_max) = HOME_MAP_BBOX["lon"], HOME_MAP_BBOX["lat"]
     size = (round((lon_max - lon_min) * HOME_MAP_RES), round((lat_max - lat_min) * HOME_MAP_RES))
-    img = Image.new("RGB", size, HOME_MAP_SEA)
-    draw = ImageDraw.Draw(img)
     features = json.loads(HOME_COUNTRIES.read_text(encoding="utf-8"))["features"]
 
-    def rings(f, dx=0, dy=0):
-        return [[(x + dx, y + dy) for x, y in (_home_map_xy(*pt) for pt in poly[0])] for poly in f["geometry"]["coordinates"]]
+    def mask(feats):
+        img = Image.new("L", size, 0)
+        draw = ImageDraw.Draw(img)
+        for f in feats:
+            for poly in f["geometry"]["coordinates"]:
+                draw.polygon([_home_map_xy(*pt) for pt in poly[0]], fill=255)
+        return np.asarray(img, dtype=np.float32) / 255
 
-    others = [f for f in features if f["properties"]["iso"] != "DEU"]
-    germany = [f for f in features if f["properties"]["iso"] == "DEU"]
-    for f in others:   # 1) 나라 그림자 (바다 위, 오른쪽 아래로)
-        for ring in rings(f, 4, 6):
-            draw.polygon(ring, fill=HOME_MAP_SHADOW)
-    for f in others:   # 2) 나라 + 흰 국경
-        for ring in rings(f):
-            draw.polygon(ring, fill=HOME_MAP_LAND)
-            draw.line(ring + ring[:1], fill=HOME_MAP_BORDER, width=3)
-    for f in germany:  # 3) 독일 판: 그림자 → 옆면(두께) → 윗면 → 국경
-        for ring in rings(f, 14, 20):
-            draw.polygon(ring, fill=HOME_MAP_DE_SHADOW)
-        for step in range(10, 0, -2):
-            for ring in rings(f, step * 0.7, step):
-                draw.polygon(ring, fill=HOME_MAP_DE_SIDE)
-        for ring in rings(f):
-            draw.polygon(ring, fill=HOME_MAP_DE)
-            draw.line(ring + ring[:1], fill=HOME_MAP_DE_BORDER, width=5)
-    return np.asarray(img, dtype=np.float32) / 255
+    land = mask(features)
+    de = _home_blur(mask([f for f in features if f["properties"]["iso"] == "DEU"]), 1.2)   # 독일 가장자리만 살짝 부드럽게
+
+    # 높이: 해안에서 안쪽으로 솟는 땅 + 굵은 굴곡 + 잔 알갱이 (석고 질감)
+    rng = np.random.default_rng(HOME_RELIEF_SEED)
+    w, h = size
+    coarse = np.asarray(Image.fromarray((rng.random((h // 40 + 1, w // 40 + 1)) * 255).astype(np.uint8), "L")
+                        .resize(size, Image.BICUBIC), dtype=np.float32) / 255
+    fine = _home_blur(rng.random((h, w)).astype(np.float32), 1.0)
+    height = _home_blur(land, 6) * 1.0 + land * (coarse * 0.25 + fine * 0.30)
+
+    # 빛 (왼쪽 위): 기울기가 빛 쪽이면 밝게, 반대면 그늘 — 땅에만 (바다는 매끈하고 낮게 보이게)
+    gy, gx = np.gradient(height)
+    edge = _home_blur(land, 2)   # 해안선 바로 바깥까지만 음영이 번지게
+    shade = 1 + np.clip((-gx - gy) * 8, -0.22, 0.10) * edge
+    drop = _home_blur(np.roll(np.roll(land, 5, axis=0), 4, axis=1), 5) * (1 - land)   # 바다 위 땅 그림자
+
+    sea, ground, purple = (np.array(c, dtype=np.float32) / 255 for c in (HOME_MAP_SEA, HOME_MAP_LAND, HOME_MAP_DE))
+    color = sea * (1 - land[..., None]) + ground * land[..., None]
+    color = color * (1 - de[..., None]) + purple * de[..., None]
+    color = color * shade[..., None] * (1 - drop[..., None] * 0.10)
+    return np.clip(color, 0, 1)
 
 
 def _home_sample(img, lon, lat):
@@ -112,8 +124,83 @@ def _home_sample(img, lon, lat):
 
 
 @lru_cache(maxsize=1)
+def home_land_masks():
+    """경도/위도 평면의 땅·독일 마스크 (H, W, 2) 0~1 — 점 지구본에서 '이 점이 땅인가'를 볼 때 씀"""
+    (lon_min, lon_max), (lat_min, lat_max) = HOME_MAP_BBOX["lon"], HOME_MAP_BBOX["lat"]
+    size = (round((lon_max - lon_min) * HOME_MAP_RES), round((lat_max - lat_min) * HOME_MAP_RES))
+    features = json.loads(HOME_COUNTRIES.read_text(encoding="utf-8"))["features"]
+
+    def mask(feats):
+        img = Image.new("L", size, 0)
+        draw = ImageDraw.Draw(img)
+        for f in feats:
+            for poly in f["geometry"]["coordinates"]:
+                draw.polygon([_home_map_xy(*pt) for pt in poly[0]], fill=255)
+        return np.asarray(img, dtype=np.float32) / 255
+
+    return np.dstack([mask(features), mask([f for f in features if f["properties"]["iso"] == "DEU"])])
+
+
+# 점 지구본 (2026-10-26 PM: '글로벌 무역 분석 대시보드' 느낌 — 연하늘→진한 페리윙클 그라데이션 구, 광택, 흰·연하늘 점 대륙)
+HOME_DOT_STEP = 11              # 점 간격 (구 이미지 px)
+HOME_DOT_R = 2.6                # 점 반지름 (독일은 조금 크게)
+HOME_SPHERE_LIGHT = (0.80, 0.87, 1.00)   # 구 밝은 쪽 (연하늘)
+HOME_SPHERE_DEEP = (0.36, 0.40, 0.86)    # 구 어두운 쪽 (진한 페리윙클 블루)
+HOME_DOT_LAND = (0.94, 0.96, 1.00)       # 대륙 점 (흰·연하늘)
+HOME_DOT_DE = (0.80, 0.70, 1.00)         # 독일 점 (연보라, 위치를 알아보게)
+
+
+@lru_cache(maxsize=1)
 def home_globe_image():
-    """지도를 독일 중심 구에 입힌 WebP(data URI). 처음 한 번만 계산"""
+    """점 지구본 WebP(data URI). 처음 한 번만 계산.
+    구 바탕은 빛(왼쪽 위)에 따라 연하늘→페리윙클 그라데이션 + 광택, 대륙은 일정한 간격의 빛나는 점(살짝 번지는 빛)."""
+    n = HOME_GLOBE_PX
+    yy, xx = np.mgrid[0:n, 0:n]
+    u = (xx + 0.5) / n * 2 - 1
+    v = 1 - (yy + 0.5) / n * 2
+    r = np.hypot(u, v)
+    rc = np.clip(r, 0, 1)
+    c = np.arcsin(rc) / (math.pi / 2) * math.radians(HOME_GLOBE_CAP)
+    theta = np.arctan2(u, v)
+    lon0, lat0 = map(math.radians, HOME_CENTER)
+    lat = np.arcsin(math.sin(lat0) * np.cos(c) + math.cos(lat0) * np.sin(c) * np.cos(theta))
+    lon = lon0 + np.arctan2(np.sin(theta) * np.sin(c) * math.cos(lat0), np.cos(c) - math.sin(lat0) * np.sin(lat))
+    masks = _home_sample(home_land_masks(), np.degrees(lon), np.degrees(lat))   # (n, n, 2)
+
+    # 구 바탕: 왼쪽 위 빛 → 연하늘, 반대쪽 → 진한 페리윙클
+    z = np.sqrt(np.clip(1 - rc ** 2, 0, 1))
+    light = np.clip(-0.45 * u + 0.5 * v + 0.74 * z, 0, 1)[..., None]
+    color = np.array(HOME_SPHERE_DEEP) * (1 - light) + np.array(HOME_SPHERE_LIGHT) * light
+
+    # 대륙 점: 칸마다 가운데에 점 하나, 그 칸 가운데가 땅이면 그림 (해안에서 점이 잘리지 않게)
+    s = HOME_DOT_STEP
+    cy, cx = (yy // s) * s + s // 2, (xx // s) * s + s // 2
+    cy, cx = np.clip(cy, 0, n - 1), np.clip(cx, 0, n - 1)
+    land_c, de_c = masks[cy, cx, 0], masks[cy, cx, 1]
+    dist = np.hypot(xx - cx, yy - cy)
+    radius = HOME_DOT_R + 1.1 * (de_c > 0.5)
+    dot = np.clip(radius - dist + 0.5, 0, 1) * (land_c > 0.5) * (rc[cy, cx] < 0.985)
+    glow = _home_blur(dot, 2.2) * 0.40                       # 점 둘레가 살짝 빛나게
+    dot_col = np.where((de_c > 0.5)[..., None], np.array(HOME_DOT_DE), np.array(HOME_DOT_LAND))
+    bright = (0.75 + 0.35 * light)                          # 빛 반대쪽 점은 조금 어둡게
+    color = color * (1 - glow[..., None]) + dot_col * bright * glow[..., None]
+    color = color * (1 - dot[..., None]) + dot_col * bright * dot[..., None]
+
+    # 광택: 왼쪽 위 부드러운 반사광 + 가장자리 얇은 흰 빛
+    spec = np.exp(-((u + 0.40) ** 2 + (v - 0.45) ** 2) / 0.16)[..., None] * 0.13   # 넓고 약한 광택
+    color = color + spec
+    rim = (rc ** 14)[..., None] * 0.55
+    color = color * (1 - rim) + np.array([0.92, 0.95, 1.0]) * rim
+
+    alpha = np.clip((1 - r) * n / 2, 0, 1)
+    rgba = np.dstack([np.clip(color, 0, 1) * (alpha > 0)[..., None], alpha])
+    buf = io.BytesIO()
+    Image.fromarray((rgba * 255).astype(np.uint8), "RGBA").save(buf, "WEBP", quality=90)
+    return "data:image/webp;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def home_globe_image_relief():
+    """(보관) 흰 석고 입체 지구본 — 2026-10-26 오후 버전. 지금은 home_globe_image()의 점 지구본을 씀"""
     n = HOME_GLOBE_PX
     yy, xx = np.mgrid[0:n, 0:n]
     u = (xx + 0.5) / n * 2 - 1
@@ -132,13 +219,13 @@ def home_globe_image():
     # 구 입체감: 왼쪽 위에서 빛 → 오른쪽 아래 가장자리는 어둡게, 왼쪽 위에 반사광, 가장자리에 얇은 대기 빛
     z = np.sqrt(np.clip(1 - rc ** 2, 0, 1))
     light = np.clip(-0.5 * u + 0.55 * v + 0.67 * z, 0, 1)
-    # 입체감 더 강하게: 빛 반대쪽(오른쪽 아래)은 보랏빛 그늘, 왼쪽 위 반사광, 가장자리 얇은 빛
-    shade = (0.6 + 0.48 * light)[..., None]
-    color = color * shade + np.array([0.10, 0.08, 0.22]) * (1 - shade) * 0.35
-    spec = np.exp(-((u + 0.36) ** 2 + (v - 0.40) ** 2) / 0.06)[..., None] * 0.28
+    # 흰 석고 구: 빛 반대쪽(오른쪽 아래)은 옅은 회색 그늘(보랏빛 줄임), 왼쪽 위 은은한 반사광, 가장자리 얇은 흰 빛
+    shade = (0.72 + 0.36 * light)[..., None]
+    color = color * shade + np.array([0.30, 0.30, 0.38]) * (1 - shade) * 0.25
+    spec = np.exp(-((u + 0.36) ** 2 + (v - 0.40) ** 2) / 0.08)[..., None] * 0.14
     color = color + spec
-    rim = (rc ** 16)[..., None] * 0.5
-    color = color * (1 - rim) + np.array([0.90, 0.88, 1.0]) * rim
+    rim = (rc ** 18)[..., None] * 0.45
+    color = color * (1 - rim) + np.array([0.96, 0.96, 1.0]) * rim
 
     alpha = np.clip((1 - r) * n / 2, 0, 1)
     rgba = np.dstack([np.clip(color, 0, 1) * (alpha > 0)[..., None], alpha])
@@ -246,14 +333,13 @@ def home_svg_img(svg, cls):
 
 
 def home_globe_svg():
-    """지도 구 (<img> 태그) + 레퍼런스 같은 테두리 2개: 안쪽은 불투명한 두꺼운 하얀 고리,
-    간격을 두고 바깥쪽은 살짝 투명하고 더 얇은 하얀 고리. 바닥 그림자는 CSS(.home-globe-shadow)로"""
+    """지도 구 (<img> 태그) + 레퍼런스처럼 구에 붙은 두꺼운 하얀 고리 (2026-10-26 PM: 두께 18 → 34).
+    멀리 떨어진 바깥 큰 고리는 화면에서 잘리게 CSS(.home-globe::after)로 그림. 바닥 그림자는 CSS(.home-globe-shadow)로"""
     mid, r = HOME_SVG_SIZE / 2, HOME_GLOBE_R
     globe = home_globe_image()
     svg = f"""
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {HOME_SVG_SIZE} {HOME_SVG_SIZE}">
-  <circle cx="{mid}" cy="{mid}" r="{r + 13}" fill="none" stroke="#FFFFFF" stroke-opacity="1" stroke-width="18"/>
-  <circle cx="{mid}" cy="{mid}" r="{r + 40}" fill="none" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="7"/>
+  <circle cx="{mid}" cy="{mid}" r="{r + 17}" fill="none" stroke="#FFFFFF" stroke-opacity="0.92" stroke-width="34"/>
   <image x="{mid - r}" y="{mid - r}" width="{2 * r}" height="{2 * r}" href="{globe}" xlink:href="{globe}"/>
 </svg>"""
     return home_svg_img(svg, "home-globe-svg")
