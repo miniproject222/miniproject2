@@ -7,6 +7,7 @@
 # - 키는 secrets.toml의 GEMINI_API_KEY / OPENAI_API_KEY를 함수 안에서만 읽습니다 (2단계와 같은 키). 새 라이브러리 없이 requests로 부릅니다.
 import json
 import re
+from difflib import SequenceMatcher
 from pathlib import Path
 
 import requests
@@ -30,6 +31,8 @@ MEDIA_VARIABLE_KINDS = {
     "a_plus": ("A+·상세 이미지", ["A+", "상세 이미지", "상세 페이지", "서브 이미지"]),
     "price": ("가격·쿠폰", ["가격", "할인", "쿠폰"]),
     "main_image": ("메인 이미지", ["메인 이미지", "대표 이미지", "썸네일", "사진", "이미지"]),
+    # 광고·입찰: 이미지가 아닌 광고 설정 가설 (예: 고온일 키워드 입찰 상향)이 메인 이미지 변수로 잘못 이어지지 않게 따로 둠
+    "ad": ("광고·입찰", ["입찰", "광고", "키워드", "캠페인", "CPC"]),
     "other": ("가설의 If", []),
 }
 # 메인 이미지 B안에서 아마존 규칙에 걸리는 말: (찾을 말, 어긴 규칙, 대신 쓸 곳). AI 답과 규칙 묶음 모두 이걸로 다시 확인합니다.
@@ -38,16 +41,34 @@ MEDIA_VARIABLE_MAIN_RULES = [
     (["손으로", "손이", "사람", "모델", "소품"], "메인 이미지에는 제품 말고 손·소품 금지", "서브 이미지"),
     (["AI로", "연출", "침실", "라이프스타일"], "메인 이미지는 흰 배경 실제 사진만", "스폰서드 브랜드 광고"),
 ]
+# 단일 변수 확인: 메인 이미지 B안이 통제 변수까지 바꾸는 말 (찾을 말, 이유). 걸리면 B로 쓰지 않고 '다음 테스트'로 돌림.
+# (다른 종류 변수 말 - 제목·가격·광고 등 - 이 B안에 들어가도 단일 변수가 아님 → media_variable_single_break())
+MEDIA_VARIABLE_CONTROL_RULES = [
+    (["조명", "보정", "필터", "밝기"], "통제 변수(조명·보정)까지 바뀜"),
+    (["배경색", "색 배경", "컬러 배경", "회색 배경", "검은 배경", "배경을"], "통제 변수(흰 배경)까지 바뀜"),
+    (["다른 색상", "색상을", "색상 변경", "다른 제품", "다른 사이즈"], "통제 변수(제품·색상)까지 바뀜"),
+]
+MEDIA_VARIABLE_B_MAX = 3            # 변수 하나에 B로 쓸 수 있는 안 최대 수 (넘으면 앞에서부터)
+MEDIA_VARIABLE_B_SIMILAR = 0.7      # B안 문장끼리 비슷한 정도(difflib 0~1)가 이 이상이면 뒤의 안을 뺌
+MEDIA_VARIABLE_AI_VERSION = 2       # 후보 묶음 만드는 규칙의 판. 올리면 같은 가설도 '다시 불러오기'에서 새로 만듦
 
 MEDIA_VARIABLE_AI_SYSTEM = """너는 amazon.de(독일)에서 냉감패드를 파는 브랜드의 A/B 테스트 설계자야.
 가설 하나를 받아, Amazon Manage Your Experiments로 실험할 "후보 변수" 목록을 만들어.
 
 반드시 지킬 것
 1. 변수 하나 = 바꿀 것 하나. 후보는 3~5개.
-2. 가설의 If가 바꾸라고 한 변수를 맨 앞에 두고 if_match를 true로 해.
+2. 가설의 If가 바꾸라고 한 변수 딱 하나만 맨 앞에 두고 if_match를 true로 해.
+   그 변수의 kind는 If가 말하는 곳과 반드시 같아야 해 (If가 광고·입찰을 바꾸면 ad, 제목이면 title …).
+   If가 이미지를 말하지 않으면 main_image 변수를 if_match true로 만들지 마.
    나머지(가설과 다른 대안, 고정해야 할 요소)는 if_match를 false로, reason에 이유, fallback에 대신 쓸 곳("다음 테스트", "고정 요소" 등)을 써.
-3. kind는 main_image, title, bullet, a_plus, price, other 중 하나만 써.
-4. if_match가 true인 변수에만 b_options를 2~4개 만들어. B안마다 label(버튼 이름, 15자 안쪽)과 b(바꾼 안, 한국어 한 문장)를 써.
+3. kind는 main_image, title, bullet, a_plus, price, ad, other 중 하나만 써.
+4. if_match가 true인 변수에만 b_options를 만들어. 규칙 안에서 쓸 수 있는 B안은 2~3개.
+   - 단일 변수: B안마다 A(지금 그대로)에서 이 변수 하나만 바꿔. 통제 변수(같은 제품·색상, 흰 배경, 같은 조명과 보정,
+     제품 85% 이상, 제목·가격·쿠폰·불릿·A+·광고)는 바꾸지 마. b에는 바뀌는 것만 쓰고, 그대로 두는 것은 쓰지 마.
+   - 가설에 맞게: 모든 B안은 가설의 If가 말한 변화를 Because의 이유대로 실현해야 해. If와 다른 방향의 안은 만들지 마.
+   - 서로 다르게: 각도 숫자나 표현만 바꾼 비슷한 안은 금지. 같은 If를 실현하는 서로 다른 방법이어야 해.
+     예: "모서리를 들어 두께 보이기" / "반 접어 단면 보이기" (O), "45도에서 두께 보이기" / "30도에서 두께 보이기" (X)
+   B안마다 label(버튼 이름, 15자 안쪽)과 b(바꾼 안, 한국어 한 문장)를 써.
    main_image 변수의 B안에는 ref_prompt(영어 레퍼런스 사진 프롬프트: white seamless background, no text, no props 포함)도 붙여.
    아마존 메인 이미지 규칙에 어긋나는 안은 b 대신 rule_break(어긴 규칙)와 fallback(대신 쓸 곳)을 써.
 5. kpi에는 가설의 Then이 말하는 측정 지표 이름만 짧게 써.
@@ -170,6 +191,28 @@ def media_variable_rule_break(text: str) -> tuple[str, str] | None:
     return None
 
 
+def media_variable_single_break(text: str, kind: str) -> str | None:
+    """B안 문장이 고른 변수(kind) 말고 다른 것까지 바꾸면 그 이유 (단일 변수가 아님), 아니면 None.
+    메인 이미지는 통제 변수(조명·배경·제품 색상) 말을, 모든 종류는 다른 변수 종류의 말(제목·가격·광고 등)을 찾습니다.
+    다른 종류의 말이 내 종류 말 안에 들어 있으면(예: A+의 '상세 이미지' 안의 '이미지') 건너뜁니다."""
+    if kind == "main_image":
+        for words, reason in MEDIA_VARIABLE_CONTROL_RULES:
+            if any(w in text for w in words):
+                return reason
+    own = MEDIA_VARIABLE_KINDS.get(kind, MEDIA_VARIABLE_KINDS["other"])[1]
+    for other, (name, words) in MEDIA_VARIABLE_KINDS.items():
+        if other in (kind, "other"):
+            continue
+        if any(w in text and not any(w in o and o in text for o in own) for w in words):
+            return f"다른 변수({name})까지 바뀜"
+    return None
+
+
+def media_variable_similar(a: str, b: str) -> bool:
+    """B안 두 문장이 표현만 다른 비슷한 안인지 (difflib 비율이 MEDIA_VARIABLE_B_SIMILAR 이상)."""
+    return SequenceMatcher(None, a, b).ratio() >= MEDIA_VARIABLE_B_SIMILAR
+
+
 def media_variable_clean_short(raw, source: str) -> dict:
     """AI가 줄인 If·Because {"if", "because"}. 칸마다 MEDIA_VARIABLE_SHORT_MAX자를 넘거나
     원문(source)에 없는 숫자가 들어 있으면 그 칸은 버립니다 (화면이 규칙으로 줄인 모양을 대신 씀)."""
@@ -184,10 +227,15 @@ def media_variable_clean_short(raw, source: str) -> dict:
     return out
 
 
-def media_variable_clean_set(raw, source: str = "") -> dict | None:
+def media_variable_clean_set(raw, source: str = "", if_text: str = "") -> dict | None:
     """후보 묶음(dict 또는 AI 답 문자열)을 정리합니다. 변수가 하나도 안 남으면 None.
     kind는 정해진 종류로만, B안은 이름 + (b 또는 rule_break)가 있는 것만, 메인 이미지 B안은 규칙에 걸리는 말이 있으면 rule_break로 바꿈.
+    가설에 맞는지: 가설 If(if_text)의 종류를 알 수 있으면, 종류가 다른 변수는 AI가 맞다고 해도 if_match를 false로 바꿈.
+    if_match가 아닌 변수의 B안은 버림 (가설과 다른 변수로 실험하지 않게).
+    단일 변수: 고른 변수 말고 다른 것까지 바꾸는 B안은 rule_break로 돌림 (media_variable_single_break()).
+    서로 다르게: 앞의 B안과 비슷한 B안은 빼고, B로 쓸 수 있는 안은 MEDIA_VARIABLE_B_MAX개까지.
     short(짧은 If·Because)는 원문 source와 맞춰 본 것만 남김 (source가 없으면 빈 dict)."""
+    if_kind = media_variable_kind(if_text) if if_text else "other"
     if isinstance(raw, str):
         start, end = raw.find("{"), raw.rfind("}")
         try:
@@ -201,18 +249,28 @@ def media_variable_clean_set(raw, source: str = "") -> dict | None:
         if not isinstance(v, dict) or not str(v.get("name") or "").strip():
             continue
         kind = v.get("kind") if v.get("kind") in MEDIA_VARIABLE_KINDS else "other"
-        options = []
-        for o in v.get("b_options") or []:
+        if_match, reason = v.get("if_match") is True, str(v.get("reason") or "")
+        if if_match and if_kind != "other" and kind != if_kind:   # AI가 맞다고 해도 가설 If와 종류가 다르면 아님
+            if_match, reason = False, f"가설의 If는 {MEDIA_VARIABLE_KINDS[if_kind][0]} 변수"
+        options, kept = [], []   # kept: B로 쓸 수 있는 안의 문장 (비슷한 안 거르기용)
+        for o in (v.get("b_options") or []) if if_match else []:
             if not isinstance(o, dict) or not str(o.get("label") or "").strip():
                 continue
             o = {k: str(o[k]).strip() for k in ("label", "b", "ref_prompt", "rule_break", "fallback") if o.get(k)}
             broken = media_variable_rule_break(o.get("b", "")) if kind == "main_image" and not o.get("rule_break") else None
             if broken:
                 o = {"label": o["label"], "rule_break": broken[0], "fallback": broken[1]}
+            single = media_variable_single_break(o["b"], kind) if o.get("b") and not o.get("rule_break") else None
+            if single:
+                o = {"label": o["label"], "rule_break": single, "fallback": "다음 테스트"}
+            if o.get("b") and not o.get("rule_break"):
+                if len(kept) >= MEDIA_VARIABLE_B_MAX or any(media_variable_similar(o["b"], b) for b in kept):
+                    continue   # 넘치거나 앞의 안과 비슷한 안은 뺌
+                kept.append(o["b"])
             if o.get("b") or o.get("rule_break"):
                 options.append(o)
-        variables.append({"name": str(v["name"]).strip(), "kind": kind, "if_match": v.get("if_match") is True,
-                          "fallback": str(v.get("fallback") or ""), "reason": str(v.get("reason") or ""),
+        variables.append({"name": str(v["name"]).strip(), "kind": kind, "if_match": if_match,
+                          "fallback": str(v.get("fallback") or ("다음 테스트" if not if_match else "")), "reason": reason,
                           "b_options": options})
     if not variables:
         return None
@@ -256,7 +314,9 @@ def media_variable_generate(hypo: dict, listing: dict) -> tuple[dict, str, str]:
             continue
         try:
             source = " ".join(str(hypo.get(k) or "") for k in ("text", "if", "because", "then"))
-            cset = media_variable_clean_set(media_variable_ai_call(provider, media_variable_ai_message(hypo, listing)), source)
+            if_text = str(hypo.get("if") or hypo["text"].split(", ")[0])   # 규칙 묶음과 같은 방법으로 If를 고름
+            cset = media_variable_clean_set(media_variable_ai_call(provider, media_variable_ai_message(hypo, listing)),
+                                            source, if_text)
         except RuntimeError as err:
             errors.append(str(err))
             continue

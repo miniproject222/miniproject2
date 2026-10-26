@@ -13,13 +13,13 @@ import streamlit as st
 from common.common_store import store_get
 from modules.media.media_handoff import (MEDIA_HANDOFF_PLAN, media_handoff_clear_plan, media_handoff_plan,
                                          media_handoff_set_plan, media_handoff_set_solution, media_handoff_solution)
-from modules.media.media_variable_ai import (MEDIA_VARIABLE_AI_RULE_SOURCE, media_variable_generate,
+from modules.media.media_variable_ai import (MEDIA_VARIABLE_AI_RULE_SOURCE, MEDIA_VARIABLE_AI_VERSION, media_variable_generate,
                                              media_variable_solution_generate)
 
 MEDIA_VARIABLE_TAB_LABEL = "가설에서 변수 도출"   # 하위 탭 ① 이름 (media_page.py와 다른 하위 탭의 '① 으로 가서 확정하기' 버튼이 씀)
 # '가설 불러오기'로 읽어 둔 값 (session_state). 다시 불러오기 전까지는 2번 탭에서 가설을 바꿔도 이 값을 씀
 MEDIA_VARIABLE_HYPO_KEY = "media-variable-hypo"   # 불러온 가설 (media_variable_saved()의 모양)
-MEDIA_VARIABLE_GEN_KEY = "media-variable-gen"     # 그 가설의 후보 묶음 {"text", "set", "source", "error"}
+MEDIA_VARIABLE_GEN_KEY = "media-variable-gen"     # 그 가설의 후보 묶음 {"text", "set", "source", "error", "version"}
 
 # 가설의 If를 짧게(규칙 후보의 B안) 만들 때 끝에서 걷어 낼 문장 틀 (정규식, 바꿀 말). 위에서부터 차례로 적용
 MEDIA_VARIABLE_IF_TRIMS = [(r"(을|를) 적용한다면$", " 적용"), (r"바꾸면$", "변경"), (r"(한다면|하면)$", "")]
@@ -100,12 +100,15 @@ def media_variable_load() -> None:
         st.session_state.pop(MEDIA_VARIABLE_GEN_KEY, None)
         return
     gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
-    # 같은 가설이라도 AI 후보에 짧은 If·Because(short)가 없으면(이 칸이 생기기 전에 만든 후보) 다시 만듦
-    if gen.get("text") == hypo["text"] and ((gen.get("set") or {}).get("short") or gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE):
+    # 같은 가설이라도 AI 후보에 짧은 If·Because(short)가 없거나(이 칸이 생기기 전에 만든 후보)
+    # 후보를 만드는 규칙의 판(MEDIA_VARIABLE_AI_VERSION)이 바뀌었으면 다시 만듦
+    if (gen.get("text") == hypo["text"] and gen.get("version") == MEDIA_VARIABLE_AI_VERSION
+            and ((gen.get("set") or {}).get("short") or gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE)):
         return
     listing = media_variable_report_sqp().get("listing")
     cset, source, error = media_variable_generate(hypo, listing if isinstance(listing, dict) else {})
-    st.session_state[MEDIA_VARIABLE_GEN_KEY] = {"text": hypo["text"], "set": cset, "source": source, "error": error}
+    st.session_state[MEDIA_VARIABLE_GEN_KEY] = {"text": hypo["text"], "set": cset, "source": source, "error": error,
+                                                "version": MEDIA_VARIABLE_AI_VERSION}
 
 
 def media_variable_candidate_set() -> dict:
