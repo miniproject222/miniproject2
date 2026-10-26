@@ -723,3 +723,42 @@
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
+
+/* ② 가설 재료 줄 사이 구분선: 왼쪽 탭 줄의 '매체 제작 | 날씨 광고 타이밍' 사이 선과 같은 굵기(1px)·색 (공통 변수 색) */
+.st-key-report-card-rank1 .report-detail-row + .report-detail-row,
+.st-key-report-card-rank2 .report-detail-row + .report-detail-row {
+  border-top: 1px solid color-mix(in srgb, var(--color-sub) 45%, transparent);
+}
+
+/* 불러오기 직후 로딩 표시: 화면 가운데 카드 (문구 = report_page.REPORT_LOADING_TEXT).
+   자리(.st-key-report-loading)는 크기 0으로 화면에 고정해 배치 칸을 차지하지 않고, 카드만 화면 정가운데에 고정.
+   이전 실행의 화면 요소가 이 칸에 잠깐 남더라도 보이지 않게 로딩 카드 말고는 숨김 */
+[data-testid="stLayoutWrapper"]:has(> .st-key-report-loading) {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: visible;
+  z-index: 1000;
+}
+.st-key-report-loading > :not(:has([data-testid="stSpinner"])) {
+  display: none !important;
+}
+.st-key-report-loading [data-testid="stSpinner"] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: 80vw;
+  background: var(--color-card);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  padding: 22px 30px;
+}
+.st-key-report-loading [data-testid="stSpinner"] p,
+.st-key-report-loading [data-testid="stSpinner"] div {
+  font-size: 16px;
+  color: var(--color-text);
+}

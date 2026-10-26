@@ -1,7 +1,6 @@
 # 2. 가설 수립
 import copy
 import html
-import time
 from datetime import datetime
 from pathlib import Path
 
@@ -21,7 +20,6 @@ HYPOTHESIS_LOADED_KEY = "hypothesis-loaded"     # 이번 접속에서 '불러오
 HYPOTHESIS_PICKED_KEY = "hypothesis-picked"   # 이번 접속에서 이용자가 '선택하기'를 눌렀는지 (안 눌렀으면 저장값이 있어도 선택 안 됨)
 HYPOTHESIS_OPEN_KEY = "hypothesis-open"   # 지금 보고 있는 가설 후보 번호 (카드 맨 위 가설 1·2·3 버튼)
 HYPOTHESIS_PENDING_KEY = "hypothesis-pending"   # '선택하기'로 고른 가설 (아직 저장 전, '저장하기'를 눌러야 저장)
-HYPOTHESIS_LOAD_MIN_SEC = 1.0                   # 불러오기 로딩 표시 최소 시간 (초)
 
 HYPOTHESIS_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경로 만들 때 사용)
 
@@ -493,7 +491,7 @@ def _hypothesis_click_load() -> None:
         hypothesis_goto_tab("report")
         return
     st.session_state[HYPOTHESIS_LOADED_KEY] = True
-    st.session_state["hypothesis-just-loaded"] = True   # 이번 한 번만: 로딩 표시 + 글자가 차례로 나타나는 효과
+    st.session_state["hypothesis-just-loaded"] = True   # 이번 한 번만: 글자가 차례로 나타나는 효과
 
 
 def _hypothesis_click_store() -> None:
@@ -725,14 +723,9 @@ def hypothesis_render():
     if not loaded:
         hypothesis_render_skeleton(report)
         return
-    reveal = st.session_state.pop("hypothesis-just-loaded", False)
-    if reveal:   # 불러오기 직후: 로딩 표시 (최소 1초)
-        started = time.time()
-        with st.spinner("① 탭 리포트를 불러와 가설 후보를 만드는 중…"):
-            candidates = hypothesis_pick_candidates(report)
-            time.sleep(max(0.0, HYPOTHESIS_LOAD_MIN_SEC - (time.time() - started)))
-    else:
-        candidates = hypothesis_pick_candidates(report)
+    reveal = st.session_state.pop("hypothesis-just-loaded", False)   # 불러오기 직후 한 번: 글자가 차례로 나타남
+    # 후보 계산은 0.01초 정도라 바로 그림 (예전 '로딩 표시 최소 1초'는 모든 탭이 같이 기다려 ① 다음으로·② 불러오기가 1초 늦어져서 뺌)
+    candidates = hypothesis_pick_candidates(report)
     sqp = report.get("sqp") if report else None
     sqp = sqp if isinstance(sqp, dict) else None
 
