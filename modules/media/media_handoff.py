@@ -7,6 +7,8 @@
 #   plan   : 1단계 B안 체크(체크 = 확정, 체크를 풀면 지움) → 2단계가 읽음
 #   prompt : 2단계 'A/B 소재 준비'의 '다음' 버튼 (media_page.py → media_s2_handoff_now()) → 3단계 '사진·영상 초안 제작'이 읽음
 #   assets : 3단계 '사진·영상 초안 제작'의 넘기기 버튼                               → 3단계 '외주 정리'가 읽음
+# 단계 사이 값이 아닌 것: 1단계에서 이미지로 진행할 수 없는 변수의 줄글 솔루션을 확정하면 store("media")의 "solution" 칸
+#   (handoff 밖, 1번 문제 분석 탭이 읽을 값 · 모양은 media_handoff_set_solution())
 # 저장은 각 단계의 확정(1단계는 B안 체크)·넘기기 버튼을 눌렀을 때만 합니다. (화면을 열기만 해서는 저장되지 않음)
 # 앞 단계가 아직 넘기지 않았으면 아래 예시 값에 "sample": True가 붙어 와서 각자 먼저 개발할 수 있습니다.
 # Supabase에 연결할 수 없으면 같은 브라우저 접속 안에서만 이어집니다.
@@ -120,6 +122,24 @@ def media_handoff_plan() -> dict:
     if saved:
         return {**MEDIA_HANDOFF_PLAN, **saved, "sample": False}
     return {**MEDIA_HANDOFF_PLAN, "sample": True}
+
+
+def media_handoff_set_solution(solution: dict) -> None:
+    """1단계에서 진행 불가 변수의 솔루션을 확정하면 부릅니다 (store("media")의 "solution" 칸, 다른 칸은 그대로).
+    모양: {"hypothesis", "variable", "kind", "title", "summary", "steps": [{"action", "detail"}], "effect", "check", "source"}. 반드시 확정 버튼의 콜백에서만 부릅니다."""
+    saved = store_get(MEDIA_HANDOFF_STORE, fresh=True)
+    data = dict(saved) if isinstance(saved, dict) else {}
+    if data.get("solution") == solution:
+        return
+    data["solution"] = dict(solution)
+    store_set(MEDIA_HANDOFF_STORE, data)
+
+
+def media_handoff_solution() -> dict:
+    """확정해 둔 솔루션 (없으면 빈 dict)."""
+    saved = store_get(MEDIA_HANDOFF_STORE)
+    solution = saved.get("solution") if isinstance(saved, dict) else None
+    return solution if isinstance(solution, dict) else {}
 
 
 def media_handoff_set_prompt(prompt: dict) -> None:
