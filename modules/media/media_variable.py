@@ -19,9 +19,7 @@ MEDIA_VARIABLE_TAB_LABEL = "가설에서 변수 도출"   # 하위 탭 ① 이�
 MEDIA_VARIABLE_HYPO_KEY = "media-variable-hypo"   # 불러온 가설 (media_variable_saved()의 모양)
 MEDIA_VARIABLE_GEN_KEY = "media-variable-gen"     # 그 가설의 후보 묶음 {"text", "set", "source", "error"}
 
-# 가설 콜아웃 각 줄 앞에 붙는 배지 (Streamlit 마크다운 배지 문법)
-MEDIA_VARIABLE_BADGES = [":blue-badge[If]", ":violet-badge[Because]", ":green-badge[Then]"]
-# 가설 콜아웃을 짧게 보여 줄 때 If 끝에서 걷어 낼 문장 틀 (정규식, 바꿀 말). 위에서부터 차례로 적용
+# 가설의 If를 짧게(규칙 후보의 B안) 만들 때 끝에서 걷어 낼 문장 틀 (정규식, 바꿀 말). 위에서부터 차례로 적용
 MEDIA_VARIABLE_IF_TRIMS = [(r"(을|를) 적용한다면$", " 적용"), (r"바꾸면$", "변경"), (r"(한다면|하면)$", "")]
 # Then '지표가 A에서 B(이상)로 (N%) 오를/낮아질 것이다' 모양 → '지표 A → B (N%↑)'
 MEDIA_VARIABLE_THEN_PATTERN = (r"(?P<metric>.+?)(?:이|가) (?P<a>\S+?)에서 (?P<b>\S+?)(?P<more> 이상)?(?:으로|로) "
@@ -168,46 +166,35 @@ def media_variable_short_then(text: str) -> str:
     return f"**{m['metric']}** **{m['a']} → {goal} " + (f"({m['pct']}{arrow})" if m["pct"] else arrow) + "**"
 
 
-def media_variable_drop_parens(text: str) -> str:
-    """괄호 '( … )' 안 설명을 걷어 냅니다 (괄호 안 괄호까지). 괄호 짝이 안 맞으면 그대로 둡니다."""
-    out, depth = [], 0
-    for ch in text:
-        if ch == "(":
-            depth += 1
-        elif ch == ")" and depth:
-            depth -= 1
-        elif not depth:
-            out.append(ch)
-    return re.sub(r"\s{2,}", " ", "".join(out)).strip() if depth == 0 else text
-
-
-def media_variable_callout(hypo: dict) -> None:
-    """가설 콜아웃(st.info). If / Because / Then을 배지 붙은 줄로 나누고, 짧은 모양으로 보여 줍니다
-    (대상은 맨 위 칩, Then은 숫자를 화살표로). If·Because는 AI가 후보 묶음과 함께 줄인 핵심(short, 원문 숫자만)을 쓰고,
-    없으면(규칙 후보) 문장 틀과 괄호 설명만 걷어 냅니다. 줄인 것은 화면뿐이고, 원문 문장 그대로는 오른쪽 위 '원문' ⓘ에 둡니다.
-    2번 탭이 나눠 저장한 If/Because/Then이 있으면 그대로 쓰고, 없으면 문장을 나눕니다. 나눌 수 없는 문장은 한 덩어리로 보여 줍니다."""
-    short = {k: media_variable_kpi_name(v) for k, v in (media_variable_candidate_set().get("short") or {}).items()}
-    text = media_variable_kpi_name(hypo["text"])
+def media_variable_parts(hypo: dict) -> list[str] | None:
+    """가설의 [If, Because, Then] (화면용 KPI 이름). 2번 탭이 나눠 저장한 값이 있으면 그대로, 없으면 문장을 나눕니다.
+    나눌 수 없는 문장이면 None."""
     if hypo.get("if") and hypo.get("because") and hypo.get("then"):
-        parts = [media_variable_kpi_name(p) for p in (hypo["if"], hypo["because"], hypo["then"])]
-    else:
-        parts = media_variable_split(text)
-    if parts:
-        target, parts[0] = media_variable_short_if(parts[0], str((hypo.get("problem") or {}).get("target") or ""))
-        parts[0] = short.get("if") or media_variable_drop_parens(parts[0])
-        parts[1] = short.get("because") or media_variable_drop_parens(parts[1].strip().rstrip(","))
-        # Then은 목표를 굵게 (넓은 화면에서 media_style.css가 콜아웃 오른쪽 칸에 배지 아래로 크게 둠)
-        parts[2] = media_variable_short_then(parts[2])
-        # 줄마다 문단을 따로 둠 → 넓은 화면에서 media_style.css가 각 줄을 한 줄로 고정 (넘치면 …)
-        body = "\n\n".join(f"{badge} {part}" for badge, part in zip(MEDIA_VARIABLE_BADGES, parts))
-        if target:
-            body = f":gray-badge[대상: {target}]\n\n{body}"
-    else:
-        body = text
-    st.info(body, icon="📥")
-    # key="media-hypo-origin": media_style.css가 콜아웃 오른쪽 위 구석에 띄움
-    with st.container(key="media-hypo-origin"):
-        st.markdown(":gray[원문]", help=f"**2번 탭에서 넘어온 가설 원문**\n\n{hypo['text']}")
+        return [media_variable_kpi_name(p) for p in (hypo["if"], hypo["because"], hypo["then"])]
+    return media_variable_split(media_variable_kpi_name(hypo["text"]))
+
+
+def media_variable_goal_text(plan: dict, hypo: dict) -> str:
+    """요약 카드의 목표 KPI 한 줄. 리포트 숫자가 있으면 그 숫자, 없으면 가설의 Then을 짧게 (숫자를 화살표로)."""
+    parts = media_variable_parts(hypo)
+    if media_variable_has_goal(plan) or not parts:
+        return media_variable_kpi_text(plan)
+    return media_variable_short_then(parts[2])
+
+
+def media_variable_hypo_tip(hypo: dict) -> str:
+    """요약 카드 ⓘ에 보일 2번 탭 가설 (If / Because / Then 원문, 나눌 수 없으면 문장 그대로)."""
+    parts = media_variable_parts(hypo)
+    body = ("\n".join(f"- **{name}**: {p.strip().rstrip(',')}" for name, p in zip(("If", "Because", "Then"), parts))
+            if parts else media_variable_kpi_name(hypo["text"]))
+    return f"**2번 가설 탭에서 불러온 가설**\n\n{body}"
+
+
+def media_variable_is_stale(hypo: dict) -> bool:
+    """불러온 가설이 2번 탭에 지금 저장된 가설과 다른지 (2번 탭에서 '선택하기'로 다른 가설을 고른 뒤 다시 불러오지 않음).
+    이번 접속에 기억해 둔 값으로만 비교합니다 (다른 사람이 저장한 값은 '다시 불러오기'를 눌러야 반영)."""
+    saved = media_variable_saved()
+    return bool(saved) and saved != hypo
 
 def media_variable_b_options(v: dict) -> tuple[list[dict], list[dict]]:
     """변수 하나의 (B로 쓸 수 있는 안, 메인 이미지 규칙을 어겨 못 쓰는 안)."""
@@ -391,18 +378,20 @@ def media_variable_kpi_chip() -> None:
 
 
 def media_variable_hypothesis_step(plan: dict, cands: dict, hypo: dict):
-    """2번 가설 탭에서 가져온 가설 콜아웃 + 핵심 요약 카드 (media_variable_step()의 윗부분)."""
-    # 넓은 화면: 왼쪽(하위 탭 바 아래 빈자리)에 핵심 요약, 오른쪽(탭 바와 같은 줄)에 가설 콜아웃 (media_style.css)
+    """핵심 요약 카드(독립 변수 + 목표 KPI) + 2번 탭 가설이 바뀌었을 때 경고 (media_variable_step()의 윗부분).
+    가설 문장은 카드 ⓘ에서 봅니다."""
     picked, chosen = cands["picked"], cands["variable"]
     variable = f"{plan['variable']} ({media_variable_label(picked)})" if picked else (plan["variable"] or "없음")
     if chosen and not chosen["ok"]:   # 고른 변수가 진행할 수 없는 변수: 카드에도 표시 (이유는 아래 오른쪽 경고)
         variable += " :orange-badge[⚠️ 진행 불가]"
-    with st.container(horizontal=True, key="media-hypo-top"):
-        with st.container(key="media-hypo-summary"):
-            # KPI 목표는 콜아웃 Then 줄과 겹쳐서 빼고 독립 변수만 (하위 탭 ②~④는 목표 KPI 칩에 보임)
-            st.markdown(f":violet-badge[독립 변수] {variable}")
-        with st.container(key="media-hypo-callout"):
-            media_variable_callout(hypo)
+    # 넓은 화면: 하위 탭 바 오른쪽 빈자리(탭 바와 같은 줄)에 띄움 (media_style.css)
+    with st.container(key="media-hypo-summary"):
+        st.markdown(f":violet-badge[독립 변수] {variable}\n\n"
+                    f":green-badge[🎯 목표 KPI] {media_variable_goal_text(plan, hypo)}",
+                    help=media_variable_hypo_tip(hypo))
+    if media_variable_is_stale(hypo):
+        st.warning("2번 가설 탭에서 고른 가설이 바뀌었어요. 오른쪽 위 '다시 불러오기'를 눌러야 새 가설로 변수를 도출해요.",
+                   icon="🔄")
     gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
     if gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE:   # AI를 못 써서 규칙으로 만든 후보: 이유는 ⓘ에
         st.markdown(":gray-badge[규칙으로 만든 후보] AI를 쓰지 못해 가설의 If를 그대로 후보 변수와 B안으로 썼어요",
@@ -592,7 +581,7 @@ def _media_variable_start_load() -> None:
 
 
 def media_variable_step():
-    """하위 탭 '가설에서 변수 도출': 오른쪽 위 '가설 불러오기' 버튼 → 가설 콜아웃 → 후보 걸러내기·단일 변수 선정.
+    """하위 탭 '가설에서 변수 도출': 오른쪽 위 '가설 불러오기' 버튼 → 요약 카드(독립 변수·목표 KPI) → 후보 걸러내기·단일 변수 선정.
     반드시 media_render() 안에서 부릅니다."""
     loading = st.session_state.pop("media-hypo-loading", False)
     loaded = loading or st.session_state.get("media-hypo-loaded", False)
