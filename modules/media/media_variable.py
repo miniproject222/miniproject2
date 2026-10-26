@@ -613,7 +613,7 @@ def _media_variable_confirm_solution(solution: dict) -> None:
     media_variable_goto_tab("report")
 
 
-@st.dialog("매체 제작 대신 솔루션", width="large")
+@st.dialog("솔루션 제공", width="large")
 def _media_variable_solution_dialog(name: str) -> None:
     """진행 불가 변수의 줄글 솔루션 팝업. 처음 열 때 AI로 만들고(가설·변수가 같으면 다시 부르지 않음), 확정하면 1번 탭으로 넘깁니다."""
     hypo = media_variable_loaded()

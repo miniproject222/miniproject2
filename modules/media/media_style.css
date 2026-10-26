@@ -267,29 +267,38 @@
   color: inherit;
 }
 
-/* 솔루션 팝업 (key media-variable-solution) - 스크롤 없이 한 화면에 들어오도록 칸 사이·문단 사이 간격과 글자를 줄임 */
+/* 솔루션 팝업 (key media-variable-solution) - 한 화면에 들어오되 칸 사이가 답답하지 않게 */
 .st-key-media-variable-solution {
-  gap: 8px !important;
+  gap: 16px !important;
 }
 
 .st-key-media-variable-solution h4 {
-  padding: 4px 0 2px;
+  padding: 6px 0 6px;
 }
 
 .st-key-media-variable-solution p {
   font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 4px;
+  line-height: 1.6;
 }
 
-/* 실행 단계 상자와 기대 효과·확인할 것 상자: 안쪽 여백을 줄임 */
+/* 실행 단계 상자 · 기대 효과 · 확인할 것 상자: 안쪽 여백, 줄 사이 간격 */
 .st-key-media-variable-solution-steps,
 [class*="st-key-media-variable-solution-box-"] {
-  padding: 10px 14px !important;
+  padding: 14px 18px !important;
 }
 
+.st-key-media-variable-solution-steps p,
 [class*="st-key-media-variable-solution-box-"] p {
-  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+/* 팝업은 media-root 밖에 그려져 위의 '이 탭 버튼만 흰 글자' 규칙이 안 걸림 → 팝업 버튼 줄에도 흰 글자 */
+.st-key-media-variable-solution-actions {
+  margin-top: 8px;
+}
+
+.st-key-media-variable-solution-actions .stButton button p {
+  color: var(--color-card) !important;
 }
 
 /* B안 고르기 블럭 (media_variable.py media_variable_b_box) - 변수 블럭과 같은 카드, 안에 '체크박스 + 옵션 N'을 가로로.
