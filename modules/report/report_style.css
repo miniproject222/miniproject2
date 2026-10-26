@@ -332,6 +332,8 @@
   pointer-events: none;
 }
 
+.st-key-report-btn-side-internal:hover::after { content: "내부 요인 전체"; }
+.st-key-report-btn-side-external:hover::after { content: "외부 요인 전체"; }
 .st-key-report-btn-side-pdf:hover::after { content: "핵심 문제 전체 · PDF 다운로드"; }
 .st-key-report-btn-side-sqp:hover::after { content: "검색어 클릭 분석 (가상 SQP)"; }
 .st-key-report-btn-side-funnel:hover::after { content: "구매 퍼널 (GA4)"; }
@@ -411,6 +413,14 @@
 .st-key-report-card-result:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-red); }
 .st-key-report-card-internal:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-purple); }
 .st-key-report-card-external:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-blue); }
+.st-key-report-card-image:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-blue); }
+
+/* 이미지로 고칠 수 있는 문제: 배지(N순위 또는 '이미지')는 파랑 - 위험도(빨강·주황)와 구분 */
+[class*="st-key-report-card-"] .report-level-img {
+  background: color-mix(in srgb, var(--report-blue) 14%, var(--color-card));
+  border-color: var(--report-blue);
+  color: color-mix(in srgb, var(--report-blue) 60%, #000);
+}
 
 /* 불러오기·저장하기 버튼: 홈 버튼과 같은 밝은 보라 */
 .st-key-report-btn-load button {
@@ -450,3 +460,27 @@
   font-size: 12px;
   font-weight: 700;
 }
+
+/* ── 1순위 | 2순위 자세히 카드 (2026-10-26) ── */
+.report-detail-head { display: flex; align-items: center; gap: 6px; margin: 4px 0 6px; }
+.report-detail-head .report-level { margin-right: 0; }
+.report-detail-title { font-size: 17px; font-weight: 700; line-height: 1.4; color: var(--color-text); margin-bottom: 6px; }
+[class*="st-key-report-card-rank"] .report-desc { font-size: 12.5px; line-height: 1.6; margin-bottom: 4px; }
+.report-detail-box {
+  margin: 10px 0 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--report-purple, #7B6CF2) 6%, var(--color-card));
+  font-size: 13px;
+}
+.report-detail-img { background: color-mix(in srgb, var(--report-blue, #46A6F5) 9%, var(--color-card)); }
+.report-detail-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--color-sub); margin-bottom: 4px; }
+.report-use { font-weight: 600; color: var(--report-blue, #46A6F5); }
+.report-detail-row { display: grid; grid-template-columns: 72px 1fr; gap: 8px; padding: 3px 0; font-size: 12.5px; line-height: 1.5; }
+.report-detail-row span { color: var(--color-sub); font-weight: 600; }
+.st-key-report-card-rank1:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"],
+.st-key-report-card-rank2:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-red); }
+.st-key-report-card-rank1:has(.report-skeleton) .report-level,
+.st-key-report-card-rank2:has(.report-skeleton) .report-level { background: var(--color-primary); color: var(--color-card); }
+.st-key-report-btn-side-image:hover::after { content: "이미지로 고칠 수 있는 문제 전체"; }
+
