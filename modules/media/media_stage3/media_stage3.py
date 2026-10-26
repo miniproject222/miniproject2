@@ -17,7 +17,7 @@ from modules.media.media_stage3.media_stage3_hf_login import (media_s3_hf_login_
 from modules.media.media_stage3.media_stage3_hf_mcp import (MediaS3HFError, media_s3_hf_check, media_s3_hf_download,
                                                            media_s3_hf_submit)
 from modules.media.media_stage3.media_stage3_ai import (MEDIA_S3_VIDEO_ASPECT, MEDIA_S3_VIDEO_SECONDS, MediaS3AIError, media_s3_ai_ready, media_s3_forbidden_hits,
-                                                       media_s3_make_image, media_s3_make_storyboard, media_s3_make_video,
+                                                       media_s3_edit_image, media_s3_make_image, media_s3_make_storyboard, media_s3_make_video,
                                                        media_s3_translate,
                                                        media_s3_video_ready)
 from modules.media.media_stage3.media_stage3_store import (MEDIA_S3_HISTORY_KEEP, media_s3_store_file,
@@ -320,6 +320,42 @@ def media_s3_photo_carousel():
                       args=(MEDIA_S3_PHOTOS, name, "media-s3-photo-files"))
 
 
+def _media_s3_video_view_set(names: list) -> None:
+    """'만든 영상' 팝업에서 영상 1·2… 고르기 콜백."""
+    picked = st.session_state.get("media-s3-video-view")
+    labels = [f"영상 {i + 1}" for i in range(len(names))]
+    if picked in labels:
+        st.session_state["media-s3-video-idx"] = labels.index(picked)
+
+
+@st.dialog("만든 영상", width="large")
+def media_s3_video_dialog():
+    """만든 영상 팝업 창 (사진의 '만든 사진'과 같은 모양): 영상 1·2… 고르기, 재생, 내려받기·지우기.
+    지금 가설로 만든 영상만 보여요 (예전 가설 영상은 '만든 결과 보기')."""
+    kept = media_s3_current(MEDIA_S3_VIDEOS)
+    with st.container(key="media-s3-video-dialog"):
+        if not kept:
+            st.caption("아직 만든 영상이 없어요.")
+            return
+        names = [n for n, _ in kept]
+        labels = [f"영상 {i + 1}" for i in range(len(kept))]
+        idx = st.session_state.get("media-s3-video-idx", len(kept) - 1) % len(kept)
+        st.session_state["media-s3-video-idx"] = idx
+        st.session_state["media-s3-video-view"] = labels[idx]
+        name, content = kept[idx]
+        st.video(content)
+        with st.container(horizontal=True, vertical_alignment="center", key="media-s3-video-dialog-info"):
+            st.segmented_control("볼 영상", labels, key="media-s3-video-view", on_change=_media_s3_video_view_set,
+                                 args=(names,), label_visibility="collapsed")
+            st.space("stretch")
+            with st.container(horizontal=True, gap="small", width="content"):
+                st.download_button("", content, file_name=name, key=f"media-s3-video-files-dl-{name}", type="tertiary",
+                                   icon=":material/download:", help=f"{name} 내려받기")
+                st.button("", key=f"media-s3-video-files-rm-{name}", type="tertiary", icon=":material/delete:",
+                          help=f"{name} 지우기", on_click=_media_s3_remove_file,
+                          args=(MEDIA_S3_VIDEOS, name, "media-s3-video-files"))
+
+
 @st.dialog("만든 사진", width="large")
 def media_s3_photo_dialog():
     """만든 사진 팝업 창: 넘겨 보기(← →, 사진 A/B 고르기, 내려받기·지우기). 오른쪽 위 X나 Esc로 닫고,
@@ -332,6 +368,17 @@ def _media_s3_photo_open_first(made: str) -> None:
     """방금 만든 사진을 팝업으로 보여 줄 때 처음 보일 사진: A가 있으면 A부터 (→로 B), 없으면 방금 만든 것."""
     names = [n for n, _ in media_s3_photo_list()]
     _media_s3_photo_jump("photo_A_ai.png" if "photo_A_ai.png" in names else made)
+
+
+def media_s3_photo_b(src: dict) -> bytes:
+    """사진 B: 지금 사진 A를 넣고 바꿀 것(slot_b) 하나만 고쳐서 만듭니다 → A와 같은 제품으로 보임.
+    사진 A가 아직 없으면 A부터 만들어 넣습니다."""
+    base = dict(media_s3_current(MEDIA_S3_PHOTOS)).get("photo_A_ai.png")
+    if base is None:
+        base = media_s3_make_image(src["prompt_a"])
+        media_s3_put_file(MEDIA_S3_PHOTOS, "photo_A_ai.png", base, prompt=src["prompt_a"])
+    change = f"{src['variable']}: from '{src['slot_a']}' to '{src['slot_b']}'"
+    return media_s3_edit_image(base, change, src["prompt_b"])
 
 
 def media_s3_photo_section(src: dict):
@@ -353,7 +400,8 @@ def media_s3_photo_section(src: dict):
                                              f"{name}만 다른 점: {src[f'slot_{name.lower()}']} · {src['variable']}")
                     clicked = st.button(f"사진 {name} 만들기", key=f"media-s3-btn-photo-{name}", type="primary",
                                         disabled=not ready, help=media_s3_ai_help(ready, "사진")
-                                        or "OpenAI 이미지 AI로 만들어요. 다시 누르면 새 사진으로 바꿔요")
+                                        or ("OpenAI 이미지 AI로 만들어요. 다시 누르면 새 사진으로 바꿔요" if name == "A" else
+                                            "사진 A를 그대로 두고 바꿀 것 하나만 고쳐서 만들어요 (같은 제품). A가 없으면 A부터 만들어요"))
                 st.markdown(f'<div class="media-s3-prompt">{html.escape(prompt)}</div>', unsafe_allow_html=True)
                 slot = html.escape(src[f"slot_{name.lower()}"])
                 st.markdown(f'<div class="media-s3-slot" title="{slot}"><b>{name}만 다른 점</b> · {slot}'
@@ -361,8 +409,8 @@ def media_s3_photo_section(src: dict):
                 if clicked:
                     with st.spinner(f"사진 {name}를 만드는 중이에요 (10~30초)"):
                         try:
-                            media_s3_put_file(MEDIA_S3_PHOTOS, f"photo_{name}_ai.png", media_s3_make_image(prompt),
-                                              prompt=prompt)
+                            made = media_s3_make_image(prompt) if name == "A" else media_s3_photo_b(src)
+                            media_s3_put_file(MEDIA_S3_PHOTOS, f"photo_{name}_ai.png", made, prompt=prompt)
                             _media_s3_photo_open_first(f"photo_{name}_ai.png")
                             open_dialog = True   # 다 그린 뒤 팝업으로 보여 줌
                         except MediaS3AIError as err:
@@ -514,7 +562,7 @@ def media_s3_video_section(src: dict):
                         media_s3_put_file(MEDIA_S3_VIDEOS, "video_draft_ai.mp4",
                                           media_s3_make_video(prompt, on_status=lambda t: status.caption(f"진행: {t}")),
                                           prompt=prompt)
-                        st.toast("영상 초안이 완성됐어요. '만든 결과 보기'에서 볼 수 있어요", icon="🎬")
+                        st.toast("영상 초안이 완성됐어요. '만든 영상 보기'에서 볼 수 있어요", icon="🎬")
                     except MediaS3AIError as err:
                         st.warning(str(err))
                     finally:
@@ -549,7 +597,7 @@ def media_s3_video_job_step():
         st.session_state[MEDIA_S3_VIDEO_LINKS] = links
         media_s3_store_json(MEDIA_S3_VIDEO_LINKS, links)
         _media_s3_clear_job()
-        st.toast("영상 초안이 완성됐어요. '만든 결과 보기'에서 볼 수 있어요", icon="🎬")
+        st.toast("영상 초안이 완성됐어요. '만든 영상 보기'에서 볼 수 있어요", icon="🎬")
         st.rerun()   # 넘기기 줄의 보낼 개수 등을 다시 그림
     elif status == "ip_detected":
         st.warning("Higgsfield가 저작권 확인을 기다리고 있어요. Higgsfield 사이트 기록(History)에서 이 영상을 열어 확인을 눌러 주세요. "
@@ -894,10 +942,15 @@ def media_s3_video_tab(src: dict):
             media_s3_storyboard_section(src)
         # '직접 만든 영상 올리기'는 사진 탭처럼 뺌 (만들기에 쓰이지 않고 보관만 돼 헷갈림)
         with st.container(horizontal=True, vertical_alignment="center", key="media-s3-video-actions"):
+            count = len(media_s3_current(MEDIA_S3_VIDEOS))
+            if st.button(f"만든 영상 보기 ({count})", key="media-s3-btn-view-videos", icon=":material/video_library:",
+                         disabled=not count):
+                st.session_state["media-s3-video-idx"] = count - 1   # 가장 최근 영상부터
+                media_s3_video_dialog()
             media_s3_guide("video")
             media_s3_handoff_step("video")
         with st.container(key="media-s3-video-note"):   # 한 줄로만 (넘치면 …), 낮은 화면에서도 스크롤 없게
-            st.caption(media_s3_notice("AI 영상은 아마존 메인 이미지로 쓰지 않아요 · 만든 영상은 '만든 결과 보기'에서 봐요"),
+            st.caption(media_s3_notice("AI 영상은 아마존 메인 이미지로 쓰지 않아요 · 만든 영상은 '만든 영상 보기'에서 봐요"),
                        help=MEDIA_S3_MEDIA_NOTE)
     with right:
         with st.container(border=True, key="media-s3-video-card"):

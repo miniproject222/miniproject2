@@ -893,3 +893,52 @@ div[role="dialog"]:has(.media-s3-sb-table) {
   width: 96vw !important;
   max-width: 96vw !important;
 }
+
+/* 만든 영상 팝업 창 (media_s3_video_dialog): 영상 높이는 화면 높이의 60% 정도 (스크롤 없이) */
+.st-key-media-s3-video-dialog video {
+  max-height: min(60vh, 600px);
+  width: 100%;
+  object-fit: contain;
+  background: #000;
+  border-radius: 10px;
+}
+
+/* ④ 안쪽 탭(사진 초안 제작 · 영상 초안 제작 · 만든 결과 보기)은 위 단계 탭(알약 버튼)과 구분되게
+   밑줄 탭으로: 테두리·배경 없이 글자만, 고른 탭은 굵은 글자 + 아래 진한 줄. 탭 줄 아래 얇은 선 */
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tablist"] {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  gap: 22px;
+  padding: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"] {
+  flex: 0 0 auto;
+  padding: 6px 2px 8px !important;
+  margin-bottom: -1px;
+  border: none !important;
+  border-bottom: 2.5px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--color-sub) !important;
+}
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"]:hover {
+  background: transparent !important;
+  color: var(--color-primary) !important;
+  border-bottom-color: color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
+}
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"][aria-selected="true"] {
+  background: transparent !important;
+  color: var(--color-primary) !important;
+  border-bottom-color: var(--color-primary) !important;
+  box-shadow: none !important;
+}
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"] p {
+  font-size: 13.5px;
+}
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"][aria-selected="true"] p {
+  color: var(--color-primary) !important;
+  font-weight: 700;
+}
