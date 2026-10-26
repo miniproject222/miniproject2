@@ -69,6 +69,7 @@ def _new_apptest(loaded: bool = True) -> AppTest:
 
 def select_and_store(at: AppTest, index: int) -> None:
     """'선택하기'(고르기만) → 오른쪽 위 '저장하기'(store에 저장)."""
+    at.button(key=f"hypothesis-btn-pick-{index}").click().run()   # 카드 맨 위 '가설 N'으로 열기
     at.button(key=f"hypothesis-btn-save-{index}").click().run()
     at.button(key="hypothesis-btn-store").click().run()
 
@@ -109,7 +110,7 @@ def test_core_flow() -> None:
     check(not at.exception, "[핵심] 1차 실행에 예외 없음")
     check(any("아직 불러오지 않음" in c.value for c in at.caption), "[핵심] 불러오기 전에는 기본 틀만 (안내 문구)")
     check(at.button(key="hypothesis-btn-store").disabled, "[핵심] 불러오기 전에는 저장하기 비활성")
-    check(not [t for t in at.tabs if t.label.startswith("가설")], "[핵심] 불러오기 전에는 가설 탭 없음")
+    check(not [b for b in at.button if (b.key or "").startswith("hypothesis-btn-pick-")], "[핵심] 불러오기 전에는 가설 1·2·3 버튼 없음")
     at.button(key="hypothesis-btn-load").click().run()
     check(not at.exception, "[핵심] 불러오기 후 예외 없음")
     # ① 저장 리포트가 없으면 ② 불러오기 → ① 탭으로 이동, ①은 분석을 불러온 상태('다음으로'를 바로 누를 수 있게)
@@ -125,11 +126,16 @@ def test_core_flow() -> None:
     cands = hypothesis_pick_candidates(SAMPLE_REPORT)
     check([c["title"] for c in cands] == ["경쟁사 가격 인하", "배송 지연 리뷰", "장바구니 이탈 증가"],
           f"[핵심] ① 순서 그대로 (실제: {[c['title'] for c in cands]})")
-    check([t.label for t in at.tabs] == ["가설 1", "가설 2", "가설 3"], "[핵심] 샘플 3문제가 가설 1/2/3 탭으로 뜸")
+    check([b.label for b in at.button if (b.key or "").startswith("hypothesis-btn-pick-")] == ["가설 1", "가설 2", "가설 3"],
+          "[핵심] 샘플 3문제가 카드 안 가설 1/2/3 버튼으로 뜸")
     check(any("아직 선택한 가설이 없어요" in m.value for m in at.markdown), "[핵심] 처음엔 '지금 선택된 가설' 비어 있음")
     check(sum("hypothesis-ibt-box" in m.value for m in at.markdown) == 0, "[핵심] 선택 전에는 If·Because·Then 카드 없음")
-    check([b.label for b in at.button if b.key and b.key.startswith("hypothesis-btn-save-")] == ["선택하기"] * 3,
-          "[핵심] 후보마다 '선택하기' 버튼 1개")
+    check([b.label for b in at.button if b.key and b.key.startswith("hypothesis-btn-save-")] == ["선택하기"],
+          "[핵심] 열린 후보 카드에 '선택하기' 버튼 1개")
+    at.button(key="hypothesis-btn-pick-2").click().run()
+    check("hypothesis-btn-save-2" in {b.key for b in at.button} and "hypothesis-btn-save-0" not in {b.key for b in at.button},
+          "[핵심] '가설 3'을 누르면 가설 3 카드로 바뀜")
+    at.button(key="hypothesis-btn-pick-0").click().run()
 
     check(at.button(key="hypothesis-btn-store").disabled, "[핵심] 고르기 전에는 저장하기 비활성")
     at.button(key="hypothesis-btn-save-0").click().run()
@@ -149,6 +155,7 @@ def test_core_flow() -> None:
 
     select_and_store(at, 1)
     check(at.button(key="hypothesis-btn-save-1").label == "✓ 선택됨", "[핵심] 가설 2 선택 → 가설 2가 '선택됨'")
+    at.button(key="hypothesis-btn-pick-0").click().run()
     check(at.button(key="hypothesis-btn-save-0").label == "선택하기", "[핵심] 가설 1은 '선택됨'에서 풀림")
     check(at.session_state["store-hypothesis"].get("text") == hypothesis_build_sentence(cands[1]), "[핵심] 최종 저장은 항상 1개")
 
@@ -350,7 +357,10 @@ def test_badge_group() -> None:
         problem("분류 없는 외부 문제", "외부", p=plan("환율 안내")),
     ]}
     at.run()
-    md = "".join(m.value for m in at.markdown)
+    md = ""
+    for k in range(3):   # 카드는 열린 가설 1개만 그려지므로 가설 1·2·3을 차례로 열어 배지를 모음
+        at.button(key=f"hypothesis-btn-pick-{k}").click().run()
+        md += "".join(m.value for m in at.markdown if "hypothesis-factor-line" in m.value)
     check(not at.exception, "[배지] 예외 없음")
     check("외부 요인 · 규제" in md and "외부 요인 · 경쟁사" in md, "[배지] 규제·경쟁사 분류 표시")
     check(md.count("외부 요인 · 경쟁사") == 1, "[배지] 경쟁사가 아닌 외부 문제에 '경쟁사'를 붙이지 않음")

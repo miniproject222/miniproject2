@@ -322,7 +322,30 @@
 /* 오른쪽 "지금 선택된 가설" 카드를 왼쪽 "가설 1/2/3" 탭 줄 높이만큼 내려서,
    왼쪽 후보 카드와 윗선을 맞춤 */
 .hypothesis-tab-spacer {
-  height: 62px;
+  height: 0;   /* 가설 1·2·3을 카드 안으로 옮겨 이제 빈칸 필요 없음 */
+}
+
+/* 카드 맨 위 '가설 1·2·3' (예전 카드 위 탭 줄과 같은 알약 모양: 고른 것 진한 보라, 나머지 흰색) */
+.st-key-hypothesis-pick .stButton > button {
+  min-height: 0;
+  padding: 6px 20px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.st-key-hypothesis-pick .stButton > button[kind="secondary"] {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.st-key-hypothesis-pick .stButton > button[kind="primary"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.st-key-hypothesis-pick .stButton > button[kind="primary"] p {
+  color: #fff !important;
 }
 
 /* "가설 후보" / "지금 선택된 가설" 제목: 페이지 제목("2. 가설 수립")과 크기가 거의 같아서
@@ -336,7 +359,7 @@
 /* ② 가설 탭이 열려 있을 때만 페이지 아래 기본 여백(160px)을 줄여서, 내용이 화면 안에
    들어가는데도 여백 때문에 생기던 세로 스크롤을 없앰. Streamlit은 열린 탭만 화면에
    그리므로 :has()가 다른 탭에는 걸리지 않음. (내용 자체가 화면보다 길면 스크롤은 남음) */
-[data-testid="stMainBlockContainer"]:has(.st-key-hypothesis-candidate-tabs) {
+[data-testid="stMainBlockContainer"]:has(.st-key-hypothesis-pick) {
   padding-bottom: 24px !important;
 }
 /* ② 탭을 연 동안만 페이지 폭·여백: 가로 폭은 ④ 광고 타이밍 탭(최대 1720px, 양옆 3.5rem), 위 여백은 ③ 탭(1rem) 기준.
