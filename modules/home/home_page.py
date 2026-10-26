@@ -38,13 +38,16 @@ HOME_WHEN_COLOR = {"지금": C["red"], "오늘": C["orange"], "이번 주": C["p
 # st.html은 스크립트를 지우므로, 보이지 않는 components.html 안에서 부모 화면에 클릭 처리기를 한 번만 붙입니다.
 # (이름을 __homeNav5로 바꿔, 예전 처리기가 붙어 있던 브라우저에도 새 처리기가 붙게 함)
 # 지금 할 일 팝업은 CSS 호버로 열림 (home_style.css .home-tpin)
-# 독일 시간(.home-clock)은 1초마다 베를린 시간으로 고침
+# 독일 시간(.home-clock)은 1초마다 베를린 시간으로 고침 + 연락 가능 표시(오전 9시~오후 5시 🟢, 그 밖 🔴)도 같이 고침
+# (2026-10-26 연락 표시 추가로 이름을 __homeNav6으로 바꿈)
+HOME_WORK_START, HOME_WORK_END = 9, 17   # 독일 근무시간 (오전 9시 이상 ~ 오후 5시 전) = 연락 가능
 HOME_NAV_JS = """
 <script>
 const P = window.parent;
-if (!P.__homeNav5) {
-  P.__homeNav5 = true;
+if (!P.__homeNav6) {
+  P.__homeNav6 = true;
   const days = "일월화수목금토";
+  const HOME_WORK_START = __START__, HOME_WORK_END = __END__;
   const tick = () => {
     const parts = {};
     new Intl.DateTimeFormat("en-GB", {timeZone: "Europe/Berlin", hour12: false, year: "numeric", month: "numeric",
@@ -55,6 +58,9 @@ if (!P.__homeNav5) {
       c.querySelector('[data-home-clock="time"]').firstChild.nodeValue = parts.hour + ":" + parts.minute;
       c.querySelector('[data-home-clock="sec"]').textContent = ":" + parts.second;
       c.querySelector('[data-home-clock="date"]').textContent = parts.month + "월 " + parts.day + "일 (" + days[wd] + ")";
+      const on = Number(parts.hour) >= HOME_WORK_START && Number(parts.hour) < HOME_WORK_END;
+      const ct = c.querySelector('[data-home-clock="contact"]');
+      if (ct) { ct.textContent = on ? "🟢 연락 가능 시간" : "🔴 근무 외 시간"; ct.classList.toggle("home-contact-off", !on); }
     });
   };
   tick();
@@ -70,7 +76,7 @@ if (!P.__homeNav5) {
   });
 }
 </script>
-"""
+""".replace("__START__", str(HOME_WORK_START)).replace("__END__", str(HOME_WORK_END))
 
 
 def home_tab_info():
@@ -247,12 +253,15 @@ def home_clock_html():
         now = datetime.now(timezone(timedelta(hours=1)))
     # 한국(UTC+9)과의 시차 (서버 시간대와 상관없이): 독일 겨울 8시간, 여름 7시간
     gap = round(9 - now.utcoffset().total_seconds() / 3600)
-    gap_text = f"한국보다 {gap}시간 느려요" if gap > 0 else "한국과 같은 시간" if gap == 0 else f"한국보다 {-gap}시간 빨라요"
+    on = HOME_WORK_START <= now.hour < HOME_WORK_END   # 독일 근무시간(오전 9시~오후 5시)이면 연락 가능
+    # 2026-10-26 PM: 시차는 라벨 옆 작은 '-8h'로, 아래 줄 시차 문장 자리에는 연락 가능 표시
+    gap_tip = f"한국보다 {gap}시간 느려요" if gap > 0 else "한국과 같은 시간" if gap == 0 else f"한국보다 {-gap}시간 빨라요"
     return f"""
 <div class="home-clock">
-  <div class="home-clock-label"><i></i>독일 시간 · 베를린</div>
+  <div class="home-clock-label"><i></i>독일 시간 · 베를린<span class="home-gap" title="{gap_tip}">{-gap:+d}h</span></div>
   <div class="home-clock-time" data-home-clock="time">{now:%H:%M}<span data-home-clock="sec">:{now:%S}</span></div>
-  <div class="home-clock-sub"><span data-home-clock="date">{now.month}월 {now.day}일 ({HOME_WEEKDAYS[now.weekday()]})</span> · {gap_text}</div>
+  <div class="home-clock-sub"><span data-home-clock="date">{now.month}월 {now.day}일 ({HOME_WEEKDAYS[now.weekday()]})</span>
+    <span class="home-contact{'' if on else ' home-contact-off'}" data-home-clock="contact">{'🟢 연락 가능 시간' if on else '🔴 근무 외 시간'}</span></div>
 </div>"""
 
 

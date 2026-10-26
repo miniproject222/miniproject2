@@ -141,6 +141,151 @@ def home_land_masks():
     return np.dstack([mask(features), mask([f for f in features if f["properties"]["iso"] == "DEU"])])
 
 
+# 매끈한 광택 지구본 (2026-10-26 PM: 'ANY Currency' 레퍼런스 분위기 — 흰색→옅은 라벤더 광택 구, 질감 없이 평평하게 칠한 땅,
+# 독일은 보라→네이비 그라데이션(보라가 더 많게), 나머지 나라는 옅은 라벤더라 독일이 돋보임)
+HOME_SOFT_WHITE = (0.93, 0.93, 0.97)      # 바다 밝은 쪽 (2026-10-26 PM: 흰색 → 연보라·회색을 살짝 섞어 진하게)
+HOME_SOFT_LAVENDER = (0.74, 0.74, 0.86)   # 바다 어두운 쪽 (연보라 + 회색)
+HOME_SOFT_LAND = (0.95, 0.95, 1.00)       # 독일 말고 나머지 땅 (거의 흰색, 바다보다 살짝 밝게)
+HOME_SOFT_LILAC = (0.70, 0.62, 1.00)      # 독일 그라데이션 맨 앞 (밝은 보라, 북서쪽 끝)
+HOME_SOFT_PURPLE = (0.50, 0.41, 0.95)     # 독일 그라데이션 가운데 (보라)
+HOME_SOFT_NAVY = (0.12, 0.15, 0.44)       # 독일 그라데이션 끝 (네이비, 더 진하게)
+HOME_MESH_TL = (0.33, 0.47, 0.87)         # 독일 메시 그라데이션: 왼쪽 위 (로열 블루)
+HOME_MESH_TR = (0.45, 0.76, 0.96)         # 오른쪽 위 (하늘색)
+HOME_MESH_BL = (0.52, 0.40, 0.88)         # 왼쪽 아래 (보라)
+HOME_MESH_BR = (0.74, 0.86, 0.98)         # 오른쪽 아래 (옅은 하늘빛, 흰 땅과 구분되게 아주 희지는 않게)
+HOME_SOFT_PURPLE_SHARE = 0.45             # 독일 그라데이션에서 보라가 차지하는 비율 (작을수록 네이비가 넓음, 0.62 → 0.45)
+
+
+@lru_cache(maxsize=1)
+def home_globe_image():
+    """매끈한 광택 지구본 WebP(data URI). 처음 한 번만 계산.
+    구 바탕: 왼쪽 위 흰색 → 아래·오른쪽 옅은 라벤더, 넓은 광택. 땅: 테두리·질감 없이 평평한 색 (빛에 따라 아주 조금만 어둡게).
+    독일: 왼쪽 위 보라 → 오른쪽 아래 네이비 대각선 그라데이션 (앞쪽 62%는 보라에 가깝게)."""
+    n = HOME_GLOBE_PX
+    yy, xx = np.mgrid[0:n, 0:n]
+    u = (xx + 0.5) / n * 2 - 1
+    v = 1 - (yy + 0.5) / n * 2
+    r = np.hypot(u, v)
+    rc = np.clip(r, 0, 1)
+    c = np.arcsin(rc) / (math.pi / 2) * math.radians(HOME_GLOBE_CAP)
+    theta = np.arctan2(u, v)
+    lon0, lat0 = map(math.radians, HOME_CENTER)
+    lat = np.arcsin(math.sin(lat0) * np.cos(c) + math.cos(lat0) * np.sin(c) * np.cos(theta))
+    lon = lon0 + np.arctan2(np.sin(theta) * np.sin(c) * math.cos(lat0), np.cos(c) - math.sin(lat0) * np.sin(lat))
+    masks = _home_sample(home_land_masks(), np.degrees(lon), np.degrees(lat))
+    land, de = masks[..., 0:1], masks[..., 1:2]
+
+    # 구 바탕: 빛(왼쪽 위)에 따라 흰색 ↔ 옅은 라벤더
+    z = np.sqrt(np.clip(1 - rc ** 2, 0, 1))
+    light = np.clip(-0.42 * u + 0.55 * v + 0.72 * z, 0, 1)[..., None]
+    sphere = np.array(HOME_SOFT_LAVENDER) * (1 - light ** 1.3) + np.array(HOME_SOFT_WHITE) * light ** 1.3
+
+    # 독일 대각선 그라데이션: 독일이 차지한 화면 범위 안에서 왼쪽 위(0) → 오른쪽 아래(1)
+    inside = masks[..., 1] > 0.5
+    if inside.any():
+        x0, x1 = xx[inside].min(), xx[inside].max()
+        y0, y1 = yy[inside].min(), yy[inside].max()
+        t = ((xx - x0) / max(x1 - x0, 1) + (yy - y0) / max(y1 - y0, 1)) / 2
+    else:
+        t = np.zeros_like(u)
+    # 2026-10-26 PM: 메시 그라데이션 (레퍼런스 'Modern Mesh Gradient') — 독일 범위의 네 모서리 색을 부드럽게 섞음
+    #   왼쪽 위 로열 블루 · 오른쪽 위 하늘색 · 왼쪽 아래 보라 · 오른쪽 아래 아주 옅은 하늘빛
+    #   (예전 3색 보라→네이비는 HOME_SOFT_LILAC/PURPLE/NAVY 상수로 남겨 둠)
+    if inside.any():
+        tx = np.clip((xx - x0) / max(x1 - x0, 1), 0, 1)[..., None]
+        ty = np.clip((yy - y0) / max(y1 - y0, 1), 0, 1)[..., None]
+    else:
+        tx = ty = np.zeros_like(u)[..., None]
+    tx, ty = tx * tx * (3 - 2 * tx), ty * ty * (3 - 2 * ty)    # 가장자리 쪽 색이 넓게, 가운데는 부드럽게 섞이게
+    top = np.array(HOME_MESH_TL) * (1 - tx) + np.array(HOME_MESH_TR) * tx
+    bottom = np.array(HOME_MESH_BL) * (1 - tx) + np.array(HOME_MESH_BR) * tx
+    germany = top * (1 - ty) + bottom * ty
+
+    flat = 0.90 + 0.10 * light                            # 땅은 평평하게 (빛 영향 아주 조금)
+    color = sphere * (1 - land) + np.array(HOME_SOFT_LAND) * flat * land
+    color = color * (1 - de) + germany * (0.94 + 0.06 * light) * de
+
+    # 광택: 왼쪽 위 넓은 반사광 + 가장자리 옅은 라벤더 빛
+    spec = np.exp(-((u + 0.36) ** 2 + (v - 0.42) ** 2) / 0.10)[..., None] * 0.06   # 2026-10-26 PM: 광 줄임 (0.22 → 0.06)
+    color = color + spec
+    # 가장자리: 아주 살짝 어둡게 (경계 그림자) + 맨 끝 얇은 옅은 빛
+    color = color * (1 - (rc ** 6)[..., None] * 0.10)
+    rim = (rc ** 22)[..., None] * 0.30
+    color = color * (1 - rim) + np.array([0.88, 0.87, 0.97]) * rim
+
+    alpha = np.clip((1 - r) * n / 2, 0, 1)
+    rgba = np.dstack([np.clip(color, 0, 1) * (alpha > 0)[..., None], alpha])
+    buf = io.BytesIO()
+    Image.fromarray((rgba * 255).astype(np.uint8), "RGBA").save(buf, "WEBP", quality=90)
+    return "data:image/webp;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+# 하얀 무광 석고 지구본 (2026-10-26 PM: 흰색 위에 흰색 · 바다는 아주 고운 점 무늬 · 땅은 매끈하게 살짝 솟은 판 + 옅은 그림자,
+# 파랑·초록 같은 진한 색 없이 거의 흰색. 독일만 아주 옅은 연보라로 위치 표시)
+HOME_WHITE_SEA = (0.925, 0.925, 0.935)    # 바다: 아주 옅은 회백색
+HOME_WHITE_LAND = (0.985, 0.985, 0.99)    # 땅: 거의 흰색
+HOME_WHITE_DE = (0.93, 0.91, 0.99)        # 독일: 아주 옅은 연보라
+HOME_SEA_DOT_STEP = 5                     # 바다 점 무늬 간격 (구 이미지 px)
+
+
+@lru_cache(maxsize=1)
+def home_white_map():
+    """경도/위도 평면의 하얀 지도 (H, W, 4): RGB + 땅 마스크.
+    땅은 바다보다 살짝 솟은 판: 해안 안쪽 가장자리에 빛 받는 면(왼쪽 위)·그늘(오른쪽 아래), 바다 위에 땅 그림자."""
+    masks = home_land_masks()
+    land, de = masks[..., 0], _home_blur(masks[..., 1], 1.0)
+    # 해안에서만 생기는 경사(판 가장자리)로 음영: 높이 = 살짝 흐린 땅 마스크
+    gy, gx = np.gradient(_home_blur(land, 3))
+    bevel = np.clip((-gx - gy) * 6, -0.16, 0.10) * land
+    drop = _home_blur(np.roll(np.roll(land, 7, axis=0), 5, axis=1), 4) * (1 - land)   # 바다 위 땅 그림자 (오른쪽 아래)
+    sea, ground, purple = (np.array(c, dtype=np.float32) for c in (HOME_WHITE_SEA, HOME_WHITE_LAND, HOME_WHITE_DE))
+    color = sea * (1 - land[..., None]) + ground * land[..., None]
+    color = color * (1 - de[..., None]) + purple * de[..., None]
+    color = color * (1 + bevel[..., None]) * (1 - drop[..., None] * 0.13)
+    return np.dstack([np.clip(color, 0, 1), land])
+
+
+@lru_cache(maxsize=1)
+def home_globe_image_white():
+    """(보관) 하얀 무광 석고 지구본 WebP(data URI) — 2026-10-26 밤 버전. 지금은 home_globe_image()의 매끈한 광택 지구본을 씀.
+    부드러운 스튜디오 빛(왼쪽 위)으로 옅은 회색 그늘만 넣고(낮은 대비), 바다에는 아주 고운 점 무늬."""
+    n = HOME_GLOBE_PX
+    yy, xx = np.mgrid[0:n, 0:n]
+    u = (xx + 0.5) / n * 2 - 1
+    v = 1 - (yy + 0.5) / n * 2
+    r = np.hypot(u, v)
+    rc = np.clip(r, 0, 1)
+    c = np.arcsin(rc) / (math.pi / 2) * math.radians(HOME_GLOBE_CAP)
+    theta = np.arctan2(u, v)
+    lon0, lat0 = map(math.radians, HOME_CENTER)
+    lat = np.arcsin(math.sin(lat0) * np.cos(c) + math.cos(lat0) * np.sin(c) * np.cos(theta))
+    lon = lon0 + np.arctan2(np.sin(theta) * np.sin(c) * math.cos(lat0), np.cos(c) - math.sin(lat0) * np.sin(lat))
+    m = _home_sample(home_white_map(), np.degrees(lon), np.degrees(lat))
+    color, land = m[..., :3], m[..., 3]
+
+    # 바다 점 무늬: 아주 작은 점을 촘촘히 (땅에는 없음)
+    s = HOME_SEA_DOT_STEP
+    dist = np.hypot(xx % s - s / 2, yy % s - s / 2)
+    dots = np.clip(1.15 - dist, 0, 1) * (1 - np.clip(land * 1.5, 0, 1))
+    color = color * (1 - dots[..., None] * 0.12)
+
+    # 구 음영: 부드러운 빛, 옅은 회색 그늘 (낮은 대비 · 밝은 톤)
+    z = np.sqrt(np.clip(1 - rc ** 2, 0, 1))
+    light = np.clip(-0.45 * u + 0.5 * v + 0.74 * z, 0, 1)[..., None]
+    shade = 0.80 + 0.24 * light
+    color = color * shade + np.array([0.55, 0.55, 0.58]) * (1 - shade) * 0.25
+    spec = np.exp(-((u + 0.38) ** 2 + (v - 0.42) ** 2) / 0.18)[..., None] * 0.06   # 은은한 광택 (무광)
+    color = color + spec
+    rim = (rc ** 20)[..., None] * 0.35
+    color = color * (1 - rim) + np.array([0.97, 0.97, 0.98]) * rim
+
+    alpha = np.clip((1 - r) * n / 2, 0, 1)
+    rgba = np.dstack([np.clip(color, 0, 1) * (alpha > 0)[..., None], alpha])
+    buf = io.BytesIO()
+    Image.fromarray((rgba * 255).astype(np.uint8), "RGBA").save(buf, "WEBP", quality=90)
+    return "data:image/webp;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
 # 점 지구본 (2026-10-26 PM: '글로벌 무역 분석 대시보드' 느낌 — 연하늘→진한 페리윙클 그라데이션 구, 광택, 흰·연하늘 점 대륙)
 HOME_DOT_STEP = 11              # 점 간격 (구 이미지 px)
 HOME_DOT_R = 2.6                # 점 반지름 (독일은 조금 크게)
@@ -151,8 +296,8 @@ HOME_DOT_DE = (0.80, 0.70, 1.00)         # 독일 점 (연보라, 위치를 알�
 
 
 @lru_cache(maxsize=1)
-def home_globe_image():
-    """점 지구본 WebP(data URI). 처음 한 번만 계산.
+def home_globe_image_dots():
+    """(보관) 점 지구본 WebP(data URI) — 2026-10-26 저녁 버전. 지금은 home_globe_image()의 하얀 석고 지구본을 씀.
     구 바탕은 빛(왼쪽 위)에 따라 연하늘→페리윙클 그라데이션 + 광택, 대륙은 일정한 간격의 빛나는 점(살짝 번지는 빛)."""
     n = HOME_GLOBE_PX
     yy, xx = np.mgrid[0:n, 0:n]
@@ -333,13 +478,14 @@ def home_svg_img(svg, cls):
 
 
 def home_globe_svg():
-    """지도 구 (<img> 태그) + 레퍼런스처럼 구에 붙은 두꺼운 하얀 고리 (2026-10-26 PM: 두께 18 → 34).
-    멀리 떨어진 바깥 큰 고리는 화면에서 잘리게 CSS(.home-globe::after)로 그림. 바닥 그림자는 CSS(.home-globe-shadow)로"""
+    """지구본 구 (<img> 태그) + 레퍼런스처럼 구를 감싼 두꺼운 반투명 흰 띠 (2026-10-26 PM, 굵기 28 → 38).
+    멀리 떨어진 반투명 흰 얇은 선은 CSS(.home-globe::after, 구 반지름의 약 1.55배)로 그림.
+    바닥 그림자는 CSS(.home-globe-shadow)로"""
     mid, r = HOME_SVG_SIZE / 2, HOME_GLOBE_R
     globe = home_globe_image()
     svg = f"""
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {HOME_SVG_SIZE} {HOME_SVG_SIZE}">
-  <circle cx="{mid}" cy="{mid}" r="{r + 17}" fill="none" stroke="#FFFFFF" stroke-opacity="0.92" stroke-width="34"/>
+  <circle cx="{mid}" cy="{mid}" r="{r + 19}" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="38"/>
   <image x="{mid - r}" y="{mid - r}" width="{2 * r}" height="{2 * r}" href="{globe}" xlink:href="{globe}"/>
 </svg>"""
     return home_svg_img(svg, "home-globe-svg")

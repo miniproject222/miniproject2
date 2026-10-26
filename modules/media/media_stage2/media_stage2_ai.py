@@ -167,7 +167,11 @@ def media_s2_listing() -> dict:
 # ① A·B 프롬프트 만들기 (수업 형식 6칸, 독립 변수 칸 하나만 다르게)
 # ─────────────────────────────────────────────
 def media_s2_mode(plan: dict) -> str:
-    """A를 어떻게 만들지 자동 판단: ①에서 확정한 A가 리포트의 '지금 메인 이미지'와 같으면 "keep"(그대로), 아니면 "new"(새로 설계)."""
+    """A를 어떻게 만들지: ①이 plan["a_mode"]("keep"/"new")를 넘겼으면 그 값을 먼저 씀 (2026-10-26 min 제안).
+    없으면(예전 값) 자동 판단: ①에서 확정한 A가 리포트의 '지금 메인 이미지'와 같으면 "keep"(그대로), 아니면 "new"(새로 설계)."""
+    a_mode = str(plan.get("a_mode") or "").strip().lower()
+    if a_mode in ("keep", "new"):
+        return a_mode
     now = str(media_s2_listing().get("main_image") or "").strip()
     return "keep" if now and now == str(plan.get("a") or "").strip() else "new"
 
@@ -189,7 +193,8 @@ def media_s2_gen_message(plan: dict, mode: str) -> str:
         return f"[{title}]\n" + ("\n".join(lines) if lines else "(없음)")
 
     return "\n\n".join([
-        block("A 만드는 방식", ["지금 메인 이미지 그대로" if mode == "keep" else "새로 설계"]),
+        block("A 만드는 방식", ["지금 메인 이미지 그대로" if mode == "keep" else "새로 설계 (새 기준 사진)",
+                               f"(새로 설계하는 이유: {plan['a_reason']})" if mode == "new" and plan.get("a_reason") else ""]),
         block("독립 변수", [plan.get("variable")]),
         block("A안", [plan.get("a"), f"(지금 메인 이미지 문제: {listing['main_image_issue']})"
                       if listing.get("main_image_issue") else ""]),

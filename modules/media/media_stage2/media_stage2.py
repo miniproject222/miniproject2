@@ -40,7 +40,7 @@ MEDIA_S2_REFINED = "media-s2-refined"    # AI로 다듬기를 한 번이라도 �
 # ─────────────────────────────────────────────
 def media_s2_plan_sig(plan: dict) -> tuple:
     """확정한 A/B 설계가 바뀌었는지 알아보는 표시 (바뀌면 프롬프트를 새로 만듦)."""
-    return tuple(str(plan.get(k) or "") for k in ("variable", "a", "b", "b_ref"))
+    return tuple(str(plan.get(k) or "") for k in ("variable", "a", "b", "b_ref", "a_mode", "a_reason"))
 
 
 def media_s2_sample_draft(plan: dict) -> dict:
@@ -255,8 +255,10 @@ def media_s2_refine_section(gen: dict, plan: dict) -> tuple[str, str, bool]:
         st.warning(msg)
     listing = media_s2_listing()
     summary = {   # 박스 맨 위 A·B 소재 요약 (①에서 확정한 A·B, A는 지금 메인 이미지 문제점도)
-        "A": f'<b>A · 현재 (대조군)</b> : {escape(plan["a"])}'
-             + (f'<br><span>{escape(listing["main_image_issue"])}</span>' if listing.get("main_image_issue") else ""),
+        # A가 새로 설계(new)면 이름을 '새 기준 사진'으로, 아래 줄은 ①이 넘긴 이유(a_reason)를 먼저 보여 줌
+        "A": f'<b>A · {"현재" if gen.get("mode") == "keep" else "새 기준 사진"} (대조군)</b> : {escape(plan["a"])}'
+             + (f'<br><span>{escape(note)}</span>' if (note := (plan.get("a_reason") if gen.get("mode") == "new" else "")
+                                                       or listing.get("main_image_issue")) else ""),
         "B": f'<b>B · 제안 (실험군)</b> : {escape(plan["b"])}',
     }
     prompts = {}

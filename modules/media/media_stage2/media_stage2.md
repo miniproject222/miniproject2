@@ -61,6 +61,7 @@
 
 - **A·B 프롬프트 만들기 (2026-10-25 밤, PM)**: ①에서 확정한 A/B(`media_variable_confirmed_plan()`)로 OpenAI가 **수업 형식 6줄**(Subject·Composition·Lighting·Background·Style·Negative, `MEDIA_S2_FIELDS`)의 A 프롬프트를 먼저 만들고, **독립 변수가 들어간 줄 하나만 바꿔 B**를 만듦 (`media_s2_generate()`, 지시문 `MEDIA_S2_GEN_SYSTEM`). 그 줄 = `{slot}`이라 3단계 약속(`base`·`slot_a`·`slot_b`·`fixed`) 그대로 넘어감
   - A를 '지금 메인 이미지 그대로'(keep) 쓸지 '새로 설계'(new)할지는 자동 판단 (`media_s2_mode()`: 확정한 A = 리포트의 지금 메인 이미지면 keep). 실제 A 사진은 쓰지 않음 (PM 결정)
+  - **2026-10-26 (min 제안 반영)**: ①이 `plan["a_mode"]`(keep/new)를 넘기면 그 값을 먼저 씀, 없을 때만 위 문장 비교. new면 `plan["a_reason"]`(이유 한 줄)을 AI에 같이 보내고, 요약 칸 이름이 'A · 새 기준 사진 (대조군)'으로 바뀌며 아래 줄에 이유를 보여 줌. `a_mode`·`a_reason`이 바뀌면 프롬프트를 새로 만듦
   - 처음 열 때 한 번 만들고 session_state(`media-s2-gen`)에 보관 → 3단계로 갔다 와도 그대로. ①에서 다시 확정하면 새로 만듦, 'A·B 다시 만들기' 버튼으로 다시 만들 수 있음. 키가 없거나 실패하면 예시 프롬프트 + 경고
   - 한 칸을 고치면 다른 칸의 같은 부분도 같이 바뀜 (`_media_s2_sync`), 독립 변수 부분을 고치면 맞추지 않고 경고. '되돌리기'는 두 칸을 처음 만든 프롬프트로 함께 되돌림
   - AI로 다듬기: 6줄 형식 유지 규칙 추가, 독일 디자인 DB(`data/` CSV의 DSN-103·104·109·110, REG-105)를 재료·근거로 씀
