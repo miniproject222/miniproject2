@@ -267,6 +267,31 @@
   color: inherit;
 }
 
+/* 솔루션 팝업 (key media-variable-solution) - 스크롤 없이 한 화면에 들어오도록 칸 사이·문단 사이 간격과 글자를 줄임 */
+.st-key-media-variable-solution {
+  gap: 8px !important;
+}
+
+.st-key-media-variable-solution h4 {
+  padding: 4px 0 2px;
+}
+
+.st-key-media-variable-solution p {
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+/* 실행 단계 상자와 기대 효과·확인할 것 상자: 안쪽 여백을 줄임 */
+.st-key-media-variable-solution-steps,
+[class*="st-key-media-variable-solution-box-"] {
+  padding: 10px 14px !important;
+}
+
+[class*="st-key-media-variable-solution-box-"] p {
+  font-size: 13px;
+}
+
 /* B안 고르기 블럭 (media_variable.py media_variable_b_box) - 변수 블럭과 같은 카드, 안에 '체크박스 + 옵션 N'을 가로로.
    옵션 사이에는 세로 구분선 (두 번째 옵션부터 왼쪽 선) */
 .st-key-media-variable-b-box {

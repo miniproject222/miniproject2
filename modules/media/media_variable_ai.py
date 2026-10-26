@@ -62,18 +62,27 @@ MEDIA_VARIABLE_AI_SYSTEM = """너는 amazon.de(독일)에서 냉감패드를 파
 8. JSON만 답해. 형식은 [예시]와 같고 short를 더해: {"kpi": "...", "note": "...", "short": {"if": "...", "because": "..."}, "variables": [...]}"""
 
 
-# 이미지로 진행할 수 없는 변수(media_variable.py의 '진행 불가' 판정)를 매체 제작 대신 풀어 줄 줄글 솔루션
-MEDIA_VARIABLE_SOLUTION_MAX = 600   # 솔루션 본문 최대 글자 수 (넘으면 AI 답을 버림)
+# 이미지로 진행할 수 없는 변수(media_variable.py의 '진행 불가' 판정)를 매체 제작 대신 풀어 줄 솔루션
+# 팝업에서 칸별로 정리해 보여 주도록 나눠 받습니다: 제목 · 한 줄 요약 · 실행 단계 · 기대 효과 · 확인할 것
+# 팝업이 스크롤 없이 한 화면에 들어오도록 짧게 받습니다 (AI에게는 아래보다 짧게 쓰라고 하고, 조금 넘는 것까지는 받아 줌)
+MEDIA_VARIABLE_SOLUTION_TEXT_MAX = {"title": 30, "summary": 70, "action": 25, "detail": 70, "effect": 70, "check": 70}
+MEDIA_VARIABLE_SOLUTION_STEPS = (2, 3)   # 실행 단계 수 (최소, 최대)
 MEDIA_VARIABLE_SOLUTION_SYSTEM = """너는 amazon.de(독일)에서 냉감패드를 파는 브랜드의 마케팅 컨설턴트야.
 가설 하나와, 그 가설에서 고른 변수 하나를 받아. 이 변수는 메인 이미지(사진·영상 제작)로는 해결할 수 없어서,
-매체 제작 대신 할 수 있는 솔루션을 줄글로 제안해야 해.
+매체 제작 대신 할 수 있는 솔루션을 칸별로 정리해 제안해야 해.
 
 반드시 지킬 것
-1. title: 솔루션을 한 줄로 (25자 안쪽, 명사형).
-2. body: 무엇을 어떻게 바꾸고, 그게 가설의 Then(목표 지표)에 왜 도움이 되는지 한국어 줄글 3~5문장. 목록·번호·마크다운 없이 문장으로만.
-3. 셀러가 Amazon Seller Central에서 직접 할 수 있는 일로 써 (예: 제목·불릿·A+ 수정, 가격·쿠폰 조정, 광고 설정).
-4. 가설·문제·리포트에 없는 수치, 인증, 효과를 지어내지 마.
-5. JSON만 답해: {"title": "...", "body": "..."}"""
+한 화면에 스크롤 없이 보여 줄 거라, 모든 칸을 짧게 써. 글자 수를 꼭 지켜.
+1. title: 솔루션을 한 줄로 (20자 안쪽, 명사형).
+2. summary: 무엇을 바꾸는지 한 문장 (50자 안쪽).
+3. steps: 셀러가 Amazon Seller Central에서 직접 할 실행 단계 2~3개, 하는 순서대로.
+   단계마다 action(할 일, 15자 안쪽 명사형)과 detail(어디서 무엇을 어떻게, 50자 안쪽).
+   예: 제목·불릿·A+ 수정, 가격·쿠폰 조정, 광고 설정.
+4. effect: 이렇게 하면 가설의 Then(목표 지표)에 왜 도움이 되는지 (50자 안쪽).
+5. check: 실행 뒤 확인할 지표나 주의할 점 (50자 안쪽).
+6. 모든 문장은 한국어, 마크다운·번호 없이. "~함", "~하기"처럼 짧게 끝내.
+7. 가설·문제·리포트에 없는 수치, 인증, 효과를 지어내지 마.
+8. JSON만 답해: {"title": "...", "summary": "...", "steps": [{"action": "...", "detail": "..."}], "effect": "...", "check": "..."}"""
 
 # ─────────────────────────────────────────────
 # 키 · AI 부르기
@@ -275,7 +284,9 @@ def media_variable_solution_message(hypo: dict, variable: dict, kpi: str) -> str
 
 
 def media_variable_clean_solution(raw: str) -> dict | None:
-    """AI 답 문자열 → {"title", "body"}. 칸이 비었거나 본문이 MEDIA_VARIABLE_SOLUTION_MAX자를 넘으면 None."""
+    """AI 답 문자열 → {"title", "summary", "steps": [{"action", "detail"}], "effect", "check"}.
+    제목·요약이 비었거나, 칸이 MEDIA_VARIABLE_SOLUTION_TEXT_MAX의 그 칸 글자 수를 넘거나, 쓸 수 있는 단계 수가 MEDIA_VARIABLE_SOLUTION_STEPS 밖이면 None.
+    단계가 최대보다 많으면 앞에서부터 최대 개수만 씁니다. effect·check는 비어도 됩니다 (팝업에서 그 칸만 빠짐)."""
     start, end = raw.find("{"), raw.rfind("}")
     try:
         data = json.loads(raw[start:end + 1]) if 0 <= start < end else None
@@ -283,14 +294,20 @@ def media_variable_clean_solution(raw: str) -> dict | None:
         return None
     if not isinstance(data, dict):
         return None
-    title, body = str(data.get("title") or "").strip(), str(data.get("body") or "").strip()
-    if not title or not body or len(body) > MEDIA_VARIABLE_SOLUTION_MAX:
+    text = {k: str(data.get(k) or "").strip() for k in ("title", "summary", "effect", "check")}
+    steps = [{"action": str(s.get("action") or "").strip(), "detail": str(s.get("detail") or "").strip()}
+             for s in data.get("steps") or [] if isinstance(s, dict)]
+    steps = [s for s in steps if s["action"]][:MEDIA_VARIABLE_SOLUTION_STEPS[1]]
+    limit = MEDIA_VARIABLE_SOLUTION_TEXT_MAX
+    too_long = (any(len(t) > limit[k] for k, t in text.items())
+                or any(len(s[k]) > limit[k] for s in steps for k in ("action", "detail")))
+    if not text["title"] or not text["summary"] or too_long or len(steps) < MEDIA_VARIABLE_SOLUTION_STEPS[0]:
         return None
-    return {"title": title, "body": body}
+    return {**text, "steps": steps}
 
 
 def media_variable_solution_generate(hypo: dict, variable: dict, kpi: str) -> tuple[dict | None, str, str]:
-    """진행 불가 변수 하나 → (줄글 솔루션 {"title", "body"}, 출처 이름, AI를 못 쓴 이유).
+    """진행 불가 변수 하나 → (솔루션 {"title", "summary", "steps", "effect", "check"}, 출처 이름, AI를 못 쓴 이유).
     키가 있는 AI를 차례로 시도하고, 모두 안 되면 (None, "", 이유). 규칙으로 대신 만들지 않습니다 (지어낸 솔루션이 되지 않게)."""
     errors = []
     for provider, key_name in MEDIA_VARIABLE_AI_PROVIDERS.items():

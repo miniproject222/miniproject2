@@ -624,23 +624,39 @@ def _media_variable_solution_dialog(name: str) -> None:
         return
     cache = st.session_state.setdefault(MEDIA_VARIABLE_SOLUTION_KEY, {})
     key = _media_variable_solution_cache_key(name)
-    if key not in cache:
+    old = (cache.get(key) or {}).get("solution")
+    if key not in cache or (old and "steps" not in old):   # 칸별 정리 전 모양(줄글 body)으로 만든 솔루션이면 다시 만듦
         with st.spinner("가설과 변수를 보고 솔루션을 만드는 중…"):
             solution, source, error = media_variable_solution_generate(hypo, variable, cands["set"].get("kpi", ""))
         cache[key] = {"solution": solution, "source": source, "error": error}
     made = cache[key]
-    st.markdown(f":violet-badge[변수] **{name}** :{MEDIA_VARIABLE_VERDICT_BADGE[variable['verdict']]}-badge[{variable['verdict']}]")
-    st.caption(f"가설: {hypo['text']}")
     solution = made["solution"]
-    if solution:
-        st.markdown(f"#### {solution['title']}")
-        st.markdown(solution["body"])
-        st.caption(f"{made['source']}가 가설과 변수를 보고 만든 솔루션이에요. 확정하면 1번 문제 분석 탭으로 넘겨요.")
-    else:
-        st.markdown("**솔루션을 만들지 못했어요**")
-        st.caption(f"이유: {made['error']} · AI 키를 확인한 뒤 '다시 만들기'를 눌러 주세요.")
+    # 스크롤 없이 한 화면에 들어오도록: 가설 원문은 ⓘ 툴팁, 단계는 한 줄씩, 출처는 버튼 줄 왼쪽
+    # key="media-variable-solution": media_style.css가 팝업 안 간격을 줄임
+    with st.container(key="media-variable-solution"):
+        st.markdown(f":violet-badge[변수] **{name}** "
+                    f":{MEDIA_VARIABLE_VERDICT_BADGE[variable['verdict']]}-badge[{variable['verdict']}]",
+                    help=f"**가설**: {hypo['text']}")
+        if solution:   # 제목 · 한 줄 요약 → 실행 단계(번호 순) → 기대 효과 | 확인할 것
+            st.markdown(f"#### {solution['title']}\n\n{solution['summary']}")
+            with st.container(border=True, key="media-variable-solution-steps"):
+                st.markdown("**:material/checklist: 실행 단계**\n\n" + "\n\n".join(
+                    f":blue-badge[{i}] **{step['action']}**" + (f" · {step['detail']}" if step["detail"] else "")
+                    for i, step in enumerate(solution["steps"], start=1)))
+            boxes = [(":material/target: 기대 효과", solution.get("effect")),
+                     (":material/search: 확인할 것", solution.get("check"))]
+            boxes = [(head, body) for head, body in boxes if body]
+            for i, (col, (head, body)) in enumerate(zip(st.columns(len(boxes)) if boxes else [], boxes)):
+                with col, st.container(border=True, height="stretch", key=f"media-variable-solution-box-{i}"):
+                    st.markdown(f"**{head}**\n\n{body}")
+        else:
+            st.markdown("**솔루션을 만들지 못했어요**")
+            st.caption(f"이유: {made['error']} · AI 키를 확인한 뒤 '다시 만들기'를 눌러 주세요.")
     saved = media_handoff_solution()
-    with st.container(horizontal=True, horizontal_alignment="right", key="media-variable-solution-actions"):
+    with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
+                      key="media-variable-solution-actions"):
+        if solution:
+            st.caption(f"{made['source']}가 만든 솔루션 · 확정하면 1번 문제 분석 탭으로 넘겨요", width="stretch")
         st.button("↻ 다시 만들기", key="media-btn-variable-solution-regen", type="secondary",
                   on_click=_media_variable_regen_solution, args=(name,))
         if solution:

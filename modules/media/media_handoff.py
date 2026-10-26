@@ -126,7 +126,7 @@ def media_handoff_plan() -> dict:
 
 def media_handoff_set_solution(solution: dict) -> None:
     """1단계에서 진행 불가 변수의 솔루션을 확정하면 부릅니다 (store("media")의 "solution" 칸, 다른 칸은 그대로).
-    모양: {"hypothesis", "variable", "kind", "title", "body", "source"}. 반드시 확정 버튼의 콜백에서만 부릅니다."""
+    모양: {"hypothesis", "variable", "kind", "title", "summary", "steps": [{"action", "detail"}], "effect", "check", "source"}. 반드시 확정 버튼의 콜백에서만 부릅니다."""
     saved = store_get(MEDIA_HANDOFF_STORE, fresh=True)
     data = dict(saved) if isinstance(saved, dict) else {}
     if data.get("solution") == solution:
