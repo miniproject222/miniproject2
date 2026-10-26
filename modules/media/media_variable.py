@@ -427,7 +427,7 @@ def media_variable_cards(rows: list[dict], variable: dict) -> None:
 
 
 def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cands: dict):
-    """후보 변수 걸러내기(블럭에서 변수 하나 고르기) → 고른 변수를 A/B로 나누기 (media_variable_step()의 아랫부분).
+    """후보 변수 선택(블럭에서 변수 하나 고르기) → 고른 변수를 A/B로 나누기 (media_variable_step()의 아랫부분).
     선정 표의 값은 plan에서 가져옵니다."""
     rows, variable, options, picked = cands["rows"], cands["variable"], cands["options"], cands["picked"]
     # 왼쪽(변수 블럭)을 조금 넓혀 이유가 한 줄에 들어가게 함 → 오른쪽(B안 고르기 블럭 + A·B 표)과 높이를 맞춤
@@ -435,7 +435,7 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
     with c1:
         # 판정 기준은 제목 옆 ⓘ에 마우스를 올리면 보임 (설명 줄이 빠져 오른쪽 선정 표와 위쪽 끝이 맞음)
         hidden = cands["hidden"]
-        st.markdown("**후보 변수 걸러내기**", help=(
+        st.markdown("**후보 변수 선택**", help=(
             "가설에서 바꿀 수 있는 변수를 블럭 하나에 하나씩 보여 줘요. 어느 블럭이든 눌러 A/B로 실험할 변수를 골라요.\n\n"
             f"**후보를 만든 곳**: {(st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}).get('source') or '-'} "
             "(판정은 아래 기준으로 코드가 다시 계산)\n\n"
@@ -456,11 +456,14 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
         note = cands["set"].get("note")
         broken = "\n".join(f"- {o['label']}: {o['rule_break']} → {o.get('fallback') or '서브 이미지'}"
                            for o in cands["broken"])
-        st.markdown("**선정한 단일 변수**", help=(
+        # 제목 줄: 제목 옆에 B안 고르기 블럭(옵션 체크박스)을 나란히 (진행할 수 있는 변수일 때만)
+        # key="media-variable-picked-head": media_style.css가 제목과 블럭 사이 간격을 정함
+        head = st.container(horizontal=True, vertical_alignment="center", key="media-variable-picked-head")
+        head.markdown("**선정한 단일 변수**", width="content", help=(
             "왼쪽 블럭에서 고른 변수를 A(지금 그대로)와 B(바꾼 안)로 나눠요.\n\n"
             "**A는 고정**: 지금 아마존에 올라가 있는 메인 이미지(1번 리포트 값)라 바꾸지 않아요. "
             "지금보다 나아지는지 비교해야 가설(KPI가 지금 값에서 목표로 오르는지)을 확인할 수 있어서, "
-            "A는 그대로 두고 B만 위 체크박스로 골라요.\n\n"
+            "A는 그대로 두고 B만 제목 옆 체크박스로 골라요.\n\n"
             f"**통제 변수 (고정)**: 같은 제품·색상, 흰 배경, 같은 조명과 보정, 제품 85% 이상 · 제목, 가격 {price}, 쿠폰 없음, "
             "불릿, A+ 콘텐츠, 서브 이미지, 광고 입찰\n\n"
             + (f"**종속 변수 (메인 KPI)**: {plan['kpi']} = {MEDIA_VARIABLE_KPI_RAW} (시장 대비 CTR)\n\n"
@@ -474,12 +477,13 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             st.warning(f"**{variable['name']}** · {MEDIA_VARIABLE_BLOCK_MSG[variable['verdict']][0]}", icon="⚠️")
             return
         if options:
-            media_variable_b_box(options, picked, rows.index(variable), plan)
+            with head:
+                media_variable_b_box(options, picked, rows.index(variable), plan)
         # key="media-variable-picked": media_style.css가 구분 칸('A · 대조군')을 한 줄로 유지
         with st.container(key="media-variable-picked"):
             st.markdown("| 구분 | 내용 |\n| --- | --- |\n"
                         f"| **A · 대조군** | {plan['a']} (현재 사진 · 고정) |\n"
-                        f"| **B · 실험군** | {plan['b'] or '위 옵션을 체크해 골라요'} |")
+                        f"| **B · 실험군** | {plan['b'] or '제목 옆 옵션을 체크해 골라요'} |")
         if defaults:   # 리포트 탭을 아직 안 열었거나 리포트 칸 이름이 바뀌었을 때 바로 알아차리도록
             st.caption(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
 
@@ -585,7 +589,7 @@ def _media_variable_start_load() -> None:
 
 
 def media_variable_step():
-    """하위 탭 '가설에서 변수 도출': 오른쪽 위 '가설 불러오기' 버튼 → 요약 칩(독립 변수·목표 KPI) → 후보 걸러내기·단일 변수 선정.
+    """하위 탭 '가설에서 변수 도출': 오른쪽 위 '가설 불러오기' 버튼 → 요약 칩(독립 변수·목표 KPI) → 후보 변수 선택·단일 변수 선정.
     반드시 media_render() 안에서 부릅니다."""
     loading = st.session_state.pop("media-hypo-loading", False)
     loaded = loading or st.session_state.get("media-hypo-loaded", False)

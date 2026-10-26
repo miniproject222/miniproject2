@@ -268,6 +268,12 @@
   white-space: nowrap;
 }
 
+/* '선정한 단일 변수' 제목 줄 (media_variable.py key="media-variable-picked-head") - 제목 옆에 B안 고르기 블럭.
+   블럭 높이만큼 줄이 높아져 제목이 왼쪽 '후보 변수 선택' 제목보다 내려가므로 그만큼 끌어올림 (실제 화면에서 잰 값) */
+.st-key-media-variable-picked-head {
+  margin-top: -8px;
+}
+
 /* 선정한 단일 변수 표 (media_variable.py key="media-variable-picked") - 구분 칸('A · 대조군')은 한 줄 */
 .st-key-media-variable-picked td:nth-child(1) {
   white-space: nowrap;
@@ -336,6 +342,11 @@
 
   .st-key-media-hypo-summary {
     pointer-events: auto;
+  }
+
+  /* 칩이 탭 바 줄로 올라가 비는 자리만큼 구분선을 탭 바 쪽으로 올림 (실제 화면에서 잰 값) */
+  .st-key-media-hypo-divider {
+    margin-top: -16px;
   }
 }
 
