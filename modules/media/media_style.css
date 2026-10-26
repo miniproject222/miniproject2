@@ -127,7 +127,7 @@
   display: none;
 }
 
-/* '가설 불러오기' (media_variable.py) - 불러온 가설·변수 도출이 아래에서 살짝 떠오르며 나타남 */
+/* 가설 불러오기 (media_variable.py) - 불러온 가설·변수 도출이 아래에서 살짝 떠오르며 나타남 */
 .st-key-media-hypo-box {
   animation: media-fade-up 0.45s ease-out;
 }
@@ -137,8 +137,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 넓은 화면: '가설 불러오기' 버튼을 페이지 제목 줄 오른쪽 끝으로 올리고,
-   빈 카드는 하위 탭 바와 같은 줄(위쪽 끝 맞춤) 오른쪽 자리만큼만 차지
+/* 넓은 화면: '다시 불러오기' 버튼을 페이지 제목 줄 오른쪽 끝으로 올림
    (--media-tabbar-w = 하위 탭 바가 차지할 최대 폭. 탭 이름이 길어져도 탭 바는 이 폭 안에서 가로 스크롤되어
     오른쪽 카드와 겹치지 않음. 음수 여백은 실제 화면에서 잰 값. 제목이 바뀌면 맞춰야 함) */
 @media (min-width: 768px) {
@@ -168,12 +167,6 @@
 
   .st-key-media-hypo-load-row button {
     pointer-events: auto;
-  }
-
-  .st-key-media-hypo-empty {
-    width: calc(100% - var(--media-tabbar-w) - 24px) !important;
-    margin-left: auto;
-    margin-top: -78px;
   }
 }
 
@@ -336,13 +329,6 @@
 /* 선정한 단일 변수 표 (media_variable.py key="media-variable-picked") - 구분 칸('A · 대조군')은 한 줄 */
 .st-key-media-variable-picked td:nth-child(1) {
   white-space: nowrap;
-}
-
-/* 불러오기 전 빈 상태 카드 (하위 탭 ①). 하위 탭 ②의 확정 전 빈 카드는 media_stage2_style.css(media-s2-ab-empty) */
-.st-key-media-hypo-empty {
-  border-style: dashed !important;
-  background: var(--color-bg);
-  text-align: center;
 }
 
 /* 목표 KPI 칩 (media_variable.py의 media_variable_kpi_chip, 하위 탭 ②~④) - 작은 알약형

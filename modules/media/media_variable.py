@@ -1,5 +1,5 @@
 # 3. 매체 제작 > 가설에서 변수 도출
-# '가설 불러오기'를 누르면 2번 탭이 저장한 가설(store "hypothesis")을 다시 읽고, 그 가설로 후보 변수 묶음을 만들어
+# 3번 탭이 그려질 때 2번 탭이 저장한 가설(store "hypothesis")을 자동으로 읽고, 그 가설로 후보 변수 묶음을 만들어
 # (AI 또는 규칙, media_variable_ai.py) 사용자가 변수 블럭에서 A/B로 실험할 변수 하나와 그 변수의 B안을 고릅니다.
 # 어떤 변수 블럭이든 고를 수 있고, 메인 이미지로 진행할 수 없는 변수는 2·3단계로 넘기는 확정을 막는 대신
 # 블럭의 '솔루션 보러가기'로 AI 줄글 솔루션 팝업을 띄우고, 확정하면 1번 문제 분석 탭으로 넘깁니다.
@@ -18,7 +18,7 @@ from modules.media.media_variable_ai import (MEDIA_VARIABLE_AI_RULE_SOURCE, MEDI
                                              media_variable_solution_generate)
 
 MEDIA_VARIABLE_TAB_LABEL = "가설에서 변수 도출"   # 하위 탭 ① 이름 (media_page.py와 다른 하위 탭의 '① 으로 가서 확정하기' 버튼이 씀)
-# '가설 불러오기'로 읽어 둔 값 (session_state). 다시 불러오기 전까지는 2번 탭에서 가설을 바꿔도 이 값을 씀
+# 불러온 값 (session_state). 2번 탭에서 다른 가설을 저장하면 media_variable_step()이 자동으로 다시 불러옴
 MEDIA_VARIABLE_HYPO_KEY = "media-variable-hypo"   # 불러온 가설 (media_variable_saved()의 모양)
 MEDIA_VARIABLE_GEN_KEY = "media-variable-gen"     # 그 가설의 후보 묶음 {"text", "set", "source", "error", "version"}
 
@@ -68,7 +68,7 @@ MEDIA_VARIABLE_LEAVE_KEY = "media-variable-need-confirm"   # ①을 떠나려다
 def media_variable_saved(fresh: bool = False) -> dict:
     """2번 가설 탭이 저장한 가설 {"text", "if", "because", "then", "problem"} (저장 전이면 빈 dict).
     새 모양("selected" 칸)을 먼저 읽고, 없으면 예전 평평한 키(text, if_text …)를 읽습니다.
-    fresh면 이번 접속에 기억해 둔 값 대신 Supabase에서 다시 읽습니다 ('가설 불러오기' 버튼)."""
+    fresh면 이번 접속에 기억해 둔 값 대신 Supabase에서 다시 읽습니다 ('다시 불러오기' 버튼·자동 불러오기)."""
     saved = store_get("hypothesis", fresh=fresh)
     if not isinstance(saved, dict):
         return {}
@@ -84,7 +84,7 @@ def media_variable_saved(fresh: bool = False) -> dict:
 
 
 def media_variable_loaded() -> dict:
-    """'가설 불러오기'로 읽어 둔 가설 (아직 안 불렀거나 2번 탭 저장 전이면 빈 dict)."""
+    """불러온 가설 (아직 안 불렀거나 2번 탭 저장 전이면 빈 dict)."""
     return st.session_state.get(MEDIA_VARIABLE_HYPO_KEY) or {}
 
 
@@ -201,7 +201,7 @@ def media_variable_hypo_tip(hypo: dict) -> str:
 
 def media_variable_is_stale(hypo: dict) -> bool:
     """불러온 가설이 2번 탭에 지금 저장된 가설과 다른지 (2번 탭에서 '선택하기'로 다른 가설을 고른 뒤 다시 불러오지 않음).
-    이번 접속에 기억해 둔 값으로만 비교합니다 (다른 사람이 저장한 값은 '다시 불러오기'를 눌러야 반영)."""
+    이번 접속에 기억해 둔 값으로만 비교합니다 (다른 사람이 저장한 값은 '다시 불러오기'를 눌러야 반영). 맞으면 자동으로 다시 불러옴."""
     saved = media_variable_saved()
     return bool(saved) and saved != hypo
 
@@ -399,10 +399,7 @@ def media_variable_summary_chip(plan: dict, cands: dict, hypo: dict):
 
 
 def media_variable_hypothesis_step(hypo: dict):
-    """2번 탭 가설이 바뀌었을 때 경고 + 규칙 후보 안내 (media_variable_step()의 윗부분)."""
-    if media_variable_is_stale(hypo):
-        st.warning("2번 가설 탭에서 고른 가설이 바뀌었어요. 오른쪽 위 '다시 불러오기'를 눌러야 새 가설로 변수를 도출해요.",
-                   icon="🔄")
+    """규칙 후보 안내 (media_variable_step()의 윗부분). 2번 탭 가설이 바뀌면 media_variable_step()이 자동으로 다시 불러옴."""
     gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
     if gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE:   # AI를 못 써서 규칙으로 만든 후보: 이유는 ⓘ에
         st.markdown(":gray-badge[규칙으로 만든 후보] AI를 쓰지 못해 가설의 If를 그대로 후보 변수와 B안으로 썼어요",
@@ -577,7 +574,7 @@ def media_variable_can_leave(warn: bool = True) -> bool:
         reason = "고른 변수·옵션이 확정한 값과 달라요. 옵션을 체크해 지금 값으로 확정해 주세요."
     else:
         reason = ("아직 확정한 단일 변수가 없어요. " + ("B안 옵션을 체크하면 확정돼요." if media_variable_loaded()
-                                                    else "오른쪽 위 '가설 불러오기'를 누르고 B안 옵션을 체크해 주세요."))
+                                                    else "2번 가설 탭에서 가설을 고른 뒤 B안 옵션을 체크해 주세요."))
     st.session_state[MEDIA_VARIABLE_LEAVE_KEY] = reason
     return False
 
@@ -700,36 +697,33 @@ def media_variable_locked_step() -> None:
 
 
 def _media_variable_start_load() -> None:
-    """'가설 불러오기' 버튼 콜백. 다음 화면 그리기에서 스피너를 띄우고 불러오도록 표시만 해 둡니다 (AI가 오래 걸릴 수 있어서)."""
+    """'다시 불러오기' 버튼 콜백. 다음 화면 그리기에서 스피너를 띄우고 불러오도록 표시만 해 둡니다 (AI가 오래 걸릴 수 있어서)."""
     st.session_state["media-hypo-loading"] = True
 
 
 def media_variable_step():
-    """하위 탭 '가설에서 변수 도출': 오른쪽 위 '가설 불러오기' 버튼 → 요약 칩(독립 변수·목표 KPI) → 후보 변수 선택·단일 변수 선정.
+    """하위 탭 '가설에서 변수 도출': 2번 탭 가설을 자동으로 불러옴 → 요약 칩(독립 변수·목표 KPI) → 후보 변수 선택·단일 변수 선정.
+    오른쪽 위 '다시 불러오기'는 다른 사람이 방금 저장한 가설을 Supabase에서 다시 읽을 때만 씁니다.
     반드시 media_render() 안에서 부릅니다."""
-    loading = st.session_state.pop("media-hypo-loading", False)
-    loaded = loading or st.session_state.get("media-hypo-loaded", False)
+    pressed = st.session_state.pop("media-hypo-loading", False)   # '다시 불러오기' 또는 2번 탭 '다음으로'
+    # 버튼 없이 자동으로 불러옴: 이번 접속에서 아직 안 불렀거나, 2번 탭에서 다른 가설을 저장했을 때.
+    # 3번 탭 내용은 다른 탭을 보고 있을 때도 같이 그려지므로, 3번 탭을 직접 눌러 들어와도 이미 불러온 화면이 보임
+    auto = not st.session_state.get("media-hypo-loaded") or media_variable_is_stale(media_variable_loaded())
     with st.container(horizontal=True, horizontal_alignment="right", key="media-hypo-load-row"):
-        st.button("↻ 다시 불러오기" if loaded else "📥 가설 불러오기", key="media-btn-hypo-load",
-                  type="secondary" if loaded else "primary", on_click=_media_variable_start_load)
+        st.button("↻ 다시 불러오기", key="media-btn-hypo-load", on_click=_media_variable_start_load)
 
-    # 버튼을 누른 직후 한 번만: 2번 탭 가설을 Supabase에서 다시 읽고 후보 묶음을 만듦 (AI를 부르면 몇 초 걸림)
-    if loading:
+    # 불러올 때만: 2번 탭 가설을 Supabase에서 다시 읽고 후보 묶음을 만듦 (같은 가설이면 AI를 다시 부르지 않음)
+    if pressed or auto:
         with st.spinner("2번 가설 탭에서 가설을 불러와 후보 변수를 만드는 중…"):
             media_variable_load()
         st.session_state["media-hypo-loaded"] = True
-        if media_variable_loaded():
+        if pressed and media_variable_loaded():   # 자동으로 불러올 때는 다른 탭을 보고 있을 수 있어 토스트를 띄우지 않음
             st.toast("가설을 불러왔어요", icon="📥")
 
     hypo = media_variable_loaded()
-    if not loaded or not hypo:
-        with st.container(border=True, key="media-hypo-empty"):
-            if loaded:   # 불러왔지만 2번 탭에 저장된 가설이 없음
-                st.markdown("**2번 탭에서 선택한 가설이 없어요**")
-                st.caption("2. 가설 수립 탭에서 가설 하나를 '선택하기'로 고른 뒤, 오른쪽 위 '다시 불러오기'를 눌러 주세요.")
-            else:
-                st.markdown("**아직 불러온 가설이 없어요**")
-                st.caption("오른쪽 위 '가설 불러오기'를 누르면 2번 가설 탭의 가설을 가져와 A/B로 바꿀 변수를 도출해요.")
+    if not hypo:   # 2번 탭에 저장된 가설이 없음: 요약 칩과 같은 모양·자리의 안내 칩
+        with st.container(key="media-hypo-summary"):
+            st.markdown(":gray-badge[가설 없음] 2번 가설 탭에서 가설을 고르고 '다음으로'를 누르면 여기로 불러와요")
         return
 
     # key="media-hypo-box": media_style.css의 나타나는 애니메이션(.st-key-media-hypo-box)

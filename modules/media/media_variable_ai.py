@@ -1,5 +1,5 @@
 # 3. 매체 제작 > 가설에서 변수 도출: 가설 하나로 후보 변수 묶음 만들기 (화면 코드 없음)
-# 화면(표·버튼)은 media_variable.py에서 그립니다. '가설 불러오기'를 누를 때만 부릅니다.
+# 화면(표·버튼)은 media_variable.py에서 그립니다. 가설을 불러올 때만 부릅니다.
 # - 어떤 가설이 와도 후보 묶음을 돌려줍니다: AI(Gemini/OpenAI)로 만들고, 키가 없거나 실패하면 규칙으로 만듭니다.
 # - 묶음 모양은 예시 파일 data/media_variable_candidates.json의 한 묶음과 같습니다 {"kpi", "note", "variables"}.
 #   AI 묶음에는 가설 콜아웃에 보일 짧은 If·Because("short")가 더 붙습니다 (규칙 묶음은 빈 dict).
