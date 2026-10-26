@@ -219,6 +219,21 @@ def media_s2_gen_validate(raw: str, plan: dict, mode: str) -> dict | None:
             "fields": fields, "slot_field": slot_field, "mode": mode, "notes": str(data.get("notes") or "").strip()}
 
 
+MEDIA_S2_TRANSLATE_SYSTEM = """너는 사진 촬영 프롬프트 번역가야. 영어 프롬프트를 자연스러운 한국어로 옮겨.
+- 줄 수와 줄 순서는 그대로. 줄 앞 칸 이름은 '피사체(Subject):', '구도(Composition):', '조명(Lighting):',
+  '배경(Background):', '스타일(Style):', '제외(Negative):'처럼 한국어 뒤 괄호에 영어를 남겨.
+- [강조할 부분]으로 준 영어 문구를 옮긴 한국어 부분은 [[ ]]로 감싸 (한 번만).
+- 설명이나 따옴표 없이 번역문만 답해."""
+
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def media_s2_translate(text: str, mark: str = "") -> str:
+    """영어 프롬프트 → 한국어 번역 (같은 문장은 하루 동안 다시 부르지 않음). mark를 옮긴 부분은 [[ ]]로 감싸서 돌려줌.
+    실패하면 RuntimeError (화면에서 경고)."""
+    message = f"[영어 프롬프트]\n{text}" + (f"\n\n[강조할 부분]\n{mark}" if mark else "")
+    return media_s2_ai_call(MEDIA_S2_TRANSLATE_SYSTEM, message).strip()
+
+
 def media_s2_generate(plan: dict, mode: str) -> dict:
     """OpenAI로 A·B 프롬프트 만들기. JSON이 틀리면 한 번만 다시 요청하고, 또 틀리면 ValueError.
     호출 자체가 실패하면 RuntimeError (화면에서 경고로 보여 줌)."""

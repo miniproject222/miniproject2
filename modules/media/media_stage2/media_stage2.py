@@ -21,7 +21,8 @@ from modules.media.media_handoff import (MEDIA_HANDOFF_PROMPT_SAMPLE, MEDIA_HAND
                                          media_handoff_fill, media_handoff_prompt, media_handoff_set_prompt)
 from modules.media.media_stage2.media_stage2_ai import (MEDIA_S2_AI_KEY, MEDIA_S2_OPENAI_MODEL, media_s2_ai_material,
                                                         media_s2_ai_ready, media_s2_ai_run, media_s2_forbidden_hits,
-                                                        media_s2_generate, media_s2_listing, media_s2_mode)
+                                                        media_s2_generate, media_s2_listing, media_s2_mode,
+                                                        media_s2_translate)
 # 1단계(min)가 다른 하위 탭용으로 만든 함수: 확정한 A/B 설계 + 상태, '① 으로 가서 확정하기' 버튼 콜백
 from modules.media.media_variable import media_variable_confirmed_plan, media_variable_go_step
 
@@ -206,6 +207,27 @@ def media_s2_marked(text: str, slot: str) -> str:
     return f'<div class="media-s2-view">{body}</div>'
 
 
+@st.dialog("프롬프트 번역본", width="medium")
+def _media_s2_ko_dialog(name: str, text: str, slot: str) -> None:
+    """'번역본 보기' 팝업: 위에 영어 프롬프트(독립 변수 빨간 밑줄), 아래에 한국어 번역 (✕로 닫힘)."""
+    st.markdown(f"**프롬프트 {name} · {'대조군' if name == 'A' else '실험군'}**")
+    st.markdown('<div class="media-s2-ko-label">영어 (원문)</div>' + media_s2_marked(text, slot).replace(
+        'class="media-s2-view"', 'class="media-s2-view media-s2-view-auto"'), unsafe_allow_html=True)
+    try:
+        with st.spinner("한국어로 옮기는 중이에요…"):
+            ko = media_s2_translate(text, slot)
+    except RuntimeError as err:
+        st.warning(f"번역하지 못했어요: {err}")
+        return
+    # 번역문의 [[ ]] 부분(독립 변수)에 원문과 같은 빨간 밑줄
+    head, _, rest = ko.partition("[[")
+    mid, _, tail = rest.partition("]]")
+    body = (f'{escape(head)}<span class="media-s2-var">{escape(mid)}</span>{escape(tail)}' if rest and mid
+            else escape(ko.replace("[[", "").replace("]]", "")))
+    st.markdown(f'<div class="media-s2-ko-label">한국어 (번역)</div>'
+                f'<div class="media-s2-view media-s2-view-auto">{body}</div>', unsafe_allow_html=True)
+
+
 def _media_s2_toggle_edit(name: str) -> None:
     """'수정하기' / '수정 완료' 버튼 콜백: 그 칸을 입력 칸 ↔ 보기 화면(빨간 밑줄)으로 바꿈."""
     key = f"media-s2-edit-{name}"
@@ -246,7 +268,8 @@ def media_s2_refine_section(gen: dict, plan: dict) -> tuple[str, str, bool]:
         editing = st.session_state.get(f"media-s2-edit-{name}", False)
         with col:
             with st.container(border=True, key=f"media-s2-prompt-box-{name}"):
-                st.markdown(f'<div class="media-s2-sum">{summary[name]}</div>', unsafe_allow_html=True)
+                # 안쪽 div 하나로 감싸야 세로 가운데 정렬할 때 'A · 현재 (대조군) : …'가 한 줄로 이어짐
+                st.markdown(f'<div class="media-s2-sum"><div>{summary[name]}</div></div>', unsafe_allow_html=True)
                 st.markdown(f"**프롬프트 {name} · {'대조군' if name == 'A' else '실험군'}**")
                 if editing:   # 수정 중: 입력 칸 (고치면 다른 칸 같은 부분도 같이 바뀜)
                     prompts[name] = st.text_area(f"프롬프트 {name}", key=key, height=230, label_visibility="collapsed",
@@ -261,6 +284,10 @@ def media_s2_refine_section(gen: dict, plan: dict) -> tuple[str, str, bool]:
                               icon=":material/check:" if editing else ":material/edit:",
                               on_click=_media_s2_toggle_edit, args=(name,),
                               help=None if editing else "고치면 다른 칸의 같은 부분도 같이 바뀌어요 (빨간 밑줄 부분은 그대로)")
+                    st.button("번역본 보기", key=f"media-s2-btn-ko-{name}", type="secondary", icon=":material/translate:",
+                              disabled=not media_s2_ai_ready(), on_click=_media_s2_ko_dialog,
+                              args=(name, prompts[name], draft[f"slot_{name.lower()}"]),
+                              help="영어 프롬프트와 한국어 번역을 팝업으로 보여 줘요 (OpenAI 번역)")
 
     st.markdown(f'<div class="media-s2-ab-var">🎯 <span>독립 변수</span> : <b>{escape(plan["variable"])}</b></div>',
                 unsafe_allow_html=True)
