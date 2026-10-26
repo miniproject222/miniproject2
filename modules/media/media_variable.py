@@ -62,7 +62,8 @@ MEDIA_VARIABLE_SOLUTION_OPEN_KEY = "media-variable-solution-open"   # 솔루션 
 MEDIA_VARIABLE_VERDICT_BADGE = {MEDIA_VARIABLE_PASS: "green", MEDIA_VARIABLE_NOT_IMAGE: "blue", MEDIA_VARIABLE_NO_B: "blue"}
 MEDIA_VARIABLE_SHOW = 3   # 변수 블럭을 보여 줄 수 (가설·후보 목록이 바뀌어도 이 수만큼만)
 MEDIA_VARIABLE_VAR_KEY = "media-variable-var"       # 사용자가 블럭에서 고른 변수 이름 (session_state)
-MEDIA_VARIABLE_A_KEEP = "지금 사진 · 유지"   # A 카드 배지 (지금은 A를 항상 지금 메인 이미지로 둠. 2단계 media_s2_mode()의 "keep")
+# A 카드 배지 {plan["a_mode"]: 글자}. a_mode는 1단계만 정함(media_handoff.py), 지금은 항상 keep
+MEDIA_VARIABLE_A_BADGE = {"keep": "지금 사진 · 유지", "new": "새 기준 사진"}
 MEDIA_VARIABLE_LEAVE_KEY = "media-variable-need-confirm"   # ①을 떠나려다 막혔을 때 경고창에 보일 이유 (session_state)
 
 
@@ -496,7 +497,7 @@ def media_variable_ab_step(plan: dict, price: str, defaults: list[str], cands: d
     with st.container(key="media-variable-ab-cards"):
         # A 카드: 누를 수 없는 카드. 나중에 가설에 따라 A를 새로 설계하게 되면 배지와 이 카드만 바꾸면 됨
         with st.container(key="media-variable-a-card"):
-            st.markdown(f"**A · 대조군** :gray-badge[{MEDIA_VARIABLE_A_KEEP}]")
+            st.markdown(f"**A · 대조군** :gray-badge[{MEDIA_VARIABLE_A_BADGE.get(plan.get('a_mode'), MEDIA_VARIABLE_A_BADGE['keep'])}]")
             st.caption(plan["a"])
         if options:
             media_variable_b_cards(options, picked, plan)
