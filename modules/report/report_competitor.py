@@ -502,7 +502,15 @@ def report_four_problems(internal, external):
     """① 핵심 문제: 내부 요인 상위 2개 + 외부 위협 상위 2개(각 카드에 보이는 4개)를 다시 위험도 → 심각도 순으로 1~4순위.
     결과 박스는 이 중 1·2순위를 보여 주고, 카드의 같은 문제에 'N순위' 표시를 붙입니다 (internal·external 항목에 rank_label)."""
     threats = [f for f in external if f["kind"] == "위협"]
-    picked = sorted(internal[:2] + threats[:2], key=report_severity_key)
+    return report_rank_list(sorted(internal[:2] + threats[:2], key=report_severity_key), internal)
+
+
+def report_rank_list(picked, internal):
+    """정한 순서대로 1~N순위 핵심 문제를 만들고, 요인 항목에 'N순위' 표시(rank_label)를 붙입니다 (이전 표시는 지움)."""
+    for f in internal:
+        f.pop("rank_label", None)
+    for f in picked:
+        f.pop("rank_label", None)
     out = []
     for i, f in enumerate(picked, 1):
         f["rank_label"] = f"{i}순위"

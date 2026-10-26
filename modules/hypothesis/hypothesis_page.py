@@ -353,7 +353,8 @@ def hypothesis_pick_candidates(report: dict | None, limit: int = HYPOTHESIS_MAX_
             continue
         used_actions.add(key)
         picked.append(p)
-    return (picked + held)[:limit]
+    # ③ 탭까지 이어지는 문제(① 리포트 stage3.ok: 메인 이미지 B안)를 먼저, 같은 조건 안에서는 ① 순서 그대로
+    return sorted(picked + held, key=lambda p: not (p.get("stage3") or {}).get("ok"))[:limit]
 
 
 def hypothesis_action_key(problem: dict, sqp: dict | None = None) -> str:
@@ -553,8 +554,14 @@ def _hypothesis_render_candidate(index: int, problem: dict, sqp: dict | None, sa
                 args=(problem, text, ibt),
                 type="primary" if not is_saved else "secondary",
             )
+        stage3 = problem.get("stage3") if isinstance(problem.get("stage3"), dict) else None
+        stage3_badge = ""
+        if stage3:   # ① 리포트가 판정한 ③ 탭 연결 (마우스를 올리면 이유)
+            why = html.escape(str(stage3.get("why") or ""), quote=True)
+            stage3_badge = (f'<span class="hypothesis-badge hypothesis-badge-s3{"" if stage3.get("ok") else " off"}" title="{why}">'
+                            + ("③ 이미지 제작 가능" if stage3.get("ok") else "③ 연결 안 됨") + "</span> ")
         st.markdown(
-            f'<p class="hypothesis-factor-line">'
+            f'<p class="hypothesis-factor-line">' + stage3_badge
             + (f'<span class="hypothesis-badge hypothesis-badge-source">{source}</span> ' if source else "")
             + f'<span class="hypothesis-badge {badge_class}">{badge_label}</span>'
             f' <b>{html.escape(str(problem.get("title", "")), quote=False)}</b></p>',
@@ -697,8 +704,11 @@ def hypothesis_render():
         skipped = [f"① {i}순위 '{k.get('title')}' ({k.get('plan_none') or '가설 재료 없음'})"
                    for i, k in enumerate(report.get("key_problems") or [], 1)
                    if isinstance(k, dict) and k.get("title") not in cand_titles]
-        if skipped:
-            st.caption("후보에서 빠진 ① 핵심 문제: " + " · ".join(skipped))
+        if skipped:   # 평소에는 작은 물음표 아이콘만, 누르면 이유가 보임
+            with st.container(key="hypothesis-skipped"):
+                with st.popover("", icon=":material/help:", type="tertiary", help="후보에서 빠진 ① 핵심 문제 보기"):
+                    st.markdown("**후보에서 빠진 ① 핵심 문제**")
+                    st.markdown("\n".join(f"- {s}" for s in skipped))
 
     # 오른쪽 끝 아이콘 줄: 열린 가설 것만, 칸 바깥에 (화면에 고정)
     hypothesis_render_side(opened, candidates[opened], sqp, saved)

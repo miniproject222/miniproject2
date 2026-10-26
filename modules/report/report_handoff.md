@@ -36,7 +36,9 @@ Keepa API(마지막 조회값) · Open-Meteo   ┘                              
 | `seori_profile.qmax_ad`, `qmax_note` | ③ 광고 소재 | 광고에 써도 되는 Q-max 문구 (qmax의 원단·원사 수치는 광고 금지) |
 | `sqp.kpi_goal`, `kpi_goal_basis` | ②·③ | 목표 배수 = 문제 없는 검색어에서 우리 배수 중앙값 (지금 0.98, 고정 0.8 아님) |
 | `analyzed_on`, `previous` | ① (내부용) | 분석한 날, 이전 분석의 날짜·데이터 기준·1·2순위 제목 (이전 분석 대비 문구용) |
-| `key_problems` | ② 가설 | 핵심 문제 1~4순위 (내부 상위 2 + 외부 위협 상위 2를 위험도 → 심각도 점수 순, `severity`: score·data·urgency·gap·basis) + 가설 질문 `question` · `plan` · `problems` 앞 4개와 같은 순서 |
+| `key_problems` | ② 가설 | 핵심 문제 1~4순위 (2026-10-26부터 1·2순위 = ② 가설 재료가 있고 이미지로 고칠 수 있는 문제 중 위험도 → 심각도 순, `image_fix`: kind·title·action·use / 3순위부터 내부 상위 2 + 외부 위협 상위 2를 위험도 → 심각도 점수 순, `severity`: score·data·urgency·gap·basis) + 가설 질문 `question` · `plan` · `problems` 앞 4개와 같은 순서 |
+| `image_fixes` | ② 가설 · ③ 광고 소재 | 이미지로 고칠 수 있는 문제 목록 `title`·`detail`·`action`·`use`(쓰는 탭)·`rank_label`(위험도 순위와 연결되면 'N순위')·`source` (2026-10-26 추가, report_image.py) |
+| `problems[*].stage3` | ② 가설 | ① → ② → ③ 연결 판정 `{ok, why}` — ok = ② 가설 재료가 있고 ③ 탭이 지금 만드는 메인 이미지로 해결하는 문제 (② 후보 순서·배지, 2026-10-26 추가) |
 | `opportunities` | ② 가설 | 외부 기회 |
 | `review_analysis` | ② 가설 | 리뷰 문제 근거·목표 (`seori`, `leader`, `five_star_needed`, `findings`, `metric`, `target`, `rule`, `shop`). `shop` = 자사몰 리뷰 요약(가정: SleepCOOL 공식몰 Trusted Shops 실제 리뷰): 상점 평점·리뷰 수, 냉감 리뷰 주제별 건수·예시 — ③ 광고 문구 기대 관리용, Amazon 리뷰 수에는 안 더함 |
 | `seori_profile` | ③ 광고 소재 | 서리 제품·가격(SleepCOOL 실적)·판매 채널·Q-max·인증(`certs`)·시험(`tests`)·강점·약점·Amazon 수수료 추정(`amazon_fees`)·체온 광고 규칙(`body_temp_rule`) |

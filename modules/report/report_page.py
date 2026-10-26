@@ -24,9 +24,11 @@ REPORT_DIR = Path(__file__).resolve().parent   # 내 폴더 (images/, data/ 경�
 
 REPORT_LEVEL_DOTS = {"높음": "●●●", "중간": "●●○", "낮음": "●○○"}
 REPORT_LEVEL_CLASS = {"높음": "high", "중간": "mid", "낮음": "low"}
-REPORT_FACTOR_HEIGHT = 250   # 내부·외부 요인 카드 높이(px): 두 카드를 같게 고정 (결과 박스와 함께 한 화면에 들어오도록)
+REPORT_TOP_HEIGHT = 560   # 본문 50:50 두 카드 높이(px): 왼쪽 1순위·오른쪽 2순위 자세히 카드를 같게 (넘치면 카드 안 스크롤)
 
 
+REPORT_HELP_RULE = ("**순위 기준**: ② 가설로 만들어 ③ 탭에서 바로 제작할 수 있는 문제(지금 ③은 메인 이미지)를 먼저, "
+                    "그다음 이미지(서브·광고 배너 문구)로 고칠 수 있는 문제, 같은 조건 안에서는 위험도 → 심각도 순. 3순위부터는 다른 문제여도 됨")
 REPORT_LOAD_MIN_SEC = 1.0   # 불러오기 로딩 표시 최소 시간 (초): 너무 빨리 끝나도 '불러오는 느낌'이 나게
 REPORT_LOADED_KEY = "report-loaded"   # 이번 접속에서 '불러오기'를 눌렀는지 (누르기 전에는 화면을 비워 둠)
 
@@ -38,6 +40,8 @@ def report_render():
     with st.container(horizontal=True, vertical_alignment="center", key="report-head"):
         with st.container(key="report-head-title"):
             ui.page_header("1. 문제 분석", "Keepa·경쟁사 DB·검색어 분석으로 서리의 내부·외부 문제를 찾아 위험도 순으로 정리해요.")
+        with st.container(key="report-help"):   # 안내 문구는 화면에 늘어놓지 않고 이 물음표 하나에 모음 (내용은 아래에서 채움)
+            help_box = st.popover("", icon=":material/help:", type="tertiary", help="순위 기준 · 저장 상태 안내")
         st.button("불러오기", icon=":material/download:", key="report-btn-load", on_click=report_click_load,
                   help="Keepa·경쟁사 DB·검색어 분석으로 문제 분석 결과를 만듭니다")
         st.button("다음으로", icon=":material/arrow_forward:", key="report-btn-save", type="primary", disabled=not loaded,
@@ -47,7 +51,7 @@ def report_render():
     if st.session_state.pop("report-saved-toast", False):
         st.toast("리포트를 저장하고 ② 가설 탭으로 넘어왔어요", icon=":material/check_circle:")
     if not loaded:
-        report_show_empty()
+        report_show_empty(help_box)
         return
 
     just = st.session_state.pop("report-just-loaded", False)
@@ -74,18 +78,22 @@ def report_render():
     position_kpis = report_ga4_kpis(ga4) if ga4 else data["position_kpis"]
     kpis = report_sqp_kpis(sqp) if sqp else position_kpis
 
-    # 본문: 문제 분석 결과(1·2순위) → 내부·외부 요인. 세부 내용은 오른쪽 끝 아이콘을 누르면 지금 화면 위에 창으로 열림
-    report_show_key_problems(data)
-    left, right = st.columns(2)
-    with left:
-        report_show_internal(data)
-    with right:
-        report_show_external(data)
+    # 본문 50:50: 왼쪽 문제 분석 결과(1·2순위), 오른쪽 이미지로 고칠 수 있는 문제(② 가설·③ 광고 소재용).
+    # 내부·외부 요인과 세부 내용은 오른쪽 끝 아이콘을 누르면 지금 화면 위에 창으로 열림
+    left, right = st.columns(2, gap="medium")
+    keys = data["key_problems"]
+    for col, rank in ((left, 1), (right, 2)):
+        with col:
+            report_show_rank_card(data, keys[rank - 1] if len(keys) >= rank else None, rank)
+    report_fill_help(help_box, data)
 
     # 오른쪽 끝 아이콘 (① 탭 안에서만 보이고 화면에 고정: report_style.css .st-key-report-side)
     # 아이콘: 테마 색 한 가지로 보이는 Material 아이콘 (마우스를 올리면 이름)
     # 마우스를 올렸을 때 이름은 report_style.css의 말풍선 (.st-key-report-btn-side-이름)
-    buttons = [("pdf", ":material/picture_as_pdf:", report_dialog_problems, (data, summary, kpis, steps, utm_rows)),
+    buttons = [("internal", ":material/domain:", report_dialog_internal, (data,)),
+               ("external", ":material/public:", report_dialog_external, (data,)),
+               ("image", ":material/image:", report_dialog_image_fixes, (data,)),
+               ("pdf", ":material/picture_as_pdf:", report_dialog_problems, (data, summary, kpis, steps, utm_rows)),
                ("sqp", ":material/manage_search:", report_dialog_sqp, (sqp, kpis)),
                ("comp", ":material/leaderboard:", report_dialog_competitors, (data, position_kpis, sqp)),
                ("ab", ":material/science:", report_dialog_ab, (data,))]
@@ -97,7 +105,7 @@ def report_render():
                 dialog(*args)
 
 
-def report_show_empty():
+def report_show_empty(help_box):
     """'불러오기' 전 기본 틀: 결과 박스(1·2순위)와 내부·외부 요인 카드를 같은 모양으로 그리고 내용만 비워 둠.
     분석·Keepa 조회는 하지 않고, 결과 박스 아래에 안내와 마지막 저장 리포트만 보여 줍니다."""
     blank = "&nbsp;"
@@ -105,25 +113,15 @@ def report_show_empty():
     saved = saved if isinstance(saved, dict) and saved.get("problems") else None
     last = (f'마지막 저장 리포트: {saved.get("analyzed_on", "-")} 분석 · '
             + " / ".join(p["title"] for p in (saved.get("key_problems") or [])[:2]) if saved else "저장된 리포트 없음")
-    with st.container(border=True, key="report-card-result"):
-        st.markdown(':material/flag: **문제 분석 결과** <span class="report-desc">내부·외부 요인 중 위험도 → 심각도 순 1·2순위 '
-                    "→ ② 가설 탭에서 사용</span>", unsafe_allow_html=True)
-        # 결과를 모르니 내부·외부는 쓰지 않고, 색도 기본색(report-skeleton) - 불러오면 실제 값과 색으로 바뀜
-        st.markdown('<span class="report-skeleton"></span>' + "".join(
-            report_row_html(f'<span class="report-level">{rank}순위</span>', "", blank, blank,
-                            f'<div class="report-row-q">{blank}</div>')
-            for rank in (1, 2)), unsafe_allow_html=True)
-        st.markdown(f"<div class=\"report-desc\">아직 불러오지 않음 → 오른쪽 위 '불러오기'를 누르면 분석 결과가 채워져요 · {last}</div>",
-                    unsafe_allow_html=True)
-    left, right = st.columns(2)
-    for col, title, key in ((left, ":material/domain: **내부 요인**", "internal"), (right, ":material/public: **외부 요인**", "external")):
-        with col, st.container(border=True, height=REPORT_FACTOR_HEIGHT, key=f"report-card-{key}"):
-            # 높음·중간은 불러와야 알 수 있어 '위험도'로만, 색도 기본색
-            st.markdown(f'{title} <span class="report-desc">불러오기 전</span><span class="report-skeleton"></span>', unsafe_allow_html=True)
-            st.markdown("".join(report_row_html('<span class="report-level">위험도</span>', "", blank, blank) for _ in range(2)),
-                        unsafe_allow_html=True)
-            with st.container(key=f"report-more-{key}"):
-                st.popover("더보기 0", type="tertiary", disabled=True)
+    left, right = st.columns(2, gap="medium")
+    for col, rank in ((left, 1), (right, 2)):
+        # 결과를 모르니 내부·외부·위험도는 쓰지 않고, 색도 기본색(report-skeleton) - 불러오면 실제 값과 색으로 바뀜
+        with col, st.container(border=True, height=REPORT_TOP_HEIGHT, key=f"report-card-rank{rank}"):
+            st.markdown(f':material/flag: **{rank}순위 문제**<span class="report-skeleton"></span>', unsafe_allow_html=True)
+            st.markdown(report_row_html(f'<span class="report-level">{rank}순위</span>', "", blank, blank,
+                                        f'<div class="report-row-q">{blank}</div>'), unsafe_allow_html=True)
+    with help_box:
+        st.markdown(f"**아직 불러오지 않음** → 오른쪽 위 '불러오기'를 누르면 분석 결과가 채워져요\n\n{last}\n\n" + REPORT_HELP_RULE)
 
 
 @st.dialog("핵심 문제 전체 · 리포트 다운로드", width="large", icon=":material/picture_as_pdf:")
@@ -257,6 +255,7 @@ def report_build_payload(data, summary, worst, utm_rows, utm_worst):
         "ab_test": report_store_home_ab(data["ab_upload"]),   # 홈: A/B 결과 (직접 올린 파일이 있을 때만)
         # ── 다른 탭에서 쓰도록 준비한 키 ──
         "key_problems": data["key_problems"],          # 가설: 핵심 문제 Top 3 + 가설 질문(question)
+        "image_fixes": data.get("image_fixes") or [],  # 가설·광고 소재: 이미지로 고칠 수 있는 문제 (title, detail, action, use, rank_label)
         "opportunities": [{"title": f["title"], "level": f["level"], "detail": f["detail"]}
                           for f in data["external"] if f["kind"] == "기회"],
         "seori_profile": report_store_profile(data["seori_profile"], data["ad_claims"]),   # 광고 소재: 서리 제품·가격·인증·시험
@@ -358,23 +357,98 @@ def report_row_html(badge, tag, title, detail, extra=""):
             f'<div class="report-desc report-clamp" title="{full}">{detail}</div>{extra}</div></div>')
 
 
-def report_show_key_problems(data):
-    """문제 분석 결과: 핵심 문제 1·2순위를 한 박스에 세로로. 전체(3순위)·PDF는 오른쪽 PDF 아이콘."""
-    with st.container(border=True, key="report-card-result"):
-        # report-loaded-mark: 불러온 뒤 결과 박스를 빨간 테두리로 (report_style.css), report-reveal: 불러오기 직후 글자 효과
-        st.markdown(':material/flag: **문제 분석 결과** <span class="report-desc">아래 내부 요인 2개 + 외부 요인 2개 중 위험도 → 심각도 순 1·2순위 (배지에 마우스를 올리면 점수) → ② 가설 탭에서 사용</span>'
-                    '<span class="report-loaded-mark"></span>' + ('<span class="report-reveal"></span>' if data.get("reveal") else ""),
+def report_show_rank_card(data, k, rank):
+    """N순위 문제 1개를 자세히: 근거 전체 · 심각도 · ③ 이미지로 고치기 · ② 가설 재료(행동·KPI·테스트) · 가설 탭 질문."""
+    with st.container(border=True, height=REPORT_TOP_HEIGHT, key=f"report-card-rank{rank}"):
+        st.markdown(f':material/flag: **{rank}순위 문제**<span class="report-loaded-mark"></span>' + report_reveal_mark(data),
                     unsafe_allow_html=True)
+        if not k:
+            st.markdown('<div class="report-desc">이 순위에 들어갈 문제가 없어요</div>', unsafe_allow_html=True)
+            return
+        sev = k.get("severity") or {}
+        st.markdown(
+            f'<div class="report-detail-head"><span class="report-level report-level-{REPORT_LEVEL_CLASS[k["level"]]}">{rank}순위 · {k["type"]}</span>'
+            f'<span class="report-tag">{k["group"]}</span></div>'
+            f'<div class="report-detail-title">{k["title"]}</div>'
+            f'<div class="report-desc"><b>근거</b> {k["detail"]}</div>'
+            + (f'<div class="report-desc">심각도 {sev["score"]:.2f} = {sev["basis"]}</div>' if sev else ""),
+            unsafe_allow_html=True)
+        fix = k.get("image_fix")
+        if fix:
+            st.markdown(
+                f'<div class="report-detail-box report-detail-img"><div class="report-detail-label">'
+                + (f'③ 이미지로 고치기 · {fix["kind"]} · ③ 탭에서 바로 제작' if fix.get("stage3") else f'이미지로 고치기 · {fix["kind"]}')
+                + f'<span class="report-use">{" · ".join(fix["use"])}</span></div>'
+                f'<b>{fix["title"]}</b><div class="report-desc">{fix["action"]}</div></div>', unsafe_allow_html=True)
+        else:   # 이미지로 고칠 수 있는 문제가 2개보다 적으면 다음 순서 문제로 채움 (③ 이미지 제작과는 바로 이어지지 않음)
+            st.markdown('<div class="report-detail-box"><div class="report-detail-label">이미지로 고치기</div>'
+                        '<div class="report-desc">지금 데이터로는 이미지로 고칠 문제가 이것보다 적어, 위험도 다음 순서 문제를 보여 줘요 '
+                        '(③ 이미지 제작과는 바로 이어지지 않음)</div></div>', unsafe_allow_html=True)
+        plan = next((p.get("plan") for p in data["problems"] if p["title"] == k["title"] and p.get("plan")), None)
+        if plan:
+            unit = plan.get("unit") or ""
+            rows = [("행동", plan.get("action")), ("KPI", f'{plan.get("kpi")} {plan.get("now")}{unit} → {plan.get("goal")}{unit}'),
+                    ("테스트", plan.get("test")), ("기간·표본", plan.get("period"))]
+            st.markdown('<div class="report-detail-box"><div class="report-detail-label">② 가설 재료</div>'
+                        + "".join(f'<div class="report-detail-row"><span>{a}</span><div>{b}</div></div>' for a, b in rows if b)
+                        + "</div>", unsafe_allow_html=True)
+        st.markdown(f'<div class="report-row-q">→ 가설 탭 질문: <b>{k["question"]}</b></div>', unsafe_allow_html=True)
+
+
+def report_fill_help(help_box, data):
+    """제목 줄 물음표 안: 저장 상태 · 이전 분석 비교 · 3순위 위치 · 순위 기준."""
+    saved_text = (f"**저장됨**{' (' + st.session_state['report-saved-at'] + ')' if st.session_state.get('report-saved-at') else ''} · ② 가설 탭에서 확인 가능"
+                  if data.get("saved") else "**아직 저장 안 됨** → 오른쪽 위 '다음으로'를 누르면 저장하고 ② 가설 탭으로 넘어가요")
+    rest = len(data["key_problems"]) - 2
+    lines = [saved_text] + ([data["compare"]] if data.get("compare") else []) \
+        + ([f"3순위부터 {rest}개는 오른쪽 PDF 아이콘"] if rest > 0 else []) + [REPORT_HELP_RULE]
+    with help_box:
+        st.markdown("\n\n".join(lines))
+
+
+def report_show_stage3_table(data):
+    """모든 문제의 ① → ② → ③ 연결 분석 (report_stage3_check)."""
+    rows = [{"③": "✅" if (p.get("stage3") or {}).get("ok") else "—", "문제": p["title"],
+             "② 가설": "가능" if p.get("plan") else "불가", "이유": (p.get("stage3") or {}).get("why", "")} for p in data["problems"]]
+    ok = sum(r["③"] == "✅" for r in rows)
+    st.markdown(f"**① → ② → ③ 연결 분석** · 전체 {len(rows)}개 중 ② 가설 {sum(r['② 가설'] == '가능' for r in rows)}개, ③까지 {ok}개")
+    st.dataframe(rows, hide_index=True, width="stretch", key="report-table-stage3")
+
+
+@st.dialog("이미지로 고칠 수 있는 문제 전체", width="large", icon=":material/image:")
+def report_dialog_image_fixes(data):
+    """메인 이미지·광고 이미지 문구·상세 이미지 (② 가설·③ 광고 소재에서 사용). N순위 = 화면 1·2순위 카드와 같은 문제."""
+    fixes = data.get("image_fixes") or []
+    st.caption(f"사진·배너·상세 이미지로 고칠 수 있는 것 {len(fixes)}개 · ③ 탭에서 바로 쓸 수 있는 메인 이미지가 맨 위")
+    with st.container(key="report-card-image"):
         st.markdown("".join(
-            report_row_html(f'<span class="report-level report-level-{REPORT_LEVEL_CLASS[p["level"]]}" '
-                            f'title="심각도 {p["severity"]["score"]:.2f} = {p["severity"]["basis"]}">{p["rank"]}순위 · {p["type"]}</span>',
-                            p["group"], p["title"], f'근거: {p["detail"]}',
-                            f'<div class="report-row-q">→ 가설 탭 질문: <b>{p["question"]}</b></div>')
-            for p in data["key_problems"][:2]), unsafe_allow_html=True)
-        saved_text = (f"저장됨{' (' + st.session_state['report-saved-at'] + ')' if st.session_state.get('report-saved-at') else ''} · ② 가설 탭에서 확인 가능"
-                      if data.get("saved") else "아직 저장 안 됨 → 오른쪽 위 '다음으로'를 누르면 저장하고 ② 가설 탭으로 넘어가요")
-        st.markdown(f'<div class="report-desc">{saved_text}' + (f' · {data["compare"]}' if data.get("compare") else "") + "</div>",
-                    unsafe_allow_html=True)
+            report_row_html('<span class="report-level report-level-img">'
+                            + (f'{f["rank_label"]}' if f["rank_label"] else "이미지") + "</span>",
+                            " · ".join(f["use"]), f["title"], f'근거: {f["detail"]} ({f["source"]})',
+                            f'<div class="report-row-q">→ 이렇게: <b>{f["action"]}</b></div>')
+            for f in fixes) or '<div class="report-desc">지금 데이터로는 이미지로 고칠 문제가 없어요</div>', unsafe_allow_html=True)
+    report_show_stage3_table(data)
+
+
+@st.dialog("내부 요인 전체", width="large", icon=":material/domain:")
+def report_dialog_internal(data):
+    st.caption(f'서리 = {data["seori_proxy"] or "-"} 실적 가정 · {report_keepa_age_text(data)}' + (" · 검색어 분석(가상)" if data.get("sqp") else "")
+               + " · N순위 = 문제 분석 결과 순위 대상")
+    items = data["internal"]
+    st.markdown("".join(report_factor_row(f, f["group"]) for f in items) or '<div class="report-desc">표시할 내부 요인이 없습니다.</div>',
+                unsafe_allow_html=True)
+
+
+@st.dialog("외부 요인 전체", width="large", icon=":material/public:")
+def report_dialog_external(data):
+    items = data["external"]
+    st.caption(f'위협 {sum(f["kind"] == "위협" for f in items)}개 · 기회 {sum(f["kind"] == "기회" for f in items)}개 · Keepa·Open-Meteo·독일 DB'
+               " · N순위 = 문제 분석 결과 순위 대상")
+    for kind in ("위협", "기회"):
+        sub = [f for f in items if f["kind"] == kind]
+        if sub:
+            st.markdown(f"**{'⚠️ 위협' if kind == '위협' else '✨ 기회'}** ({len(sub)})")
+            st.markdown("".join(report_factor_row(f, f"{f['kind']} · {f['group']}") for f in sub), unsafe_allow_html=True)
 
 
 def report_show_problem_rest(data, summary, kpis, steps, utm_rows):
@@ -418,12 +492,6 @@ def report_show_kpis(kpis):
                         f'<span class="report-kpi-value">{k["value"]}</span>{badge}</div>', unsafe_allow_html=True)
 
 
-def report_factor_split(items):
-    """카드에 보이는 상위 2개 (이미 위험도 → 심각도 순으로 정렬된 목록). 나머지는 더보기.
-    내부 2 + 외부 2 = 4개가 결과 박스 순위의 대상 (report_four_problems)."""
-    return items[:2], items[2:]
-
-
 def report_factor_row(f, tag):
     # 결과 박스 순위 대상(4개)이면 제목 앞에 'N순위' 표시 → 결과 박스와 카드의 같은 문제를 바로 연결
     rank = f'<span class="report-rank-chip">{f["rank_label"]}</span>' if f.get("rank_label") else ""
@@ -431,34 +499,9 @@ def report_factor_row(f, tag):
                            f'{REPORT_LEVEL_DOTS[f["level"]]} {f["level"]}</span>', tag, rank + f["title"], f["detail"])
 
 
-def report_factor_card(title, desc, items, render, key, tag=lambda f: f["group"], top=None, empty="표시할 항목이 없습니다."):
-    """같은 높이 카드: 상위 항목(읽기 쉬운 줄) + 오른쪽 아래 '더보기' (나머지 항목은 전체 내용으로).
-    top을 주면 그 항목만 위에 보이고 나머지는 더보기 (외부 요인: 위협만 순위 대상이라 기회는 더보기로)."""
-    if top is None:
-        top, rest = report_factor_split(items)
-    else:
-        rest = [f for f in items if f not in top]
-    with st.container(border=True, height=REPORT_FACTOR_HEIGHT, key=f"report-card-{key}"):
-        st.markdown(f'{title} <span class="report-desc">{desc}</span>', unsafe_allow_html=True)
-        st.markdown("".join(report_factor_row(f, tag(f)) for f in top) or f'<div class="report-desc">{empty}</div>', unsafe_allow_html=True)
-        with st.container(key=f"report-more-{key}"):
-            with st.popover(f"더보기 {len(rest)}", type="tertiary", disabled=not rest):
-                st.markdown(render(rest), unsafe_allow_html=True)
-
-
 def report_reveal_mark(data):
     """불러오기 직후 한 번만: 카드 안 글자가 차례로 나타나게 하는 표시 (report_style.css .report-reveal)."""
     return '<span class="report-reveal"></span>' if data.get("reveal") else ""
-
-
-def report_show_internal(data):
-    """내부 요인: 서리가 경쟁사 대비 부족한 점. 가장 큰 문제 2개(최대 3개) + 더보기."""
-    items = data["internal"]
-    if not items:
-        st.caption("표시할 내부 요인이 없습니다. (경쟁사 DB에서 서리 행을 찾지 못하면 비어 보입니다. 앱을 다시 켜 주세요.)")
-        return
-    report_factor_card(":material/domain: **내부 요인**", f'서리 = {data["seori_proxy"] or "-"} 실적 가정 · {report_keepa_age_text(data)}' + (" · 검색어 분석(가상)" if data.get("sqp") else "") + report_reveal_mark(data), items,
-                       lambda fs: "".join(report_factor_html(f, f["group"]) for f in fs), "internal")
 
 
 def report_show_funnel(funnel, worst):
@@ -474,25 +517,6 @@ def report_show_funnel(funnel, worst):
     st.markdown(f'<div class="report-desc">이전 기간보다 가장 크게 떨어진 단계: <b>{worst["name"]}</b> '
                 f'({worst["prev"]:.1f}% → {worst["now"]:.1f}%, {worst["diff"]:+.1f}%p, GA4)</div>',
                 unsafe_allow_html=True)
-
-
-def report_show_external(data):
-    """외부 요인: 위에는 위협 상위 2개(결과 박스 순위 대상)만, 기회와 나머지 위협은 더보기."""
-    items = data["external"]
-    threats_top = [f for f in items if f["kind"] == "위협"][:2]
-
-    def block(group):
-        html = ""
-        for kind in ("위협", "기회"):
-            sub = [f for f in group if f["kind"] == kind]
-            if sub:
-                html += f"<p><b>{'⚠️ 위협' if kind == '위협' else '✨ 기회'}</b> ({len(sub)})</p>"
-                html += "".join(report_factor_html(f, f["group"]) for f in sub)
-        return html
-
-    report_factor_card(":material/public: **외부 요인**", f'위협 {sum(f["kind"] == "위협" for f in items)}개 · 기회 {sum(f["kind"] == "기회" for f in items)}개 · '
-                       "Keepa·Open-Meteo·독일 DB" + report_reveal_mark(data), items, block, "external", tag=lambda f: f"{f['kind']} · {f['group']}",
-                       top=threats_top, empty="지금 외부 위협이 없어요 (기회는 더보기)")
 
 
 def report_keepa_age_text(data):
