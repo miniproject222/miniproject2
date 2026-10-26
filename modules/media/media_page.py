@@ -34,6 +34,7 @@ MEDIA_STEPS = [
 # '다음' 버튼을 누를 때 탭을 옮기기 전에 먼저 할 일 (탭 이름 → 함수)
 # 2026-10-25 PM 결정: ② A/B 소재 준비의 '다음' 버튼이 프롬프트 A·B를 3단계로 넘김 (따로 있던 넘기기 버튼 대신)
 # ① 단일 변수: B안 옵션을 체크(= 확정)해야 넘어감. 안 했으면 탭을 옮기지 않고 가운데 경고창
+#   (고른 변수가 이미지로 진행할 수 없는 변수면 경고창 대신 그 변수의 솔루션 팝업 → 확정하면 1번 문제 분석 탭으로)
 # (하위 탭을 직접 누르면 탭은 바뀌지만 ②~④ 내용 대신 잠금 안내가 보임 → media_render())
 MEDIA_STEP_ON_NEXT = {MEDIA_VARIABLE_TAB_LABEL: media_variable_can_leave, MEDIA_S2_TAB_LABEL: media_s2_handoff_now}
 
@@ -81,7 +82,7 @@ def media_render():
     media_load_stage_css()
     # key="media-root": media_style.css가 이 탭 안의 간격만 줄이도록 범위를 정하는 class (.st-key-media-root)
     with st.container(key="media-root"):
-        media_variable_leave_notice()   # ①을 떠나려다 막혔으면 가운데 경고창
+        media_variable_leave_notice()   # ①을 떠나려다 막혔으면 가운데 경고창, 진행 불가 변수면 솔루션 팝업
         ui.page_header("3. 매체 제작", "가설에서 변수 도출 → A/B 소재·프롬프트 → 사진·영상 초안 제작 → 외주 정리, 단계별로 넘어가요")
         tabs = st.tabs([label for label, _ in MEDIA_STEPS], key="media-step", on_change=_media_step_changed)
         for i, (tab, (_, render)) in enumerate(zip(tabs, MEDIA_STEPS)):

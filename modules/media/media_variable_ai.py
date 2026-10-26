@@ -62,6 +62,19 @@ MEDIA_VARIABLE_AI_SYSTEM = """너는 amazon.de(독일)에서 냉감패드를 파
 8. JSON만 답해. 형식은 [예시]와 같고 short를 더해: {"kpi": "...", "note": "...", "short": {"if": "...", "because": "..."}, "variables": [...]}"""
 
 
+# 이미지로 진행할 수 없는 변수(media_variable.py의 '진행 불가' 판정)를 매체 제작 대신 풀어 줄 줄글 솔루션
+MEDIA_VARIABLE_SOLUTION_MAX = 600   # 솔루션 본문 최대 글자 수 (넘으면 AI 답을 버림)
+MEDIA_VARIABLE_SOLUTION_SYSTEM = """너는 amazon.de(독일)에서 냉감패드를 파는 브랜드의 마케팅 컨설턴트야.
+가설 하나와, 그 가설에서 고른 변수 하나를 받아. 이 변수는 메인 이미지(사진·영상 제작)로는 해결할 수 없어서,
+매체 제작 대신 할 수 있는 솔루션을 줄글로 제안해야 해.
+
+반드시 지킬 것
+1. title: 솔루션을 한 줄로 (25자 안쪽, 명사형).
+2. body: 무엇을 어떻게 바꾸고, 그게 가설의 Then(목표 지표)에 왜 도움이 되는지 한국어 줄글 3~5문장. 목록·번호·마크다운 없이 문장으로만.
+3. 셀러가 Amazon Seller Central에서 직접 할 수 있는 일로 써 (예: 제목·불릿·A+ 수정, 가격·쿠폰 조정, 광고 설정).
+4. 가설·문제·리포트에 없는 수치, 인증, 효과를 지어내지 마.
+5. JSON만 답해: {"title": "...", "body": "..."}"""
+
 # ─────────────────────────────────────────────
 # 키 · AI 부르기
 # ─────────────────────────────────────────────
@@ -73,15 +86,15 @@ def media_variable_ai_secret(name: str) -> str:
         return ""
 
 
-def media_variable_ai_call(provider: str, message: str) -> str:
-    """AI 한 번 부르기 → 답 문자열. 실패하면 키가 들어가지 않은 짧은 문구로 RuntimeError."""
+def media_variable_ai_call(provider: str, message: str, system: str = MEDIA_VARIABLE_AI_SYSTEM) -> str:
+    """AI 한 번 부르기 → 답 문자열 (system: 지시문, 기본은 후보 변수 묶음). 실패하면 키가 들어가지 않은 짧은 문구로 RuntimeError."""
     key = media_variable_ai_secret(MEDIA_VARIABLE_AI_PROVIDERS[provider])
     try:
         if provider == "Gemini":
             resp = requests.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{MEDIA_VARIABLE_AI_GEMINI_MODEL}:generateContent",
                 headers={"x-goog-api-key": key, "Content-Type": "application/json"},
-                json={"systemInstruction": {"parts": [{"text": MEDIA_VARIABLE_AI_SYSTEM}]},
+                json={"systemInstruction": {"parts": [{"text": system}]},
                       "contents": [{"role": "user", "parts": [{"text": message}]}],
                       "generationConfig": {"responseMimeType": "application/json"}},
                 timeout=MEDIA_VARIABLE_AI_TIMEOUT)
@@ -90,7 +103,7 @@ def media_variable_ai_call(provider: str, message: str) -> str:
                 "https://api.openai.com/v1/responses",
                 headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
                 json={"model": MEDIA_VARIABLE_AI_OPENAI_MODEL,
-                      "input": [{"role": "system", "content": MEDIA_VARIABLE_AI_SYSTEM},
+                      "input": [{"role": "system", "content": system},
                                 {"role": "user", "content": message}]},
                 timeout=MEDIA_VARIABLE_AI_TIMEOUT)
     except requests.Timeout:
@@ -242,3 +255,55 @@ def media_variable_generate(hypo: dict, listing: dict) -> tuple[dict, str, str]:
             return cset, provider, ""
         errors.append(f"{provider} 답 형식이 맞지 않음")
     return media_variable_rule_set(hypo), MEDIA_VARIABLE_AI_RULE_SOURCE, " · ".join(errors) or "AI 키가 없음"
+
+
+# ─────────────────────────────────────────────
+# 진행 불가 변수의 줄글 솔루션
+# ─────────────────────────────────────────────
+def media_variable_solution_message(hypo: dict, variable: dict, kpi: str) -> str:
+    """솔루션을 만들 때 AI에게 보내는 글. 가설 · 문제 · 고른 변수 · 목표 지표를 칸마다 나눕니다."""
+    problem = hypo.get("problem") or {}
+    kind = MEDIA_VARIABLE_KINDS.get(variable.get("kind"), MEDIA_VARIABLE_KINDS["other"])[0]
+    blocks = [("가설", [hypo.get("text")]),
+              ("If / Because / Then", [f"If: {hypo.get('if')}", f"Because: {hypo.get('because')}",
+                                       f"Then: {hypo.get('then')}"] if hypo.get("if") else []),
+              ("문제 (1번 리포트)", [f"{k}: {problem[k]}" for k in ("title", "detail", "target", "metric") if problem.get(k)]),
+              ("고른 변수", [f"이름: {variable.get('name')}", f"종류: {kind}",
+                         f"이미지로 진행할 수 없는 이유: {variable.get('why')}", variable.get("reason")]),
+              ("목표 지표", [kpi])]
+    return "\n\n".join(f"[{title}]\n" + ("\n".join(str(x) for x in lines if x) or "(없음)") for title, lines in blocks)
+
+
+def media_variable_clean_solution(raw: str) -> dict | None:
+    """AI 답 문자열 → {"title", "body"}. 칸이 비었거나 본문이 MEDIA_VARIABLE_SOLUTION_MAX자를 넘으면 None."""
+    start, end = raw.find("{"), raw.rfind("}")
+    try:
+        data = json.loads(raw[start:end + 1]) if 0 <= start < end else None
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    title, body = str(data.get("title") or "").strip(), str(data.get("body") or "").strip()
+    if not title or not body or len(body) > MEDIA_VARIABLE_SOLUTION_MAX:
+        return None
+    return {"title": title, "body": body}
+
+
+def media_variable_solution_generate(hypo: dict, variable: dict, kpi: str) -> tuple[dict | None, str, str]:
+    """진행 불가 변수 하나 → (줄글 솔루션 {"title", "body"}, 출처 이름, AI를 못 쓴 이유).
+    키가 있는 AI를 차례로 시도하고, 모두 안 되면 (None, "", 이유). 규칙으로 대신 만들지 않습니다 (지어낸 솔루션이 되지 않게)."""
+    errors = []
+    for provider, key_name in MEDIA_VARIABLE_AI_PROVIDERS.items():
+        if not media_variable_ai_secret(key_name):
+            continue
+        try:
+            raw = media_variable_ai_call(provider, media_variable_solution_message(hypo, variable, kpi),
+                                         MEDIA_VARIABLE_SOLUTION_SYSTEM)
+        except RuntimeError as err:
+            errors.append(str(err))
+            continue
+        solution = media_variable_clean_solution(raw)
+        if solution:
+            return solution, provider, ""
+        errors.append(f"{provider} 답 형식이 맞지 않음")
+    return None, "", " · ".join(errors) or "AI 키가 없음"

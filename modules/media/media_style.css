@@ -243,6 +243,30 @@
   cursor: pointer;
 }
 
+/* 진행 불가 블럭 아랫줄 '매체 제작 대신 솔루션으로 해결 + 솔루션 보러가기' (key media-variable-solution-row-<번호>)
+   줄은 투명 '고르기' 버튼 위에 올리되 클릭은 통과시키고(줄 아무 데나 눌러도 블럭을 고름), 버튼만 누를 수 있게 함 */
+[class*="st-key-media-variable-solution-row-"] {
+  position: relative;
+  z-index: 2;
+  gap: 10px !important;
+  pointer-events: none;
+}
+
+[class*="st-key-media-variable-solution-row-"] p {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+[class*="st-key-media-variable-solution-row-"] button {
+  pointer-events: auto;
+  min-height: 0;
+  padding: 2px 12px;
+}
+
+[class*="st-key-media-variable-solution-row-"] button p {
+  color: inherit;
+}
+
 /* B안 고르기 블럭 (media_variable.py media_variable_b_box) - 변수 블럭과 같은 카드, 안에 '체크박스 + 옵션 N'을 가로로.
    옵션 사이에는 세로 구분선 (두 번째 옵션부터 왼쪽 선) */
 .st-key-media-variable-b-box {

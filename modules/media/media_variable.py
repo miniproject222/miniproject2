@@ -1,7 +1,8 @@
 # 3. 매체 제작 > 가설에서 변수 도출
 # '가설 불러오기'를 누르면 2번 탭이 저장한 가설(store "hypothesis")을 다시 읽고, 그 가설로 후보 변수 묶음을 만들어
 # (AI 또는 규칙, media_variable_ai.py) 사용자가 변수 블럭에서 A/B로 실험할 변수 하나와 그 변수의 B안을 고릅니다.
-# 어떤 변수 블럭이든 고를 수 있고, 메인 이미지로 진행할 수 없는 변수를 고르면 경고를 보여 주고 2·3단계로 넘기는 확정만 막습니다.
+# 어떤 변수 블럭이든 고를 수 있고, 메인 이미지로 진행할 수 없는 변수는 2·3단계로 넘기는 확정을 막는 대신
+# 블럭의 '솔루션 보러가기'로 AI 줄글 솔루션 팝업을 띄우고, 확정하면 1번 문제 분석 탭으로 넘깁니다.
 # 3번 탭의 하위 탭 ①(가설에서 변수 도출)에서 부릅니다.
 # 고른 A/B 설계(plan)는 1번 리포트 값으로 채워 화면에 보여 주고, 사용자가 확정하면 2단계로 넘깁니다 (media_handoff.py).
 # 바깥 값을 읽는 곳은 두 함수뿐입니다: 가설 media_variable_saved(), 리포트 media_variable_report_sqp()
@@ -11,8 +12,9 @@ import streamlit as st
 
 from common.common_store import store_get
 from modules.media.media_handoff import (MEDIA_HANDOFF_PLAN, media_handoff_clear_plan, media_handoff_plan,
-                                         media_handoff_set_plan)
-from modules.media.media_variable_ai import MEDIA_VARIABLE_AI_RULE_SOURCE, media_variable_generate
+                                         media_handoff_set_plan, media_handoff_set_solution, media_handoff_solution)
+from modules.media.media_variable_ai import (MEDIA_VARIABLE_AI_RULE_SOURCE, media_variable_generate,
+                                             media_variable_solution_generate)
 
 MEDIA_VARIABLE_TAB_LABEL = "가설에서 변수 도출"   # 하위 탭 ① 이름 (media_page.py와 다른 하위 탭의 '① 으로 가서 확정하기' 버튼이 씀)
 # '가설 불러오기'로 읽어 둔 값 (session_state). 다시 불러오기 전까지는 2번 탭에서 가설을 바꿔도 이 값을 씀
@@ -45,13 +47,14 @@ MEDIA_VARIABLE_STAGE_KIND = "main_image"   # 2·3단계(프롬프트 → 매체 
 MEDIA_VARIABLE_PASS = "✅ 이미지로 진행"
 MEDIA_VARIABLE_NOT_IMAGE = "⚠️ 이미지로 해결 불가"
 MEDIA_VARIABLE_NO_B = "⚠️ B안 없음"
-# 진행할 수 없는 변수를 골랐을 때 오른쪽 경고와 확정 줄 안내 {판정: (경고, 확정 줄 안내)}
+# 진행할 수 없는 변수를 골랐을 때 오른쪽 안내 (경고 대신, 블럭의 '솔루션 보러가기'로 이끔) {판정: 안내}
 MEDIA_VARIABLE_BLOCK_MSG = {
-    MEDIA_VARIABLE_NOT_IMAGE: ("지금은 메인 이미지 문제만 해결할 수 있어요. 이 변수의 솔루션 기능은 추후 업데이트 예정이에요.",
-                               "기능 업데이트 예정 · 지금은 메인 이미지 변수만 확정할 수 있어요"),
-    MEDIA_VARIABLE_NO_B: ("이 변수로 만들 메인 이미지 B안이 없어요. B안이 있는 메인 이미지 변수를 골라 주세요.",
-                          "이 변수로 만들 B안이 없어요 · B안이 있는 메인 이미지 변수를 골라 주세요"),
+    MEDIA_VARIABLE_NOT_IMAGE: "이미지로 바꿀 수 있는 변수가 아니에요.",
+    MEDIA_VARIABLE_NO_B: "이 변수로 만들 메인 이미지 B안이 없어요.",
 }
+MEDIA_VARIABLE_SOLUTION_LINE = "매체 제작 대신 솔루션으로 해결"   # 진행 불가 블럭 아랫줄 · 오른쪽 안내 · 확정 줄에 같이 씀
+MEDIA_VARIABLE_SOLUTION_KEY = "media-variable-solutions"       # 만든 솔루션 {"가설|변수": {"solution", "source", "error"}} (session_state)
+MEDIA_VARIABLE_SOLUTION_OPEN_KEY = "media-variable-solution-open"   # 솔루션 팝업을 띄울 변수 이름 (session_state)
 # 판정 배지 색 (Streamlit 마크다운 배지 :색-badge[...])
 MEDIA_VARIABLE_VERDICT_BADGE = {MEDIA_VARIABLE_PASS: "green", MEDIA_VARIABLE_NOT_IMAGE: "orange", MEDIA_VARIABLE_NO_B: "orange"}
 MEDIA_VARIABLE_SHOW = 3   # 변수 블럭을 보여 줄 수 (가설·후보 목록이 바뀌어도 이 수만큼만)
@@ -381,10 +384,8 @@ def media_variable_summary_chip(plan: dict, cands: dict, hypo: dict):
     """하위 탭 ①의 요약 칩 '[독립 변수] … · [🎯 목표 KPI] …' (ⓘ에 2번 탭 가설).
     ②~④의 목표 KPI 칩과 같은 모양·자리 (넓은 화면은 하위 탭 바와 같은 줄 오른쪽 끝, media_style.css).
     칩은 탭 패널 기준으로 띄우므로 나타나는 애니메이션 상자(media-hypo-box) 밖에서 부릅니다."""
-    picked, chosen = cands["picked"], cands["variable"]
+    picked = cands["picked"]
     variable = f"{plan['variable']} ({media_variable_label(picked)})" if picked else (plan["variable"] or "없음")
-    if chosen and not chosen["ok"]:   # 고른 변수가 진행할 수 없는 변수: 칩에도 표시 (이유는 아래 오른쪽 경고)
-        variable += " :orange-badge[⚠️ 진행 불가]"
     with st.container(key="media-hypo-summary"):
         st.markdown(f":violet-badge[독립 변수] {variable} · "
                     f":green-badge[🎯 목표 KPI] {media_variable_goal_text(plan, hypo)}",
@@ -404,7 +405,7 @@ def media_variable_hypothesis_step(hypo: dict):
 
 
 def _media_variable_select(name: str) -> None:
-    """변수 블럭을 누를 때 콜백. 어떤 블럭이든 그 변수로 바꿉니다 (진행할 수 없는 변수는 오른쪽 경고 + 확정만 막음).
+    """변수 블럭을 누를 때 콜백. 어떤 블럭이든 그 변수로 바꿉니다 (진행할 수 없는 변수는 오른쪽 안내 + 확정만 막음).
     고른 블럭을 다시 눌러도 선택이 풀리지 않습니다."""
     st.session_state[MEDIA_VARIABLE_VAR_KEY] = name
 
@@ -422,6 +423,12 @@ def media_variable_cards(rows: list[dict], variable: dict) -> None:
                 st.markdown(f"{mark} **{v['name']}** "
                             f":{MEDIA_VARIABLE_VERDICT_BADGE[v['verdict']]}-badge[{v['verdict']}]")
                 st.caption(v["why"])
+                if not v["ok"]:   # 진행 불가 변수: 매체 제작 대신 솔루션 (버튼은 투명 '고르기' 버튼 위에 올림, media_style.css)
+                    with st.container(horizontal=True, vertical_alignment="center",
+                                      key=f"media-variable-solution-row-{i}"):
+                        st.markdown(f":material/lightbulb: {MEDIA_VARIABLE_SOLUTION_LINE}", width="content")
+                        st.button("솔루션 보러가기", key=f"media-btn-variable-solution-{i}", type="primary",
+                                  on_click=_media_variable_open_solution, args=(v["name"],))
                 st.button(f"{v['name']} 고르기", key=f"media-variable-choose-{i}",
                           on_click=_media_variable_select, args=(v["name"],))
 
@@ -473,8 +480,9 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             + (f"\n\n{note}" if note else "")))
         if not variable:   # 후보가 없음 (왼쪽에 안내, 확정 줄에서 확정을 막음)
             return
-        if not variable["ok"]:   # 진행할 수 없는 변수: 고른 것은 그대로 두고 경고만 (확정 줄에서 확정을 막음)
-            st.warning(f"**{variable['name']}** · {MEDIA_VARIABLE_BLOCK_MSG[variable['verdict']][0]}", icon="⚠️")
+        if not variable["ok"]:   # 진행할 수 없는 변수: 경고 대신 솔루션으로 이끄는 안내 (확정 줄에서 확정을 막음)
+            st.caption(f"**{variable['name']}** · {MEDIA_VARIABLE_BLOCK_MSG[variable['verdict']]} "
+                       f"{MEDIA_VARIABLE_SOLUTION_LINE}해요. 왼쪽 블럭의 '솔루션 보러가기'를 눌러 주세요.")
             return
         if options:
             with head:
@@ -521,10 +529,13 @@ def media_variable_confirm_step(plan: dict, variable: dict):
     elif toast == "clear":
         st.toast("확정을 취소했어요. 옵션을 다시 체크해야 다음 단계로 넘어가요", icon="↩️")
     state = media_variable_confirm_state(plan)
-    if not variable.get("ok"):
-        reason = (MEDIA_VARIABLE_BLOCK_MSG[variable["verdict"]][1] if variable.get("verdict") in MEDIA_VARIABLE_BLOCK_MSG
-                  else "후보 변수가 없어요 · 2번 탭에서 다른 가설을 고르고 다시 불러와 주세요")
-        note = f":orange-badge[🚫 다음 단계 진행 불가] {reason}"
+    if not variable:
+        note = ":orange-badge[🚫 다음 단계 진행 불가] 후보 변수가 없어요 · 2번 탭에서 다른 가설을 고르고 다시 불러와 주세요"
+    elif not variable.get("ok"):   # 진행 불가 변수: 매체 제작 대신 솔루션 (확정했으면 1번 탭으로 넘겼다고 알림)
+        if media_handoff_solution().get("variable") == variable["name"]:
+            note = ":green-badge[✅ 솔루션 확정됨] 1번 문제 분석 탭으로 넘겼어요 · 다시 보려면 '솔루션 보러가기'"
+        else:
+            note = f":gray-badge[{MEDIA_VARIABLE_SOLUTION_LINE}] 솔루션을 확정하면 1번 문제 분석 탭으로 넘어가요"
     elif state == "same":
         note = ":green-badge[✅ 확정됨] 다음 단계(A/B 소재 준비부터)가 이 값을 받아요 · 체크를 풀면 확정이 취소돼요"
     elif state == "changed" and media_handoff_plan().get("variable") == variable["name"]:   # 같은 변수인데 리포트 값 등이 바뀜
@@ -547,10 +558,10 @@ def media_variable_can_leave(warn: bool = True) -> bool:
     if not warn:
         return False
     variable = media_variable_candidates()["variable"]
-    if variable and not variable["ok"]:
-        reason = ("이 변수는 지금 이미지로 해결할 수 없어 다음 단계로 갈 수 없어요 (기능 업데이트 예정). "
-                  "진행 가능한(✅) 변수를 골라 옵션을 체크해 주세요.")
-    elif state == "changed":
+    if variable and not variable["ok"]:   # 진행 불가 변수: 경고창 대신 그 변수의 솔루션 팝업
+        st.session_state[MEDIA_VARIABLE_SOLUTION_OPEN_KEY] = variable["name"]
+        return False
+    if state == "changed":
         reason = "고른 변수·옵션이 확정한 값과 달라요. 옵션을 체크해 지금 값으로 확정해 주세요."
     else:
         reason = ("아직 확정한 단일 변수가 없어요. " + ("B안 옵션을 체크하면 확정돼요." if media_variable_loaded()
@@ -568,9 +579,86 @@ def _media_variable_need_confirm_dialog(reason: str) -> None:
         st.rerun()
 
 
+def _media_variable_open_solution(name: str) -> None:
+    """진행 불가 블럭의 '솔루션 보러가기' 콜백. 그 변수를 고르고, 이번 화면에서 솔루션 팝업을 띄우도록 표시합니다."""
+    st.session_state[MEDIA_VARIABLE_VAR_KEY] = name
+    st.session_state[MEDIA_VARIABLE_SOLUTION_OPEN_KEY] = name
+
+
+def _media_variable_solution_cache_key(name: str) -> str:
+    """만든 솔루션을 기억해 둘 칸 이름 (가설이 바뀌면 같은 변수라도 다시 만듦)."""
+    return f"{media_variable_loaded().get('text', '')}|{name}"
+
+
+def _media_variable_regen_solution(name: str) -> None:
+    """솔루션 팝업의 '다시 만들기' 콜백. 기억해 둔 솔루션을 지워 팝업이 AI를 다시 부르게 합니다."""
+    st.session_state.get(MEDIA_VARIABLE_SOLUTION_KEY, {}).pop(_media_variable_solution_cache_key(name), None)
+
+
+def media_variable_goto_tab(code: str) -> None:
+    """왼쪽 탭 줄에서 code 탭을 선택 (app.py st.tabs key="main_tabs"의 탭 이름과 같은 모양: 아이콘 + 띄어쓰기를 줄바꿈 없는 공백으로).
+    위젯이 그려지기 전에 바꿔야 하므로 반드시 버튼 콜백에서 부릅니다."""
+    from common.common_layout import LAYOUT_TABS   # 순환 import를 피하려고 함수 안에서
+    tab = next((t for t in LAYOUT_TABS if t["code"] == code), None)
+    if tab:
+        st.session_state["main_tabs"] = f"{tab['icon']} {tab['label'].replace(' ', chr(160))}"
+
+
+def _media_variable_confirm_solution(solution: dict) -> None:
+    """솔루션 팝업의 '확정하고 1번 탭으로' 콜백. store("media")의 solution 칸에 저장하고 1번 문제 분석 탭으로 옮깁니다."""
+    media_handoff_set_solution(solution)
+    st.session_state["media-variable-solution-toast"] = True
+    media_variable_goto_tab("report")
+
+
+@st.dialog("매체 제작 대신 솔루션", width="large")
+def _media_variable_solution_dialog(name: str) -> None:
+    """진행 불가 변수의 줄글 솔루션 팝업. 처음 열 때 AI로 만들고(가설·변수가 같으면 다시 부르지 않음), 확정하면 1번 탭으로 넘깁니다."""
+    hypo = media_variable_loaded()
+    cands = media_variable_candidates()
+    variable = next((v for v in cands["rows"] + cands["hidden"] if v["name"] == name), None)
+    if not hypo or not variable:
+        st.markdown("가설을 다시 불러온 뒤 솔루션을 열어 주세요.")
+        return
+    cache = st.session_state.setdefault(MEDIA_VARIABLE_SOLUTION_KEY, {})
+    key = _media_variable_solution_cache_key(name)
+    if key not in cache:
+        with st.spinner("가설과 변수를 보고 솔루션을 만드는 중…"):
+            solution, source, error = media_variable_solution_generate(hypo, variable, cands["set"].get("kpi", ""))
+        cache[key] = {"solution": solution, "source": source, "error": error}
+    made = cache[key]
+    st.markdown(f":violet-badge[변수] **{name}** :{MEDIA_VARIABLE_VERDICT_BADGE[variable['verdict']]}-badge[{variable['verdict']}]")
+    st.caption(f"가설: {hypo['text']}")
+    solution = made["solution"]
+    if solution:
+        st.markdown(f"#### {solution['title']}")
+        st.markdown(solution["body"])
+        st.caption(f"{made['source']}가 가설과 변수를 보고 만든 솔루션이에요. 확정하면 1번 문제 분석 탭으로 넘겨요.")
+    else:
+        st.markdown("**솔루션을 만들지 못했어요**")
+        st.caption(f"이유: {made['error']} · AI 키를 확인한 뒤 '다시 만들기'를 눌러 주세요.")
+    saved = media_handoff_solution()
+    with st.container(horizontal=True, horizontal_alignment="right", key="media-variable-solution-actions"):
+        st.button("↻ 다시 만들기", key="media-btn-variable-solution-regen", type="secondary",
+                  on_click=_media_variable_regen_solution, args=(name,))
+        if solution:
+            payload = {"hypothesis": hypo["text"], "variable": name, "kind": variable.get("kind", ""),
+                       **solution, "source": made["source"]}
+            done = saved == payload
+            if st.button("✅ 확정됨 · 1번 탭으로" if done else "확정하고 1번 탭으로", key="media-btn-variable-solution-confirm",
+                         type="primary", on_click=_media_variable_confirm_solution, args=(payload,)):
+                st.rerun()   # 팝업을 닫고 앱 전체를 다시 그려 1번 탭으로 옮김
+
+
 def media_variable_leave_notice() -> None:
-    """①을 떠나려다 막혔으면(media_variable_can_leave가 이유를 남김) 가운데 경고창을 띄웁니다. media_render()가 매번 부릅니다."""
-    if reason := st.session_state.pop(MEDIA_VARIABLE_LEAVE_KEY, None):
+    """media_render()가 매번 부릅니다. 솔루션 팝업 표시(블럭 버튼 또는 진행 불가 변수에서 '다음')가 있으면 솔루션 팝업을,
+    ①을 떠나려다 막혔으면(media_variable_can_leave가 이유를 남김) 가운데 경고창을 띄웁니다. 솔루션을 확정한 직후면 토스트."""
+    if st.session_state.pop("media-variable-solution-toast", False):
+        st.toast("솔루션을 확정해 1번 문제 분석 탭으로 넘겼어요", icon="✅")
+    if name := st.session_state.pop(MEDIA_VARIABLE_SOLUTION_OPEN_KEY, None):
+        st.session_state.pop(MEDIA_VARIABLE_LEAVE_KEY, None)
+        _media_variable_solution_dialog(name)
+    elif reason := st.session_state.pop(MEDIA_VARIABLE_LEAVE_KEY, None):
         _media_variable_need_confirm_dialog(reason)
 
 
