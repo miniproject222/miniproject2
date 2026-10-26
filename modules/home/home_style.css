@@ -455,3 +455,83 @@
 
 /* 지금 할 일 아래 카드 3개(가설·A/B 소재·경쟁사 가격): 전체를 조금 위로 */
 .home-cards { margin-bottom: calc(26 * var(--u)); }
+
+/* 2026-10-26 PM: 레퍼런스 비율로 지구본 크게 — 구 지름 ≈ 판 높이(740)의 93% ≈ 690
+   (칸 폭 828 × 500/600 = 690), 판 가운데 · 위아래가 판 끝 가까이 (중심이 위에서 약 355) */
+.home-globe {
+  top: calc(-59 * var(--u));
+  left: calc(50% - 394 * var(--u));
+  width: calc(828 * var(--u));
+}
+
+/* 바깥 반투명 고리: 구 지름의 1.2배(≈ 828) — 판 높이보다 커서 위아래가 잘림, 구에 붙은 흰 띠 바깥에 한 겹 더 */
+.home-globe::after {
+  top: calc(414 * var(--u));
+  width: calc(828 * var(--u));
+  height: calc(828 * var(--u));
+  border-width: calc(10 * var(--u));
+  border-color: color-mix(in srgb, #FFFFFF 55%, transparent);
+}
+
+/* 2026-10-26 PM: 'ANY Currency' 레퍼런스처럼 — 옅은 빛·큰 반투명 고리는 빼고
+   지구본 조금 작게: 칸 폭 828 → 760 (구 지름 ≈ 633), 중심 위치는 그대로 (가운데 + 20, 위에서 355) */
+.home-globe {
+  top: calc(-25 * var(--u));
+  left: calc(50% - 360 * var(--u));
+  width: calc(760 * var(--u));
+}
+.home-globe::before,
+.home-globe::after { content: none; display: none; }
+
+/* (2026-10-26 PM) 얇은 선 고리(.home-orbit)는 빼고, 구를 감싼 두꺼운 반투명 흰 띠 + 간격 둔 얇은 흰 선을 SVG(home_globe_svg)로 그림 */
+
+/* 2026-10-26 PM: 굵은 흰 띠 바깥의 반투명 흰 얇은 선을 멀리 — 구 반지름(760 × 250/600 ≈ 317)의 약 1.55배 ≈ 490,
+   지름 ≈ 980 (판 높이보다 커서 위아래가 잘림). 중심은 지구본 그림 가운데 (위에서 380) */
+.home-globe::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: calc(380 * var(--u));
+  left: 50%;
+  width: calc(980 * var(--u));
+  height: calc(980 * var(--u));
+  transform: translate(-50%, -50%);
+  border: calc(2.5 * var(--u)) solid color-mix(in srgb, #FFFFFF 70%, transparent);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 2026-10-26 PM: 얇은 흰 선 + 선 위 흰 동그라미 포인트 (왼쪽 위 1개, 오른쪽 위 큰 점·작은 점 2개, 반지름 4.5·5·3).
+   CSS 테두리(border)는 배경 그림 위에 그려져 점을 반투명하게 덮어 잘려 보였음 → 테두리를 없애고,
+   선과 점을 같은 SVG 그림 하나에 그려 점이 선 위에 완전한 흰 원으로 올라가게 함 (점 테두리 없음) */
+.home-globe::after {
+  border: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 980 980'%3E%3Ccircle cx='490' cy='490' r='488.75' fill='none' stroke='white' stroke-opacity='0.7' stroke-width='2.5'/%3E%3Ccircle cx='66.7' cy='245.6' r='4.5' fill='white'/%3E%3Ccircle cx='933.0' cy='283.4' r='5' fill='white'/%3E%3Ccircle cx='945.7' cy='313.3' r='3' fill='white'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+
+/* 2026-10-26 PM: 지구본 위아래 흔들림(home-bob)과 그림자 숨쉬기(home-shadow) 없앰 */
+.home-globe-wrap, .home-globe-shadow { animation: none; }
+
+/* 2026-10-26 PM: '독일 시간 · 베를린' 옆 연락 가능 표시 (독일 오전 9시~오후 5시 🟢 연락 가능 시간, 그 밖 🔴 근무 외 시간) */
+.home-contact {
+  margin-left: calc(4 * var(--u));
+  padding: calc(2 * var(--u)) calc(9 * var(--u));
+  border-radius: 999px;
+  font-size: calc(12 * var(--u));
+  font-weight: 600;
+  color: #1E7A4E;
+  background: color-mix(in srgb, #2EB872 12%, transparent);
+  white-space: nowrap;
+}
+.home-contact.home-contact-off { color: #B4383A; background: color-mix(in srgb, #E5484D 11%, transparent); }
+
+/* 2026-10-26 PM: 라벨 옆 한국과 시차 (작게, 마우스를 올리면 '한국보다 8시간 느려요') */
+.home-gap {
+  margin-left: calc(6 * var(--u));
+  font-size: calc(11 * var(--u));
+  font-weight: 500;
+  color: var(--home-sub);
+  cursor: default;
+}
+.home-clock-sub { display: flex; align-items: center; gap: calc(6 * var(--u)); }
