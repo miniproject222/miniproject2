@@ -57,6 +57,8 @@
 
 ## 지금 상태
 
+- **화면 배치 3 (2026-10-26)**: 위쪽 A·B 카드를 없애고 각 프롬프트 박스 맨 위에 A·현재 / B·제안 요약(`.media-s2-sum`). 맨 위 제목 '📝 A안·B안 프롬프트 만들기' + (?) 팝오버(`media-s2-help`, 성과 측정 설명). 박스는 평소 **보기 화면**(`media_s2_marked()`, 독립 변수 부분 빨간 밑줄 `.media-s2-var`)이고 '수정하기'를 누르면 입력 칸. 박스 아래 🎯 독립 변수 줄 → 도구 줄(왼쪽 '리포트에서 받은 규칙 ↗'·'AI 다듬기 목록 보러가기 ↗' 연회색 알약, 오른쪽 'A·B 다시 만들기'·그라데이션 'AI로 다듬기'). AI 다듬기 결과는 아래 펼침 대신 **팝업**(`_media_s2_ai_dialog`, 다듬기 직후 자동, 목록 버튼으로 다시 열기)
+
 - **A·B 프롬프트 만들기 (2026-10-25 밤, PM)**: ①에서 확정한 A/B(`media_variable_confirmed_plan()`)로 OpenAI가 **수업 형식 6줄**(Subject·Composition·Lighting·Background·Style·Negative, `MEDIA_S2_FIELDS`)의 A 프롬프트를 먼저 만들고, **독립 변수가 들어간 줄 하나만 바꿔 B**를 만듦 (`media_s2_generate()`, 지시문 `MEDIA_S2_GEN_SYSTEM`). 그 줄 = `{slot}`이라 3단계 약속(`base`·`slot_a`·`slot_b`·`fixed`) 그대로 넘어감
   - A를 '지금 메인 이미지 그대로'(keep) 쓸지 '새로 설계'(new)할지는 자동 판단 (`media_s2_mode()`: 확정한 A = 리포트의 지금 메인 이미지면 keep). 실제 A 사진은 쓰지 않음 (PM 결정)
   - 처음 열 때 한 번 만들고 session_state(`media-s2-gen`)에 보관 → 3단계로 갔다 와도 그대로. ①에서 다시 확정하면 새로 만듦, 'A·B 다시 만들기' 버튼으로 다시 만들 수 있음. 키가 없거나 실패하면 예시 프롬프트 + 경고
