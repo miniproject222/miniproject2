@@ -518,3 +518,208 @@
   margin-top: 0;
 }
 
+/* 제목 줄 물음표: 제목 바로 오른쪽, 제목 글자 아래쪽에 맞춤 (버튼·토글은 오른쪽 끝 그대로) - ①·②·④ 같은 규칙 */
+.st-key-report-head .st-key-report-head-title {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-report-head .st-key-report-help {
+  flex: 1 1 auto !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+
+/* 1·2순위 카드 배지 줄 오른쪽 끝 물음표(근거) */
+[class*="st-key-report-rank-head"] > div:first-child { flex: 1 1 auto; }
+[class*="st-key-report-rank-head"] .stPopover button {
+  min-height: 0;
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+[class*="st-key-report-rank-head"] .stPopover button span[data-testid="stIconMaterial"] { color: var(--report-purple, #7B6CF2); }
+
+/* (위 규칙 보완) 폭은 키 달린 칸을 감싼 stLayoutWrapper가 정하므로 감싸개에도 같은 규칙 */
+.st-key-report-head > [data-testid="stLayoutWrapper"]:has(> .st-key-report-head-title) {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-report-head > [data-testid="stLayoutWrapper"]:has(> .st-key-report-help) {
+  flex: 1 1 auto !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+.st-key-report-head .st-key-report-head-title .ui-title { width: auto; }
+
+/* 물음표 칸은 남는 폭만 (기본 폭 0에서 늘어남) → 버튼과 같은 줄에 머묾 */
+.st-key-report-head > [data-testid="stLayoutWrapper"]:has(> .st-key-report-help) {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+}
+.st-key-report-head { flex-wrap: nowrap !important; }
+
+/* ── ④ 광고 타이밍 색 적용 (2026-10-26): ④와 같은 공통 색(ui_theme)만 씀 ──
+   카드 = 테두리 없는 흰 카드 + 그림자 / 안쪽 상자 = ④ '오늘의 추천'(연보라)·'예산 결과'(회보라) 상자 /
+   분류 태그 = ④ 회색 알약 칩 / 위험 배지 = ④ 품절·정상 배지처럼 연한 바탕 + 진한 글자 (오른쪽 아이콘 창 안은 예전 색 그대로) */
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 {
+  border: none !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 7%, transparent);
+}
+
+/* 위험 배지: 높음 = ④ 품절·가장 더운 권역(연한 주황 + 진한 주황 글자), 중간 = ④ 더운 권역(피치), 낮음 = ④ '정상'(연두) */
+.st-key-report-card-rank1 .report-level,
+.st-key-report-card-rank2 .report-level {
+  border: none !important;
+  font-weight: 700;
+}
+.st-key-report-card-rank1 .report-level-high,
+.st-key-report-card-rank2 .report-level-high {
+  background: #FDE3D8 !important;
+  color: #B9441A !important;
+}
+.st-key-report-card-rank1 .report-level-mid,
+.st-key-report-card-rank2 .report-level-mid {
+  background: #FCDD9D !important;
+  color: var(--color-text) !important;
+}
+.st-key-report-card-rank1 .report-level-low,
+.st-key-report-card-rank2 .report-level-low {
+  background: #EEF2DD !important;
+  color: #5E6B2E !important;
+}
+
+/* 분류 태그(소재 개선·규제): ④ '7일 합계' 같은 회색 알약 칩 */
+.st-key-report-card-rank1 .report-tag,
+.st-key-report-card-rank2 .report-tag {
+  background: var(--color-bg) !important;
+  color: var(--color-sub) !important;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+/* ③ 이미지로 고치기: ④ '오늘의 추천' 상자 (연보라 바탕) */
+.st-key-report-card-rank1 .report-detail-img,
+.st-key-report-card-rank2 .report-detail-img {
+  background: color-mix(in srgb, #C4C3E3 35%, #FFFFFF) !important;
+  border-radius: 12px;
+}
+
+/* ② 가설 재료: ④ '예산 결과' 상자 (회보라 바탕) */
+.st-key-report-card-rank1 .report-detail-box:not(.report-detail-img),
+.st-key-report-card-rank2 .report-detail-box:not(.report-detail-img) {
+  background: var(--color-bg) !important;
+  border-radius: 14px;
+}
+
+/* 상자 머리 글자: ④ 상자 머리(작은 회색 글자), 쓰는 곳(② 가설 · ③ 소재)은 ④ 강조 글자(진한 보라) */
+.st-key-report-card-rank1 .report-detail-label,
+.st-key-report-card-rank2 .report-detail-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-sub);
+}
+.st-key-report-card-rank1 .report-use,
+.st-key-report-card-rank2 .report-use {
+  color: var(--color-text) !important;
+  font-weight: 700;
+}
+
+/* 불러오기 전 기본 틀 배지도 ④ 칩처럼 회색 */
+.st-key-report-card-rank1:has(.report-skeleton) .report-level,
+.st-key-report-card-rank2:has(.report-skeleton) .report-level {
+  background: var(--color-bg) !important;
+  color: var(--color-sub) !important;
+}
+
+/* 오른쪽 아이콘 줄: ④ 카드처럼 테두리 없이 그림자 */
+.st-key-report-side {
+  border: none !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+/* ── 1·2순위 카드: 빈 공간을 쓰고 글씨를 키움 (2026-10-26) ──
+   글씨·여백을 화면 높이(vh)에 맞춰 키움 → 높은 화면에서는 크게, 작은 화면(약 700px)에서는 예전 크기 그대로라 스크롤이 생기지 않음.
+   카드 최대 높이도 640 → 760px (높은 화면에서 아래 빈칸을 카드가 씀) */
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 {
+  height: clamp(360px, calc(100vh - 215px), 760px) !important;
+  gap: clamp(0.45rem, 1.2vh, 1rem);
+  padding: clamp(14px, 2vh, 22px) clamp(16px, 2.1vh, 26px) !important;
+}
+.st-key-report-card-rank1 .report-level,
+.st-key-report-card-rank2 .report-level {
+  font-size: clamp(12px, 1.6vh, 14.5px);
+  padding: 2px 11px;
+}
+.st-key-report-card-rank1 .report-tag,
+.st-key-report-card-rank2 .report-tag {
+  font-size: clamp(11.5px, 1.5vh, 13.5px);
+  padding: 2px 10px;
+}
+.st-key-report-card-rank1 .report-detail-title,
+.st-key-report-card-rank2 .report-detail-title {
+  font-size: clamp(17px, 2.4vh, 22px);
+  line-height: 1.35;
+}
+.st-key-report-card-rank1 .report-detail-box,
+.st-key-report-card-rank2 .report-detail-box {
+  margin: clamp(6px, 1vh, 12px) 0;
+  padding: clamp(10px, 1.8vh, 18px) clamp(12px, 2vh, 22px);
+}
+.st-key-report-card-rank1 .report-detail-label,
+.st-key-report-card-rank2 .report-detail-label {
+  font-size: clamp(11.5px, 1.55vh, 14px);
+  margin-bottom: clamp(4px, 0.8vh, 8px);
+}
+.st-key-report-card-rank1 .report-detail-box b,
+.st-key-report-card-rank2 .report-detail-box b {
+  font-size: clamp(13px, 1.9vh, 17px);
+}
+.st-key-report-card-rank1 .report-desc,
+.st-key-report-card-rank2 .report-desc {
+  font-size: clamp(12.5px, 1.75vh, 15.5px);
+}
+.st-key-report-card-rank1 .report-detail-row,
+.st-key-report-card-rank2 .report-detail-row {
+  grid-template-columns: clamp(72px, 9.5vh, 96px) 1fr;
+  font-size: clamp(12.5px, 1.75vh, 15.5px);
+  padding: clamp(3px, 0.6vh, 7px) 0;
+}
+.st-key-report-card-rank1 .report-row-q,
+.st-key-report-card-rank2 .report-row-q {
+  font-size: clamp(12px, 1.7vh, 15px);
+}
+
+/* (보완) 높은 화면에서 글씨 상한에 걸려 카드가 덜 차던 것: 상한·줄 간격을 조금 더 */
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 { gap: clamp(0.45rem, 1.4vh, 1.1rem); }
+.st-key-report-card-rank1 .report-detail-title,
+.st-key-report-card-rank2 .report-detail-title { font-size: clamp(17px, 2.55vh, 23.5px); }
+.st-key-report-card-rank1 .report-detail-box,
+.st-key-report-card-rank2 .report-detail-box { padding: clamp(10px, 2vh, 20px) clamp(12px, 2.2vh, 24px); }
+.st-key-report-card-rank1 .report-detail-box b,
+.st-key-report-card-rank2 .report-detail-box b { font-size: clamp(13px, 2vh, 18px); }
+.st-key-report-card-rank1 .report-desc,
+.st-key-report-card-rank2 .report-desc,
+.st-key-report-card-rank1 .report-detail-row,
+.st-key-report-card-rank2 .report-detail-row { font-size: clamp(12.5px, 1.85vh, 16.5px); }
+.st-key-report-card-rank1 .report-detail-row,
+.st-key-report-card-rank2 .report-detail-row { padding: clamp(3px, 0.75vh, 8px) 0; }
+.st-key-report-card-rank1 .report-row-q,
+.st-key-report-card-rank2 .report-row-q { font-size: clamp(12px, 1.8vh, 16px); }
+
+/* 줄바꿈은 단어 단위로 ('0.63 / 배)', '위 / 험'처럼 단어 중간에서 끊기지 않게, 너무 긴 단어만 예외) */
+.st-key-report-card-rank1 .report-detail-title,
+.st-key-report-card-rank2 .report-detail-title,
+.st-key-report-card-rank1 .report-detail-box,
+.st-key-report-card-rank2 .report-detail-box,
+.st-key-report-card-rank1 .report-row-q,
+.st-key-report-card-rank2 .report-row-q {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}

@@ -180,10 +180,40 @@ def report_keepa_auto_lock():
     return threading.Lock()
 
 
+# '오늘 아침 자동 갱신을 한 날'을 남기는 Supabase 표 (RULES.md: 직접 저장은 report_ 표에만 → common_store 아님)
+# 표 구성은 common_store와 같음 (key text primary key, value jsonb, updated_at). 표가 아직 없으면 PC 안 잠금만으로 막음
+REPORT_KEEPA_AUTO_TABLE = "report_keepa_auto"
+REPORT_KEEPA_AUTO_KEY = "daily"
+
+
+def report_keepa_auto_shared_day():
+    """다른 PC(팀원·배포 앱)까지 포함해 오늘 아침 자동 갱신을 이미 했는지: report_keepa_auto 표의 날짜. 표가 없거나 연결이 안 되면 None."""
+    try:
+        from common.common_db import db_read
+        rows = db_read(REPORT_KEEPA_AUTO_TABLE, ttl=0, key=REPORT_KEEPA_AUTO_KEY)
+        return ((rows[0].get("value") or {}).get("day")) if rows else None
+    except Exception:
+        return None
+
+
+def report_keepa_auto_mark_shared(day):
+    """report_keepa_auto 표에 '오늘 아침 자동 갱신 함'을 먼저 적어 둠 (다른 PC가 같은 날 또 조회하지 않게). 표가 없거나 연결이 안 되면 넘어감."""
+    try:
+        from common.common_db import db_upsert
+        db_upsert(REPORT_KEEPA_AUTO_TABLE, {"key": REPORT_KEEPA_AUTO_KEY,
+                                            "value": {"day": day, "at": datetime.now().strftime("%Y-%m-%d %H:%M")}})
+    except Exception:
+        pass
+
+
 def _report_keepa_auto_daily_locked(day):
     snap = report_keepa_snapshot() or {}
     if snap.get("auto_day") == day:
         return f"아침 자동 갱신 완료 ({snap.get('fetched_at', day)})"
+    # 아침 자동 갱신 날짜가 PC마다 파일에만 있어서, 켜 둔 사람마다 하루 한 번씩 조회하던 문제
+    # (10/26: 이 PC 2번 + 팀원 PC 1번 = 18토큰) → report_keepa_auto 표 날짜로 팀 전체 하루 1번
+    if report_keepa_auto_shared_day() == day:
+        return "아침 자동 갱신: 오늘 다른 PC에서 이미 갱신함 (dev를 받으면 최신 값이 반영돼요)"
     usage = report_keepa_usage()
     est = report_keepa_estimate()
     if not report_keepa_secret("KEEPA_API_KEY"):
@@ -191,6 +221,7 @@ def _report_keepa_auto_daily_locked(day):
     if est > REPORT_KEEPA_AUTO_DAILY_MAX or est > usage["budget"] - usage["used"]:
         return f"아침 자동 갱신 안 함: 예상 {est}토큰 (하루 최대 {REPORT_KEEPA_AUTO_DAILY_MAX}, 남은 한도 {usage['budget'] - usage['used']})"
     asins = [p["asin"] for p in report_keepa_products(report_keepa_top_brands())]
+    report_keepa_auto_mark_shared(day)   # 조회 전에 먼저 적어 둠 (거의 동시에 연 다른 PC가 또 조회하지 않게)
     try:
         used = report_keepa_save(report_keepa_request(asins), asins, "아침 자동 갱신", auto_day=day)
     except RuntimeError as err:

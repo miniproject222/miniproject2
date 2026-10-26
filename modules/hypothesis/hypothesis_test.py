@@ -146,13 +146,13 @@ def test_core_flow() -> None:
     check(at.button(key="hypothesis-btn-save-0").disabled, "[핵심] 이미 선택된 가설 버튼은 비활성화")
     check(at.session_state["store-hypothesis"] is None, "[핵심] '선택하기'만으로는 저장 안 됨")
     check(not at.button(key="hypothesis-btn-store").disabled, "[핵심] 고르면 저장하기 활성")
-    check(any("아직 저장 안 됨" in c.value for c in at.caption), "[핵심] 저장 전 안내")
+    check(any("**아직 저장 안 됨**" in m.value for m in at.markdown), "[핵심] 저장 전 안내 (제목 옆 물음표 안)")
     at.button(key="hypothesis-btn-store").click().run()
     check(not at.button(key="hypothesis-btn-store").disabled, "[핵심] 저장 후에도 '다음으로'는 켜짐 (저장된 가설 그대로 ③으로)")
     media_tab = next(t for t in LAYOUT_TABS if t["code"] == "media")   # 탭 이름은 PM이 바꿀 수 있어 탭 목록에서 만듦
     check(at.session_state["main_tabs"] == f"{media_tab['icon']} {media_tab['label'].replace(' ', chr(160))}", f"[핵심] 저장하면 ③ 탭으로 ({at.session_state['main_tabs']!r})")
     check(at.session_state["media-hypo-loading"] is True, "[핵심] '다음으로' → ③이 가설을 바로 불러오도록 표시")
-    check(any("저장됨" in c.value for c in at.caption), "[핵심] 저장 후 '저장됨' 표시")
+    check(any("**저장됨**" in m.value for m in at.markdown), "[핵심] 저장 후 '저장됨' 표시 (제목 옆 물음표 안)")
     saved = at.session_state["store-hypothesis"]
     check(saved.get("text") == hypothesis_build_sentence(cands[0]), "[핵심] 저장 문장 = 화면 후보 문장")
     check(saved.get("hypothesis") == saved.get("text"), "[핵심] 홈이 읽는 'hypothesis' 키도 같이 저장")
