@@ -497,3 +497,89 @@
 .st-key-media-root .st-key-media-s2-btn-ai-list button p {
   color: #5E5C75 !important;
 }
+
+/* ───────── 2026-10-26 추가 수정 2 ───────── */
+
+/* (?) 버튼: 제목 글씨 바로 옆, 글씨 가운데 높이에 (버튼을 감싼 칸도 글자 높이에 맞춤) */
+.st-key-media-s2-title-row {
+  gap: 2px !important;
+  align-items: center !important;
+}
+
+.st-key-media-s2-help {
+  display: flex;
+  align-items: center;
+  height: auto !important;
+  min-height: 0 !important;
+  margin-top: 3px;
+}
+
+.st-key-media-s2-help [data-testid="stButton"],
+.st-key-media-s2-help .stButton {
+  display: flex;
+  align-items: center;
+}
+
+/* 프롬프트 독립 변수 밑줄: 1px → 1.5px */
+.media-s2-var {
+  text-decoration-thickness: 1.5px;
+}
+
+/* 'AI로 다듬기' 배경: 한 단계 진하게 */
+.st-key-media-root .st-key-media-s2-btn-refine button {
+  background: linear-gradient(90deg, #B4A8F2 0%, #9384E8 55%, #7565D9 100%) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button:hover {
+  background: linear-gradient(90deg, #A699EE 0%, #8676E2 55%, #685AD0 100%) !important;
+}
+
+/* 독립 변수 줄: 위 박스 쪽으로 올림 */
+.media-s2-ab-var {
+  margin-top: -8px;
+}
+
+/* 요약 칸 아래와 '프롬프트 A · 대조군' 제목 사이 간격 */
+.media-s2-sum {
+  margin-bottom: 8px;
+}
+
+/* ───────── 2026-10-26 번역본 보기 ───────── */
+
+/* '번역본 보기' - '되돌리기'·'수정하기'와 같은 테두리 알약 */
+.st-key-media-root .st-key-media-s2-btn-ko-A button,
+.st-key-media-root .st-key-media-s2-btn-ko-B button {
+  min-height: 30px;
+  padding: 2px 14px;
+  border-radius: 999px;
+  background: transparent !important;
+  border: 1px solid var(--color-primary) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-ko-A button p,
+.st-key-media-root .st-key-media-s2-btn-ko-B button p,
+.st-key-media-root .st-key-media-s2-btn-ko-A button span,
+.st-key-media-root .st-key-media-s2-btn-ko-B button span {
+  font-size: 13px;
+  color: var(--color-primary) !important;
+}
+
+/* 번역 팝업: 위 영어 · 아래 한국어, 높이는 글 길이만큼 */
+.media-s2-ko-label {
+  margin: 6px 0 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-sub);
+}
+
+.media-s2-view.media-s2-view-auto {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  margin-bottom: 4px;
+}
+
+/* (?) 버튼 조금 더 아래로 */
+.st-key-media-s2-help {
+  margin-top: 8px;
+}
