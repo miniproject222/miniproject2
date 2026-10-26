@@ -141,12 +141,34 @@ def media_s3_text_dialog(title: str, text: str, note: str = ""):
             st.caption(str(err))
 
 
+def media_s3_storyboard_rows(rows: list) -> list:
+    """스토리보드 표에서 빈 줄(표의 '새 줄 추가' 칸 등, 값이 모두 비었거나 None)을 빼고 None은 빈칸으로."""
+    clean = []
+    for r in rows or []:
+        if not isinstance(r, dict):
+            continue
+        r = {k: ("" if v is None else v) for k, v in r.items()}
+        if any(str(v).strip() for v in r.values()):
+            clean.append(r)
+    return clean
+
+
 @st.dialog("스토리보드 크게 보기", width="large")
 def media_s3_storyboard_dialog(rows: list, note: str = ""):
-    """'크게 보기' 버튼으로 여는 팝업 창: 스토리보드 표 전체 (고치기는 화면의 표에서)."""
+    """'크게 보기' 버튼으로 여는 팝업 창: 스토리보드 표 전체를 칸 안 줄바꿈으로 한 번에 (빈 줄·None 없이, 잘리지 않게).
+    고치기는 화면의 표에서 합니다."""
     if note:
         st.caption(note)
-    st.dataframe(rows, hide_index=True, width="stretch")
+    rows = media_s3_storyboard_rows(rows)
+    if not rows:
+        st.caption("표가 비어 있어요.")
+        return
+    order = ["장면", "길이(초)", "화면", "움직임", "자막", "피할 것"]   # 저장하면서 칸 순서가 섞여도 늘 이 순서로
+    cols = [c for c in order if c in rows[0]] + [c for c in rows[0] if c not in order]
+    head = "".join(f"<th>{html.escape(str(c))}</th>" for c in cols)
+    body = "".join("<tr>" + "".join(f"<td>{html.escape(str(r.get(c, '')))}</td>" for c in cols) + "</tr>" for r in rows)
+    st.markdown(f'<table class="media-s3-sb-table"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>',
+                unsafe_allow_html=True)
 
 
 MEDIA_S3_GUIDE = {
@@ -362,7 +384,8 @@ def media_s3_photo_section(src: dict):
 
 def _media_s3_confirm_storyboard() -> None:
     """'스토리보드 확정' 버튼 콜백. 지금 표를 확정본으로 보관합니다."""
-    st.session_state[MEDIA_S3_STORYBOARD_DONE] = list(st.session_state.get(MEDIA_S3_STORYBOARD, MEDIA_S3_STORYBOARD_SAMPLE))
+    st.session_state[MEDIA_S3_STORYBOARD_DONE] = media_s3_storyboard_rows(  # 빈 줄은 빼고 확정 (영상 프롬프트·PDF에 None이 안 들어가게)
+        st.session_state.get(MEDIA_S3_STORYBOARD, MEDIA_S3_STORYBOARD_SAMPLE))
     media_s3_store_json(MEDIA_S3_STORYBOARD_DONE, st.session_state[MEDIA_S3_STORYBOARD_DONE])
 
 
@@ -404,7 +427,7 @@ def media_s3_storyboard_section(src: dict):
     if hits:
         badge = " :red-badge[금지 표현 있음]"
         tip.append("금지 표현: " + ", ".join(hits))
-    if done is not None and done == st.session_state[MEDIA_S3_STORYBOARD]:
+    if done is not None and done == media_s3_storyboard_rows(st.session_state[MEDIA_S3_STORYBOARD]):
         badge += " :green-badge[확정됨]"
     elif done is not None:
         badge += " :orange-badge[다시 확정 필요]"
