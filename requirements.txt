@@ -1,5 +1,6 @@
 fpdf2
 higgsfield-client
+imageio-ffmpeg
 matplotlib>=3.8
 openai>=1.40
 pandas>=2.0
