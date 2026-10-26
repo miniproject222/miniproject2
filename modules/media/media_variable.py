@@ -612,11 +612,11 @@ def _media_variable_regen_solution(name: str) -> None:
 
 
 def _media_variable_confirm_solution(solution: dict) -> None:
-    """솔루션 팝업의 '확정하기' 콜백. store("media")의 solution 칸에 저장하고, 다시 그릴 때 팝업을 다시 띄워
-    PDF 저장 버튼을 보여 줍니다."""
+    """솔루션 팝업의 '확정하기' 콜백. store("media")의 solution 칸에 저장합니다. 콜백 뒤에는 팝업만 다시 그려지므로
+    팝업은 열린 채 '확정하기' 자리에 PDF 저장 버튼이 보입니다. (팝업을 다시 띄우는 표시를 남기면 앱 전체가 다시 그려질 때까지
+    지워지지 않아, 팝업을 닫고 다른 탭으로 옮길 때 팝업이 다시 뜸)"""
     media_handoff_set_solution(solution)
     st.session_state["media-variable-solution-toast"] = True
-    st.session_state[MEDIA_VARIABLE_SOLUTION_OPEN_KEY] = solution["variable"]
 
 
 @st.dialog("솔루션 제공", width="large")
@@ -638,6 +638,8 @@ def _media_variable_solution_dialog(name: str) -> None:
         cache[key] = {"solution": solution, "source": source, "error": error}
     made = cache[key]
     solution = made["solution"]
+    if st.session_state.pop("media-variable-solution-toast", False):   # 방금 '확정하기'를 누름
+        st.toast("솔루션을 확정했어요. 보고서용 PDF로 저장할 수 있어요", icon="✅")
     # 스크롤 없이 한 화면에 들어오도록: 가설 원문은 ⓘ 툴팁, 단계는 한 줄씩, 출처는 버튼 줄 왼쪽
     # key="media-variable-solution": media_style.css가 팝업 안 간격을 줄임
     with st.container(key="media-variable-solution"):
@@ -683,16 +685,13 @@ def _media_variable_solution_dialog(name: str) -> None:
                                    mime="application/pdf", key="media-btn-variable-solution-download-pdf",
                                    type="primary", icon=":material/picture_as_pdf:", on_click="ignore")
         elif solution:
-            if st.button("확정하기", key="media-btn-variable-solution-confirm",
-                         type="primary", on_click=_media_variable_confirm_solution, args=(payload,)):
-                st.rerun()   # 앱 전체를 다시 그려 확정 상태 줄을 바꾸고, 콜백이 남긴 표시로 팝업을 다시 띄움
+            st.button("확정하기", key="media-btn-variable-solution-confirm", type="primary",
+                      on_click=_media_variable_confirm_solution, args=(payload,))
 
 
 def media_variable_leave_notice() -> None:
     """media_render()가 매번 부릅니다. 솔루션 팝업 표시(블럭 버튼 또는 진행 불가 변수에서 '다음')가 있으면 솔루션 팝업을,
-    ①을 떠나려다 막혔으면(media_variable_can_leave가 이유를 남김) 가운데 경고창을 띄웁니다. 솔루션을 확정한 직후면 토스트."""
-    if st.session_state.pop("media-variable-solution-toast", False):
-        st.toast("솔루션을 확정했어요. 팝업에서 보고서용 PDF로 저장할 수 있어요", icon="✅")
+    ①을 떠나려다 막혔으면(media_variable_can_leave가 이유를 남김) 가운데 경고창을 띄웁니다."""
     if name := st.session_state.pop(MEDIA_VARIABLE_SOLUTION_OPEN_KEY, None):
         st.session_state.pop(MEDIA_VARIABLE_LEAVE_KEY, None)
         _media_variable_solution_dialog(name)
