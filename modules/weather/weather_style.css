@@ -593,3 +593,21 @@
 /* 카드 마지막 줄 아래 여백: Streamlit 글 블록의 아래 -1rem 여백 때문에 마지막 줄이 카드 끝에 잘리던 것 */
 .weather-asin-line { margin-bottom: 1rem; }
 .weather-rival:last-child { margin-bottom: 1rem; }
+
+/* 제목 줄: ① 문제 분석 탭과 같은 구조 (제목 칸이 남는 폭을 쓰고, 물음표·토글은 오른쪽) */
+.st-key-weather-head .st-key-weather-head-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.st-key-weather-head .st-key-weather-toggle-sample {
+  min-height: 40px;   /* ① 탭 '불러오기'·'다음으로' 버튼 높이와 같게 → 같은 줄 높이 */
+  align-items: center;
+}
+
+
+/* 토글 칸을 ① '불러오기'+'다음으로' 두 버튼 폭(약 220px)과 같게 → 물음표 위치도 ①과 같아짐 */
+.st-key-weather-head .st-key-weather-toggle-sample {
+  min-width: 220px;
+  justify-content: flex-end;
+}
