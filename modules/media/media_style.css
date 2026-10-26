@@ -127,7 +127,7 @@
   display: none;
 }
 
-/* '가설 불러오기' (media_variable.py) - 불러온 가설·변수 도출이 아래에서 살짝 떠오르며 나타남 */
+/* 가설 불러오기 (media_variable.py) - 불러온 가설·변수 도출이 아래에서 살짝 떠오르며 나타남 */
 .st-key-media-hypo-box {
   animation: media-fade-up 0.45s ease-out;
 }
@@ -137,8 +137,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 넓은 화면: '가설 불러오기' 버튼을 페이지 제목 줄 오른쪽 끝으로 올리고,
-   빈 카드는 하위 탭 바와 같은 줄(위쪽 끝 맞춤) 오른쪽 자리만큼만 차지
+/* 넓은 화면: '다시 불러오기' 버튼을 페이지 제목 줄 오른쪽 끝으로 올림
    (--media-tabbar-w = 하위 탭 바가 차지할 최대 폭. 탭 이름이 길어져도 탭 바는 이 폭 안에서 가로 스크롤되어
     오른쪽 카드와 겹치지 않음. 음수 여백은 실제 화면에서 잰 값. 제목이 바뀌면 맞춰야 함) */
 @media (min-width: 768px) {
@@ -168,12 +167,6 @@
 
   .st-key-media-hypo-load-row button {
     pointer-events: auto;
-  }
-
-  .st-key-media-hypo-empty {
-    width: calc(100% - var(--media-tabbar-w) - 24px) !important;
-    margin-left: auto;
-    margin-top: -78px;
   }
 }
 
@@ -297,52 +290,39 @@
   margin-top: 8px;
 }
 
-.st-key-media-variable-solution-actions .stButton button p {
+.st-key-media-variable-solution-actions .stButton button p,
+.st-key-media-variable-solution-actions .stDownloadButton button p {
   color: var(--color-card) !important;
 }
 
-/* B안 고르기 블럭 (media_variable.py media_variable_b_box) - 변수 블럭과 같은 카드, 안에 '체크박스 + 옵션 N'을 가로로.
-   옵션 사이에는 세로 구분선 (두 번째 옵션부터 왼쪽 선) */
-.st-key-media-variable-b-box {
-  gap: 0 !important;
-  width: fit-content !important;
-  max-width: 100%;
-  padding: 6px 4px;
-  background: var(--color-card);
+/* 오른쪽 '선정한 단일 변수' (media_variable.py media_variable_ab_step) - A 카드 + B안 옵션 카드, 카드 사이 8px.
+   B안 카드는 key가 media-variable-card-(on-)b-<번호>라 위 변수 블럭 CSS(흰 카드·고른 카드 진한 테두리·투명 버튼)를 그대로 씀.
+   A 카드(media-variable-a-card)는 누를 수 없어 같은 모양만 (마우스를 올려도 테두리가 바뀌지 않음) */
+.st-key-media-variable-ab-cards {
+  gap: 8px !important;
+}
+
+.st-key-media-variable-a-card {
+  gap: 2px !important;
+  padding: 8px 14px;
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 12px;
 }
 
-.st-key-media-variable-b-box [data-testid="stElementContainer"] {
-  padding: 2px 14px;
-}
-
-.st-key-media-variable-b-box [data-testid="stElementContainer"] + [data-testid="stElementContainer"] {
-  border-left: 1px solid var(--color-border);
-}
-
-.st-key-media-variable-b-box [data-testid="stCheckbox"] p {
+.st-key-media-variable-a-card p {
   font-size: 14px;
-  white-space: nowrap;
+  line-height: 1.5;
 }
 
-/* '선정한 단일 변수' 제목 줄 (media_variable.py key="media-variable-picked-head") - 제목 옆에 B안 고르기 블럭.
-   블럭 높이만큼 줄이 높아져 제목이 왼쪽 '후보 변수 선택' 제목보다 내려가므로 그만큼 끌어올림 (실제 화면에서 잰 값).
-   진행 불가 변수를 고르면 B안 블럭이 없어 줄이 낮아지므로, 블럭이 있을 때만 끌어올림 (없을 때 올리면 제목이 왼쪽보다 위로 감) */
-.st-key-media-variable-picked-head:has(.st-key-media-variable-b-box) {
-  margin-top: -8px;
+.st-key-media-variable-a-card [data-testid="stCaptionContainer"] p {
+  font-size: 12.5px;
+  color: var(--color-sub);
 }
 
-/* 선정한 단일 변수 표 (media_variable.py key="media-variable-picked") - 구분 칸('A · 대조군')은 한 줄 */
-.st-key-media-variable-picked td:nth-child(1) {
-  white-space: nowrap;
-}
-
-/* 불러오기 전 빈 상태 카드 (하위 탭 ①). 하위 탭 ②의 확정 전 빈 카드는 media_stage2_style.css(media-s2-ab-empty) */
-.st-key-media-hypo-empty {
-  border-style: dashed !important;
-  background: var(--color-bg);
-  text-align: center;
+/* 오른쪽 칸 맨 아래 확정 상태 줄 (media_variable.py media_variable_confirm_step) - 카드 바로 아래에 붙임 */
+.st-key-media-variable-confirm-row p {
+  font-size: 13px;
 }
 
 /* 목표 KPI 칩 (media_variable.py의 media_variable_kpi_chip, 하위 탭 ②~④) - 작은 알약형

@@ -1,12 +1,13 @@
 # 3. 매체 제작 > 가설에서 변수 도출
-# '가설 불러오기'를 누르면 2번 탭이 저장한 가설(store "hypothesis")을 다시 읽고, 그 가설로 후보 변수 묶음을 만들어
+# 3번 탭이 그려질 때 2번 탭이 저장한 가설(store "hypothesis")을 자동으로 읽고, 그 가설로 후보 변수 묶음을 만들어
 # (AI 또는 규칙, media_variable_ai.py) 사용자가 변수 블럭에서 A/B로 실험할 변수 하나와 그 변수의 B안을 고릅니다.
 # 어떤 변수 블럭이든 고를 수 있고, 메인 이미지로 진행할 수 없는 변수는 2·3단계로 넘기는 확정을 막는 대신
-# 블럭의 '솔루션 보러가기'로 AI 줄글 솔루션 팝업을 띄우고, 확정하면 1번 문제 분석 탭으로 넘깁니다.
+# 블럭의 '솔루션 보러가기'로 AI 줄글 솔루션 팝업을 띄우고, 확정하면 보고서에 쓸 PDF로 내려받게 합니다.
 # 3번 탭의 하위 탭 ①(가설에서 변수 도출)에서 부릅니다.
 # 고른 A/B 설계(plan)는 1번 리포트 값으로 채워 화면에 보여 주고, 사용자가 확정하면 2단계로 넘깁니다 (media_handoff.py).
 # 바깥 값을 읽는 곳은 두 함수뿐입니다: 가설 media_variable_saved(), 리포트 media_variable_report_sqp()
 import re
+from datetime import datetime
 
 import streamlit as st
 
@@ -18,7 +19,7 @@ from modules.media.media_variable_ai import (MEDIA_VARIABLE_AI_RULE_SOURCE, MEDI
                                              media_variable_solution_generate)
 
 MEDIA_VARIABLE_TAB_LABEL = "가설에서 변수 도출"   # 하위 탭 ① 이름 (media_page.py와 다른 하위 탭의 '① 으로 가서 확정하기' 버튼이 씀)
-# '가설 불러오기'로 읽어 둔 값 (session_state). 다시 불러오기 전까지는 2번 탭에서 가설을 바꿔도 이 값을 씀
+# 불러온 값 (session_state). 2번 탭에서 다른 가설을 저장하면 media_variable_step()이 자동으로 다시 불러옴
 MEDIA_VARIABLE_HYPO_KEY = "media-variable-hypo"   # 불러온 가설 (media_variable_saved()의 모양)
 MEDIA_VARIABLE_GEN_KEY = "media-variable-gen"     # 그 가설의 후보 묶음 {"text", "set", "source", "error", "version"}
 
@@ -41,7 +42,7 @@ MEDIA_VARIABLE_SQP_LABEL = "가상 데이터"
 # 판정(이미지로 진행 / 진행 불가)은 묶음에 쓰지 않고 media_variable_judge()가 규칙으로 계산합니다.
 # 변수 칸: name(블럭 이름 = 독립 변수), kind(main_image·title·price 등), if_match(가설의 If와 맞는지),
 #          fallback(제외되면 대신 쓸 곳), reason(If와 안 맞는 이유), b_options(이 변수로 만들 B안 목록)
-# B안 칸: label(B안 체크박스 이름), b, ref_prompt / 메인 이미지 규칙을 어긴 안만: rule_break, fallback
+# B안 칸: label(B안 이름), b, ref_prompt / 메인 이미지 규칙을 어긴 안만: rule_break, fallback
 # 목록 순서 = 화면에 보일 우선순위
 MEDIA_VARIABLE_STAGE_KIND = "main_image"   # 2·3단계(프롬프트 → 매체 제작)가 이어받을 수 있는 변수 종류
 # 판정 값: 2·3단계로 진행 / 메인 이미지 변수가 아님 / 메인 이미지 변수지만 B안이 없음 (뒤 둘은 골라도 확정만 막음)
@@ -61,14 +62,15 @@ MEDIA_VARIABLE_SOLUTION_OPEN_KEY = "media-variable-solution-open"   # 솔루션 
 MEDIA_VARIABLE_VERDICT_BADGE = {MEDIA_VARIABLE_PASS: "green", MEDIA_VARIABLE_NOT_IMAGE: "blue", MEDIA_VARIABLE_NO_B: "blue"}
 MEDIA_VARIABLE_SHOW = 3   # 변수 블럭을 보여 줄 수 (가설·후보 목록이 바뀌어도 이 수만큼만)
 MEDIA_VARIABLE_VAR_KEY = "media-variable-var"       # 사용자가 블럭에서 고른 변수 이름 (session_state)
-MEDIA_VARIABLE_PICK_KEY = "media-variable-pick"     # B안 체크박스 (st.checkbox) key 앞부분 (뒤에 변수 번호-B안 번호)
+# A 카드 배지 {plan["a_mode"]: 글자}. a_mode는 1단계만 정함(media_handoff.py), 지금은 항상 keep
+MEDIA_VARIABLE_A_BADGE = {"keep": "지금 사진 · 유지", "new": "새 기준 사진"}
 MEDIA_VARIABLE_LEAVE_KEY = "media-variable-need-confirm"   # ①을 떠나려다 막혔을 때 경고창에 보일 이유 (session_state)
 
 
 def media_variable_saved(fresh: bool = False) -> dict:
     """2번 가설 탭이 저장한 가설 {"text", "if", "because", "then", "problem"} (저장 전이면 빈 dict).
     새 모양("selected" 칸)을 먼저 읽고, 없으면 예전 평평한 키(text, if_text …)를 읽습니다.
-    fresh면 이번 접속에 기억해 둔 값 대신 Supabase에서 다시 읽습니다 ('가설 불러오기' 버튼)."""
+    fresh면 이번 접속에 기억해 둔 값 대신 Supabase에서 다시 읽습니다 ('다시 불러오기' 버튼·자동 불러오기)."""
     saved = store_get("hypothesis", fresh=fresh)
     if not isinstance(saved, dict):
         return {}
@@ -84,7 +86,7 @@ def media_variable_saved(fresh: bool = False) -> dict:
 
 
 def media_variable_loaded() -> dict:
-    """'가설 불러오기'로 읽어 둔 가설 (아직 안 불렀거나 2번 탭 저장 전이면 빈 dict)."""
+    """불러온 가설 (아직 안 불렀거나 2번 탭 저장 전이면 빈 dict)."""
     return st.session_state.get(MEDIA_VARIABLE_HYPO_KEY) or {}
 
 
@@ -201,7 +203,7 @@ def media_variable_hypo_tip(hypo: dict) -> str:
 
 def media_variable_is_stale(hypo: dict) -> bool:
     """불러온 가설이 2번 탭에 지금 저장된 가설과 다른지 (2번 탭에서 '선택하기'로 다른 가설을 고른 뒤 다시 불러오지 않음).
-    이번 접속에 기억해 둔 값으로만 비교합니다 (다른 사람이 저장한 값은 '다시 불러오기'를 눌러야 반영)."""
+    이번 접속에 기억해 둔 값으로만 비교합니다 (다른 사람이 저장한 값은 '다시 불러오기'를 눌러야 반영). 맞으면 자동으로 다시 불러옴."""
     saved = media_variable_saved()
     return bool(saved) and saved != hypo
 
@@ -233,7 +235,7 @@ def media_variable_judge(v: dict) -> tuple[bool, str, str]:
 
 
 def media_variable_label(c: dict) -> str:
-    """B안 체크박스에 보일 이름 (label이 없으면 이름)."""
+    """B안을 구별하는 이름 (label이 없으면 이름). 확정한 B안이 어느 카드인지 맞출 때 씀."""
     return c.get("label") or c.get("name", "")
 
 
@@ -399,10 +401,7 @@ def media_variable_summary_chip(plan: dict, cands: dict, hypo: dict):
 
 
 def media_variable_hypothesis_step(hypo: dict):
-    """2번 탭 가설이 바뀌었을 때 경고 + 규칙 후보 안내 (media_variable_step()의 윗부분)."""
-    if media_variable_is_stale(hypo):
-        st.warning("2번 가설 탭에서 고른 가설이 바뀌었어요. 오른쪽 위 '다시 불러오기'를 눌러야 새 가설로 변수를 도출해요.",
-                   icon="🔄")
+    """규칙 후보 안내 (media_variable_step()의 윗부분). 2번 탭 가설이 바뀌면 media_variable_step()이 자동으로 다시 불러옴."""
     gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
     if gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE:   # AI를 못 써서 규칙으로 만든 후보: 이유는 ⓘ에
         st.markdown(":gray-badge[규칙으로 만든 후보] AI를 쓰지 못해 가설의 If를 그대로 후보 변수와 B안으로 썼어요",
@@ -441,7 +440,7 @@ def media_variable_cards(rows: list[dict], variable: dict) -> None:
 
 def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cands: dict):
     """후보 변수 선택(블럭에서 변수 하나 고르기) → 고른 변수를 A/B로 나누기 (media_variable_step()의 아랫부분).
-    선정 표의 값은 plan에서 가져옵니다."""
+    오른쪽 A·B 카드의 값은 plan에서 가져옵니다."""
     rows, variable, options, picked = cands["rows"], cands["variable"], cands["options"], cands["picked"]
     # 왼쪽(변수 블럭)을 조금 넓혀 이유가 한 줄에 들어가게 함 → 오른쪽(B안 고르기 블럭 + A·B 표)과 높이를 맞춤
     c1, c2 = st.columns([1.2, 1], gap="medium")
@@ -455,7 +454,7 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             f"**{MEDIA_VARIABLE_PASS}**: 2·3단계가 이어받을 수 있는 메인 이미지 변수이고, "
             "아마존 메인 이미지 규칙 안에서 Manage Your Experiments로 돌릴 B안이 있어요.\n\n"
             f"**{MEDIA_VARIABLE_NOT_IMAGE} · {MEDIA_VARIABLE_NO_B}**: 사진·영상으로 A/B를 만들 수 없는 변수라 "
-            f"{MEDIA_VARIABLE_SOLUTION_LINE}해요. 블럭의 '솔루션 보러가기'로 AI 솔루션을 보고, 확정하면 1번 문제 분석 탭으로 넘겨요. "
+            f"{MEDIA_VARIABLE_SOLUTION_LINE}해요. 블럭의 '솔루션 보러가기'로 AI 솔루션을 보고, 확정하면 보고서에 쓸 PDF로 저장할 수 있어요. "
             "가설의 If와 다른 변수는 블럭 아랫줄 이유에 적어요."
             + ("\n\n**화면에 안 보이는 변수**: " + ", ".join(f"{v['name']} ({v['verdict']})" for v in hidden)
                if hidden else "")))
@@ -464,68 +463,74 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
         else:
             st.caption("이 가설의 후보 목록이 아직 없어요.")
     with c2:
-        # 표에는 A·B만 (스크롤 없이 한 화면에 보이도록, 변수 표와 높이도 맞춤).
-        # 독립·종속 변수는 위 요약 칩에 있고, 통제 변수·안전장치·B로 못 쓰는 안·가설에 딸린 참고 설명(note)은
-        # 제목 옆 ⓘ에서 보임 (화면에서만 빠지고 2단계로 넘기는 plan에는 그대로 있음)
-        note = cands["set"].get("note")
-        broken = "\n".join(f"- {o['label']}: {o['rule_break']} → {o.get('fallback') or '서브 이미지'}"
-                           for o in cands["broken"])
-        # 제목 줄: 제목 옆에 B안 고르기 블럭(옵션 체크박스)을 나란히 (진행할 수 있는 변수일 때만)
-        # key="media-variable-picked-head": media_style.css가 제목과 블럭 사이 간격을 정함
-        head = st.container(horizontal=True, vertical_alignment="center", key="media-variable-picked-head")
-        head.markdown("**선정한 단일 변수**", width="content", help=(
-            "왼쪽 블럭에서 고른 변수를 A(지금 그대로)와 B(바꾼 안)로 나눠요.\n\n"
-            "**A는 고정**: 지금 아마존에 올라가 있는 메인 이미지(1번 리포트 값)라 바꾸지 않아요. "
-            "지금보다 나아지는지 비교해야 가설(KPI가 지금 값에서 목표로 오르는지)을 확인할 수 있어서, "
-            "A는 그대로 두고 B만 제목 옆 체크박스로 골라요.\n\n"
-            f"**통제 변수 (고정)**: 같은 제품·색상, 흰 배경, 같은 조명과 보정, 제품 85% 이상 · 제목, 가격 {price}, 쿠폰 없음, "
-            "불릿, A+ 콘텐츠, 서브 이미지, 광고 입찰\n\n"
-            + (f"**종속 변수 (메인 KPI)**: {plan['kpi']} = {MEDIA_VARIABLE_KPI_RAW} (시장 대비 CTR)\n\n"
-               if media_variable_has_goal(plan) else f"**종속 변수 (메인 KPI)**: {plan['kpi']} (목표는 가설의 Then)\n\n")
-            + f"**안전장치**: CVR(단위 세션 비율)이 A보다 {plan['cvr_tolerance']:g}%p 넘게 떨어지면 B 실패"
-            + (f"\n\n**B로 못 쓰는 안 (메인 이미지 규칙 위반)**\n{broken}" if broken else "")
-            + (f"\n\n{note}" if note else "")))
-        if not variable:   # 후보가 없음 (왼쪽에 안내, 확정 줄에서 확정을 막음)
-            return
-        if not variable["ok"]:   # 진행할 수 없는 변수: 경고 대신 솔루션으로 이끄는 안내 (확정 줄에서 확정을 막음)
-            st.caption(f"**{variable['name']}** · {MEDIA_VARIABLE_BLOCK_MSG[variable['verdict']]} "
-                       f"{MEDIA_VARIABLE_SOLUTION_LINE}해요. 왼쪽 블럭의 '솔루션 보러가기'를 눌러 주세요.")
-            return
+        media_variable_ab_step(plan, price, defaults, cands)
+        media_variable_confirm_step(plan, variable)
+
+
+def media_variable_ab_step(plan: dict, price: str, defaults: list[str], cands: dict) -> None:
+    """오른쪽 '선정한 단일 변수': A 카드(지금 사진 · 유지) + B안 옵션 카드 (왼쪽 변수 블럭과 같은 흰 카드라 두 칸 높이가 맞음).
+    A·B 내용은 카드에 보이므로 따로 표를 두지 않습니다. 통제 변수·KPI 식·안전장치·B로 못 쓰는 안·
+    가설에 딸린 참고 설명(note)은 제목 옆 ⓘ에서 보임 (화면에서만 빠지고 2단계로 넘기는 plan에는 그대로 있음)."""
+    rows, variable, options, picked = cands["rows"], cands["variable"], cands["options"], cands["picked"]
+    note = cands["set"].get("note")
+    broken = "\n".join(f"- {o['label']}: {o['rule_break']} → {o.get('fallback') or '서브 이미지'}"
+                       for o in cands["broken"])
+    st.markdown("**선정한 단일 변수**", help=(
+        "왼쪽 블럭에서 고른 변수를 A(지금 그대로)와 B(바꾼 안)로 나눠요.\n\n"
+        "**A는 유지**: 지금 아마존에 올라가 있는 메인 이미지(1번 리포트 값)를 그대로 써요. "
+        "지금보다 나아지는지 비교해야 가설(KPI가 지금 값에서 목표로 오르는지)을 확인할 수 있어서, "
+        "A는 그대로 두고 B만 아래 옵션 카드를 눌러 골라요.\n\n"
+        f"**통제 변수 (고정)**: 같은 제품·색상, 흰 배경, 같은 조명과 보정, 제품 85% 이상 · 제목, 가격 {price}, 쿠폰 없음, "
+        "불릿, A+ 콘텐츠, 서브 이미지, 광고 입찰\n\n"
+        + (f"**종속 변수 (메인 KPI)**: {plan['kpi']} = {MEDIA_VARIABLE_KPI_RAW} (시장 대비 CTR)\n\n"
+           if media_variable_has_goal(plan) else f"**종속 변수 (메인 KPI)**: {plan['kpi']} (목표는 가설의 Then)\n\n")
+        + f"**안전장치**: CVR(단위 세션 비율)이 A보다 {plan['cvr_tolerance']:g}%p 넘게 떨어지면 B 실패"
+        + (f"\n\n**B로 못 쓰는 안 (메인 이미지 규칙 위반)**\n{broken}" if broken else "")
+        + (f"\n\n{note}" if note else "")))
+    if not variable:   # 후보가 없음 (왼쪽에 안내, 확정 줄에서 확정을 막음)
+        return
+    if not variable["ok"]:   # 진행할 수 없는 변수: 경고 대신 솔루션으로 이끄는 안내 (확정 줄에서 확정을 막음)
+        st.caption(f"**{variable['name']}** · {MEDIA_VARIABLE_BLOCK_MSG[variable['verdict']]} "
+                   f"{MEDIA_VARIABLE_SOLUTION_LINE}해요. 왼쪽 블럭의 '솔루션 보러가기'를 눌러 주세요.")
+        return
+    # key="media-variable-ab-cards": 카드 사이 간격을 왼쪽 변수 블럭 목록과 같게 (media_style.css)
+    with st.container(key="media-variable-ab-cards"):
+        # A 카드: 누를 수 없는 카드. 나중에 가설에 따라 A를 새로 설계하게 되면 배지와 이 카드만 바꾸면 됨
+        with st.container(key="media-variable-a-card"):
+            st.markdown(f"**A · 대조군** :gray-badge[{MEDIA_VARIABLE_A_BADGE.get(plan.get('a_mode'), MEDIA_VARIABLE_A_BADGE['keep'])}]")
+            st.caption(plan["a"])
         if options:
-            with head:
-                media_variable_b_box(options, picked, rows.index(variable), plan)
-        if len(options) < MEDIA_VARIABLE_B_MIN:   # AI에게 다시 요청해도 모자랐음 (규칙 후보는 가설의 If 하나뿐)
-            gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
-            st.caption(f"옵션이 {len(options)}개만 나왔어요 (최소 {MEDIA_VARIABLE_B_MIN}개) · "
-                       + ("AI 키를 넣으면 옵션을 더 만들어요" if gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE
-                          else "오른쪽 위 '다시 불러오기'를 누르면 다시 만들어요"))
-        # key="media-variable-picked": media_style.css가 구분 칸('A · 대조군')을 한 줄로 유지
-        with st.container(key="media-variable-picked"):
-            st.markdown("| 구분 | 내용 |\n| --- | --- |\n"
-                        f"| **A · 대조군** | {plan['a']} (현재 사진 · 고정) |\n"
-                        f"| **B · 실험군** | {plan['b'] or '제목 옆 옵션을 체크해 골라요'} |")
-        if defaults:   # 리포트 탭을 아직 안 열었거나 리포트 칸 이름이 바뀌었을 때 바로 알아차리도록
-            st.caption(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
+            media_variable_b_cards(options, picked, plan)
+    if len(options) < MEDIA_VARIABLE_B_MIN:   # AI에게 다시 요청해도 모자랐음 (규칙 후보는 가설의 If 하나뿐)
+        gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
+        st.caption(f"옵션이 {len(options)}개만 나왔어요 (최소 {MEDIA_VARIABLE_B_MIN}개) · "
+                   + ("AI 키를 넣으면 옵션을 더 만들어요" if gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE
+                      else "오른쪽 위 '다시 불러오기'를 누르면 다시 만들어요"))
+    if defaults:   # 리포트 탭을 아직 안 열었거나 리포트 칸 이름이 바뀌었을 때 바로 알아차리도록
+        st.caption(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
 
 
-def media_variable_b_box(options: list[dict], picked: dict, index: int, plan: dict) -> None:
-    """B안 고르기 블럭: 한 블럭 안에 '체크박스 + 옵션 N'을 가로로 나란히 (하나만 고름). 체크 = 확정, 체크를 풀면 확정 취소.
-    화면 글자는 B안 이름과 상관없이 항상 '옵션 1', '옵션 2' …이고, 고른 B안 내용은 아래 A·B 표의 B 줄에서 보입니다.
-    체크 상태는 매번 그리기 전에 2단계로 확정해 둔 값(picked)으로 맞춥니다. 확정한 뒤 리포트 값이 바뀌면(state "changed") 체크를 비워
-    다시 체크하면 새 값으로 확정되게 합니다."""
+def media_variable_b_cards(options: list[dict], picked: dict, plan: dict) -> None:
+    """B안 옵션 카드: 카드 하나 = B안 하나 (윗줄 '체크 표시 + B · 옵션 N', 아랫줄 B안 내용). 하나만 고름.
+    카드를 누르면 체크 = 확정(그 B안으로 plan을 2단계에 넘김), 체크된 카드를 다시 누르면 확정 취소.
+    체크 표시는 매번 2단계로 확정해 둔 값(picked)으로 그립니다. 확정한 뒤 리포트 값이 바뀌면(state "changed") 체크를 비워
+    다시 누르면 새 값으로 확정되게 합니다.
+    key가 media-variable-card-(on-)b-<번호>, media-variable-choose-b-<번호>라 왼쪽 변수 블럭과 같은 CSS(카드·투명 버튼)를 씁니다."""
     chosen = media_variable_label(picked) if picked and media_variable_confirm_state(plan) == "same" else None
-    # key="media-variable-b-box": media_style.css가 변수 블럭과 같은 카드 모양 + 옵션 사이 구분선을 그림
-    with st.container(horizontal=True, vertical_alignment="center", key="media-variable-b-box"):
-        for i, o in enumerate(options):
-            key = f"{MEDIA_VARIABLE_PICK_KEY}-{index}-{i}"
-            st.session_state[key] = media_variable_label(o) == chosen   # 위젯을 그리기 전이라 값을 바꿀 수 있음 (value 인자는 쓰지 않음)
-            st.checkbox(f"옵션 {i + 1}", key=key, on_change=_media_variable_pick_b, args=(key, plan, o), width="content")
+    for i, o in enumerate(options):
+        on = media_variable_label(o) == chosen
+        with st.container(key=f"media-variable-card-{'on-' if on else ''}b-{i}"):
+            mark = ":material/check_box:" if on else ":material/check_box_outline_blank:"
+            st.markdown(f"{mark} **B · 옵션 {i + 1}**")
+            st.caption(o["b"])
+            st.button(f"옵션 {i + 1} 고르기", key=f"media-variable-choose-b-{i}",
+                      on_click=_media_variable_pick_b, args=(plan, o, on))
 
 
-def _media_variable_pick_b(key: str, plan: dict, option: dict) -> None:
-    """B안 체크박스 콜백. 체크하면 그 B안으로 A/B 설계를 2단계로 넘기고(확정), 체크를 풀면 넘긴 값을 지웁니다(확정 취소).
+def _media_variable_pick_b(plan: dict, option: dict, on: bool) -> None:
+    """B안 카드 콜백. 체크 안 된 카드면 그 B안으로 A/B 설계를 2단계로 넘기고(확정), 체크된 카드면 넘긴 값을 지웁니다(확정 취소).
     다음 화면에서 토스트를 띄웁니다."""
-    if st.session_state.get(key):
+    if not on:
         media_handoff_set_plan({**plan, "b": option["b"], "b_ref": option.get("ref_prompt", "")})
         st.session_state["media-variable-confirmed-toast"] = "set"
     else:
@@ -534,28 +539,27 @@ def _media_variable_pick_b(key: str, plan: dict, option: dict) -> None:
 
 
 def media_variable_confirm_step(plan: dict, variable: dict):
-    """선정 표 아래 상태 줄 (확정 버튼은 없음, B안 옵션을 체크하면 확정). 진행할 수 없는 변수나 후보가 없으면 '다음 단계 진행 불가'."""
+    """오른쪽 칸 맨 아래 상태 줄 (확정 버튼은 없음, B안 옵션 카드를 누르면 확정). 진행할 수 없는 변수나 후보가 없으면 '다음 단계 진행 불가'."""
     toast = st.session_state.pop("media-variable-confirmed-toast", None)
     if toast == "set":
         st.toast("단일 변수를 확정했어요. 다음 단계들이 이 값을 받아요", icon="✅")
     elif toast == "clear":
-        st.toast("확정을 취소했어요. 옵션을 다시 체크해야 다음 단계로 넘어가요", icon="↩️")
+        st.toast("확정을 취소했어요. 옵션 카드를 다시 눌러야 다음 단계로 넘어가요", icon="↩️")
     state = media_variable_confirm_state(plan)
     if not variable:
         note = ":orange-badge[🚫 다음 단계 진행 불가] 후보 변수가 없어요 · 2번 탭에서 다른 가설을 고르고 다시 불러와 주세요"
-    elif not variable.get("ok"):   # 진행 불가 변수: 매체 제작 대신 솔루션 (확정했으면 1번 탭으로 넘겼다고 알림)
+    elif not variable.get("ok"):   # 진행 불가 변수: 매체 제작 대신 솔루션 (확정했으면 PDF로 저장할 수 있다고 알림)
         if media_handoff_solution().get("variable") == variable["name"]:
-            note = ":green-badge[✅ 솔루션 확정됨] 1번 문제 분석 탭으로 넘겼어요 · 다시 보려면 '솔루션 보러가기'"
+            note = ":green-badge[✅ 솔루션 확정됨] '솔루션 보러가기'에서 보고서용 PDF로 저장할 수 있어요"
         else:
-            note = f":gray-badge[{MEDIA_VARIABLE_SOLUTION_LINE}] 솔루션을 확정하면 1번 문제 분석 탭으로 넘어가요"
+            note = f":gray-badge[{MEDIA_VARIABLE_SOLUTION_LINE}] 솔루션을 확정하면 보고서용 PDF로 저장할 수 있어요"
     elif state == "same":
-        note = ":green-badge[✅ 확정됨] 다음 단계(A/B 소재 준비부터)가 이 값을 받아요 · 체크를 풀면 확정이 취소돼요"
+        note = ":green-badge[✅ 확정됨] 다음 단계(A/B 소재 준비부터)가 이 값을 받아요 · 체크한 카드를 다시 누르면 확정이 취소돼요"
     elif state == "changed" and media_handoff_plan().get("variable") == variable["name"]:   # 같은 변수인데 리포트 값 등이 바뀜
-        note = ":orange-badge[다시 확정 필요] 확정한 뒤 리포트 값이 바뀌었어요. 옵션을 다시 체크하면 새 값으로 확정돼요"
+        note = ":orange-badge[다시 확정 필요] 확정한 뒤 리포트 값이 바뀌었어요. 옵션 카드를 다시 누르면 새 값으로 확정돼요"
     else:
-        note = "옵션을 체크하면 확정되고 다음 단계(A/B 소재 준비부터)로 넘어가요"
-    with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
-                      key="media-variable-confirm-row"):
+        note = ":gray-badge[확정 전] B안 옵션 카드를 누르면 확정되고 다음 단계(A/B 소재 준비부터)로 넘어가요"
+    with st.container(horizontal=True, vertical_alignment="center", key="media-variable-confirm-row"):
         st.markdown(note)
 
 
@@ -574,10 +578,10 @@ def media_variable_can_leave(warn: bool = True) -> bool:
         st.session_state[MEDIA_VARIABLE_SOLUTION_OPEN_KEY] = variable["name"]
         return False
     if state == "changed":
-        reason = "고른 변수·옵션이 확정한 값과 달라요. 옵션을 체크해 지금 값으로 확정해 주세요."
+        reason = "고른 변수·옵션이 확정한 값과 달라요. 옵션 카드를 눌러 지금 값으로 확정해 주세요."
     else:
-        reason = ("아직 확정한 단일 변수가 없어요. " + ("B안 옵션을 체크하면 확정돼요." if media_variable_loaded()
-                                                    else "오른쪽 위 '가설 불러오기'를 누르고 B안 옵션을 체크해 주세요."))
+        reason = ("아직 확정한 단일 변수가 없어요. " + ("B안 옵션 카드를 누르면 확정돼요." if media_variable_loaded()
+                                                    else "2번 가설 탭에서 가설을 고른 뒤 B안 옵션 카드를 눌러 주세요."))
     st.session_state[MEDIA_VARIABLE_LEAVE_KEY] = reason
     return False
 
@@ -586,7 +590,7 @@ def media_variable_can_leave(warn: bool = True) -> bool:
 def _media_variable_need_confirm_dialog(reason: str) -> None:
     """①을 떠나려다 막혔을 때 가운데에 뜨는 경고창."""
     st.markdown(reason)
-    st.caption("체크한 옵션이 2단계로 넘어가는 B안이에요. 체크를 풀면 확정이 취소돼요.")
+    st.caption("체크한 옵션 카드가 2단계로 넘어가는 B안이에요. 체크한 카드를 다시 누르면 확정이 취소돼요.")
     if st.button("확인", key="media-btn-variable-need-confirm-ok", type="primary"):
         st.rerun()
 
@@ -607,25 +611,18 @@ def _media_variable_regen_solution(name: str) -> None:
     st.session_state.get(MEDIA_VARIABLE_SOLUTION_KEY, {}).pop(_media_variable_solution_cache_key(name), None)
 
 
-def media_variable_goto_tab(code: str) -> None:
-    """왼쪽 탭 줄에서 code 탭을 선택 (app.py st.tabs key="main_tabs"의 탭 이름과 같은 모양: 아이콘 + 띄어쓰기를 줄바꿈 없는 공백으로).
-    위젯이 그려지기 전에 바꿔야 하므로 반드시 버튼 콜백에서 부릅니다."""
-    from common.common_layout import LAYOUT_TABS   # 순환 import를 피하려고 함수 안에서
-    tab = next((t for t in LAYOUT_TABS if t["code"] == code), None)
-    if tab:
-        st.session_state["main_tabs"] = f"{tab['icon']} {tab['label'].replace(' ', chr(160))}"
-
-
 def _media_variable_confirm_solution(solution: dict) -> None:
-    """솔루션 팝업의 '확정하고 1번 탭으로' 콜백. store("media")의 solution 칸에 저장하고 1번 문제 분석 탭으로 옮깁니다."""
+    """솔루션 팝업의 '확정하기' 콜백. store("media")의 solution 칸에 저장하고, 다시 그릴 때 팝업을 다시 띄워
+    PDF 저장 버튼을 보여 줍니다."""
     media_handoff_set_solution(solution)
     st.session_state["media-variable-solution-toast"] = True
-    media_variable_goto_tab("report")
+    st.session_state[MEDIA_VARIABLE_SOLUTION_OPEN_KEY] = solution["variable"]
 
 
 @st.dialog("솔루션 제공", width="large")
 def _media_variable_solution_dialog(name: str) -> None:
-    """진행 불가 변수의 줄글 솔루션 팝업. 처음 열 때 AI로 만들고(가설·변수가 같으면 다시 부르지 않음), 확정하면 1번 탭으로 넘깁니다."""
+    """진행 불가 변수의 줄글 솔루션 팝업. 처음 열 때 AI로 만들고(가설·변수가 같으면 다시 부르지 않음),
+    확정하면 보고서에 쓸 PDF로 내려받는 버튼을 보여 줍니다."""
     hypo = media_variable_loaded()
     cands = media_variable_candidates()
     variable = next((v for v in cands["rows"] + cands["hidden"] if v["name"] == name), None)
@@ -665,24 +662,37 @@ def _media_variable_solution_dialog(name: str) -> None:
     saved = media_handoff_solution()
     with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center",
                       key="media-variable-solution-actions"):
+        payload = solution and {"hypothesis": hypo["text"], "variable": name, "kind": variable.get("kind", ""),
+                                **solution, "source": made["source"]}
+        done = bool(payload) and saved == payload
         if solution:
-            st.caption(f"{made['source']}가 만든 솔루션 · 확정하면 1번 문제 분석 탭으로 넘겨요", width="stretch")
+            st.caption(f"{made['source']}가 만든 솔루션 · " + ("✅ 확정됨 · PDF로 저장해 보고서에 쓰세요" if done else
+                       "확정하면 보고서에 쓸 PDF로 저장할 수 있어요"), width="stretch")
         st.button("↻ 다시 만들기", key="media-btn-variable-solution-regen", type="secondary",
                   on_click=_media_variable_regen_solution, args=(name,))
-        if solution:
-            payload = {"hypothesis": hypo["text"], "variable": name, "kind": variable.get("kind", ""),
-                       **solution, "source": made["source"]}
-            done = saved == payload
-            if st.button("✅ 확정됨 · 1번 탭으로" if done else "확정하고 1번 탭으로", key="media-btn-variable-solution-confirm",
+        if done:   # 확정한 솔루션: 보고서용 PDF 저장 (내려받아도 팝업이 닫히지 않게 다시 그리지 않음)
+            try:
+                from modules.media.media_variable_pdf import media_variable_solution_pdf   # fpdf2가 없어도 탭은 열리게
+            except ImportError:
+                st.caption("PDF는 fpdf2가 필요해요 (`pip install -r requirements.txt`)")
+            else:
+                pdf = media_variable_solution_pdf(payload, media_variable_parts(hypo),
+                                                  media_variable_goal_text(media_variable_plan()[0], hypo))
+                st.download_button("보고서용 PDF 저장", pdf,
+                                   file_name=f"media_solution_{datetime.now().strftime('%Y-%m-%d')}.pdf",
+                                   mime="application/pdf", key="media-btn-variable-solution-download-pdf",
+                                   type="primary", icon=":material/picture_as_pdf:", on_click="ignore")
+        elif solution:
+            if st.button("확정하기", key="media-btn-variable-solution-confirm",
                          type="primary", on_click=_media_variable_confirm_solution, args=(payload,)):
-                st.rerun()   # 팝업을 닫고 앱 전체를 다시 그려 1번 탭으로 옮김
+                st.rerun()   # 앱 전체를 다시 그려 확정 상태 줄을 바꾸고, 콜백이 남긴 표시로 팝업을 다시 띄움
 
 
 def media_variable_leave_notice() -> None:
     """media_render()가 매번 부릅니다. 솔루션 팝업 표시(블럭 버튼 또는 진행 불가 변수에서 '다음')가 있으면 솔루션 팝업을,
     ①을 떠나려다 막혔으면(media_variable_can_leave가 이유를 남김) 가운데 경고창을 띄웁니다. 솔루션을 확정한 직후면 토스트."""
     if st.session_state.pop("media-variable-solution-toast", False):
-        st.toast("솔루션을 확정해 1번 문제 분석 탭으로 넘겼어요", icon="✅")
+        st.toast("솔루션을 확정했어요. 팝업에서 보고서용 PDF로 저장할 수 있어요", icon="✅")
     if name := st.session_state.pop(MEDIA_VARIABLE_SOLUTION_OPEN_KEY, None):
         st.session_state.pop(MEDIA_VARIABLE_LEAVE_KEY, None)
         _media_variable_solution_dialog(name)
@@ -694,42 +704,39 @@ def media_variable_locked_step() -> None:
     """①에서 확정 전에 ②~④ 하위 탭을 직접 눌렀을 때 그 탭 내용 대신 보이는 잠금 안내."""
     with st.container(border=True, key="media-variable-locked"):
         st.markdown("**🔒 단일 변수를 먼저 확정해 주세요**")
-        st.caption("① 가설에서 변수 도출에서 B안 옵션을 체크하면 확정되고, 이 단계부터 볼 수 있어요.")
+        st.caption("① 가설에서 변수 도출에서 B안 옵션 카드를 누르면 확정되고, 이 단계부터 볼 수 있어요.")
         st.button(f"← {MEDIA_VARIABLE_TAB_LABEL}로 가기", key="media-btn-variable-locked-go", type="primary",
                   on_click=media_variable_go_step)
 
 
 def _media_variable_start_load() -> None:
-    """'가설 불러오기' 버튼 콜백. 다음 화면 그리기에서 스피너를 띄우고 불러오도록 표시만 해 둡니다 (AI가 오래 걸릴 수 있어서)."""
+    """'다시 불러오기' 버튼 콜백. 다음 화면 그리기에서 스피너를 띄우고 불러오도록 표시만 해 둡니다 (AI가 오래 걸릴 수 있어서)."""
     st.session_state["media-hypo-loading"] = True
 
 
 def media_variable_step():
-    """하위 탭 '가설에서 변수 도출': 오른쪽 위 '가설 불러오기' 버튼 → 요약 칩(독립 변수·목표 KPI) → 후보 변수 선택·단일 변수 선정.
+    """하위 탭 '가설에서 변수 도출': 2번 탭 가설을 자동으로 불러옴 → 요약 칩(독립 변수·목표 KPI) → 후보 변수 선택·단일 변수 선정.
+    오른쪽 위 '다시 불러오기'는 다른 사람이 방금 저장한 가설을 Supabase에서 다시 읽을 때만 씁니다.
     반드시 media_render() 안에서 부릅니다."""
-    loading = st.session_state.pop("media-hypo-loading", False)
-    loaded = loading or st.session_state.get("media-hypo-loaded", False)
+    pressed = st.session_state.pop("media-hypo-loading", False)   # '다시 불러오기' 또는 2번 탭 '다음으로'
+    # 버튼 없이 자동으로 불러옴: 이번 접속에서 아직 안 불렀거나, 2번 탭에서 다른 가설을 저장했을 때.
+    # 3번 탭 내용은 다른 탭을 보고 있을 때도 같이 그려지므로, 3번 탭을 직접 눌러 들어와도 이미 불러온 화면이 보임
+    auto = not st.session_state.get("media-hypo-loaded") or media_variable_is_stale(media_variable_loaded())
     with st.container(horizontal=True, horizontal_alignment="right", key="media-hypo-load-row"):
-        st.button("↻ 다시 불러오기" if loaded else "📥 가설 불러오기", key="media-btn-hypo-load",
-                  type="secondary" if loaded else "primary", on_click=_media_variable_start_load)
+        st.button("↻ 다시 불러오기", key="media-btn-hypo-load", on_click=_media_variable_start_load)
 
-    # 버튼을 누른 직후 한 번만: 2번 탭 가설을 Supabase에서 다시 읽고 후보 묶음을 만듦 (AI를 부르면 몇 초 걸림)
-    if loading:
+    # 불러올 때만: 2번 탭 가설을 Supabase에서 다시 읽고 후보 묶음을 만듦 (같은 가설이면 AI를 다시 부르지 않음)
+    if pressed or auto:
         with st.spinner("2번 가설 탭에서 가설을 불러와 후보 변수를 만드는 중…"):
             media_variable_load()
         st.session_state["media-hypo-loaded"] = True
-        if media_variable_loaded():
+        if pressed and media_variable_loaded():   # 자동으로 불러올 때는 다른 탭을 보고 있을 수 있어 토스트를 띄우지 않음
             st.toast("가설을 불러왔어요", icon="📥")
 
     hypo = media_variable_loaded()
-    if not loaded or not hypo:
-        with st.container(border=True, key="media-hypo-empty"):
-            if loaded:   # 불러왔지만 2번 탭에 저장된 가설이 없음
-                st.markdown("**2번 탭에서 선택한 가설이 없어요**")
-                st.caption("2. 가설 수립 탭에서 가설 하나를 '선택하기'로 고른 뒤, 오른쪽 위 '다시 불러오기'를 눌러 주세요.")
-            else:
-                st.markdown("**아직 불러온 가설이 없어요**")
-                st.caption("오른쪽 위 '가설 불러오기'를 누르면 2번 가설 탭의 가설을 가져와 A/B로 바꿀 변수를 도출해요.")
+    if not hypo:   # 2번 탭에 저장된 가설이 없음: 요약 칩과 같은 모양·자리의 안내 칩
+        with st.container(key="media-hypo-summary"):
+            st.markdown(":gray-badge[가설 없음] 2번 가설 탭에서 가설을 고르고 '다음으로'를 누르면 여기로 불러와요")
         return
 
     # key="media-hypo-box": media_style.css의 나타나는 애니메이션(.st-key-media-hypo-box)
@@ -742,4 +749,3 @@ def media_variable_step():
         with st.container(key="media-hypo-divider"):
             st.divider()
         media_variable_derive_step(plan, price, defaults, cands)
-        media_variable_confirm_step(plan, cands["variable"])
