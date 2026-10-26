@@ -32,6 +32,7 @@ REPORT_HELP_ABOUT = "Keepa·경쟁사 DB·검색어 분석으로 서리의 내�
 REPORT_HELP_RULE = ("**순위 기준**: ② 가설로 만들어 ③ 탭에서 바로 제작할 수 있는 문제(지금 ③은 메인 이미지)를 먼저, "
                     "그다음 이미지(서브·광고 배너 문구)로 고칠 수 있는 문제, 같은 조건 안에서는 위험도 → 심각도 순. 3순위부터는 다른 문제여도 됨")
 REPORT_LOAD_MIN_SEC = 1.0   # 불러오기 로딩 표시 최소 시간 (초): 너무 빨리 끝나도 '불러오는 느낌'이 나게
+REPORT_LOADING_TEXT = "Keepa·경쟁사 DB·검색어 분석으로 문제 분석 결과를 만드는 중…"   # 불러오는 동안 화면 가운데 카드 문구
 REPORT_LOADED_KEY = "report-loaded"   # 이번 접속에서 '불러오기'를 눌렀는지 (누르기 전에는 화면을 비워 둠)
 
 
@@ -45,14 +46,18 @@ def report_render():
             ui.page_header("1. 문제 분석")   # 설명 한 줄(REPORT_HELP_ABOUT)은 옆 물음표 안으로 (한 화면에 들어오게)
         with st.container(key="report-help"):   # 안내 문구는 화면에 늘어놓지 않고 이 물음표 하나에 모음 (내용은 아래에서 채움)
             help_box = st.popover("", icon=":material/help:", type="tertiary", help="순위 기준 · 저장 상태 안내")
-        st.button("불러오기", icon=":material/download:", key="report-btn-load", on_click=report_click_load,
-                  help="Keepa·경쟁사 DB·검색어 분석으로 문제 분석 결과를 만듭니다")
+        # 설명 말풍선(help)은 두지 않음: 누른 뒤 탭이 바뀌는 순간 화면 왼쪽 위 구석에 떠 있는 경우가 있어서,
+        # 같은 문구를 불러오는 동안 화면 가운데 카드(REPORT_LOADING_TEXT)로 보여 줌
+        st.button("불러오기", icon=":material/download:", key="report-btn-load", on_click=report_click_load)
         st.button("다음으로", icon=":material/arrow_forward:", key="report-btn-save", type="primary", disabled=not loaded,
                   on_click=report_click_save, help="지금 결과를 리포트로 저장하고 ② 가설 탭으로 넘어갑니다")
     if st.session_state.pop("report-redirect-toast", False):   # ② 탭 '불러오기'에서 ① 리포트가 없어 넘어온 경우
         st.toast("저장된 ① 리포트가 없어 ① 탭으로 왔어요. 결과를 확인하고 '다음으로'를 눌러 주세요", icon=":material/info:")
     if st.session_state.pop("report-saved-toast", False):
         st.toast("리포트를 저장하고 ② 가설 탭으로 넘어왔어요", icon=":material/check_circle:")
+    # 로딩 표시 자리: 화면 가운데 카드 (report_style.css, 화면 배치 칸은 차지하지 않음).
+    # 불러오기 전·후 모두 같은 순서 자리에 두어야, 불러오는 동안 이전 화면 요소(기본 틀 카드)가 이 칸에 들어와 보이지 않음
+    loading_box = st.container(key="report-loading")
     if not loaded:
         report_show_empty(help_box)
         return
@@ -60,7 +65,7 @@ def report_render():
     just = st.session_state.pop("report-just-loaded", False)
     if just:   # 불러오기 직후: 데이터를 실제로 불러오는 동안 로딩 표시 (최소 1초)
         started = time.time()
-        with st.spinner("Keepa·경쟁사 DB·검색어 분석 데이터를 불러오는 중…"):
+        with loading_box, st.spinner(REPORT_LOADING_TEXT):
             data = report_load_data()
             time.sleep(max(0.0, REPORT_LOAD_MIN_SEC - (time.time() - started)))
     else:
