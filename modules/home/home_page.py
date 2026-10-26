@@ -228,7 +228,6 @@ def home_left_html(stores, temps, tabs, todos):
 <div class="home-left">
   <div class="home-title">독일 시장 한눈에 보기</div>
   {home_clock_html()}
-  <div class="home-section-label">지금 할 일 <span class="home-count">{len(todos)}</span><span class="home-sub">아이콘에 마우스를 올려 보세요</span></div>
   <div class="home-tpins">{home_todo_pins_html(todos, tabs)}</div>
   <div class="home-cards">
     <div class="home-cards-col">
