@@ -676,7 +676,9 @@ def _media_variable_solution_dialog(name: str) -> None:
             except ImportError:
                 st.caption("PDF는 fpdf2가 필요해요 (`pip install -r requirements.txt`)")
             else:
-                st.download_button("보고서용 PDF 저장", media_variable_solution_pdf(payload),
+                pdf = media_variable_solution_pdf(payload, media_variable_parts(hypo),
+                                                  media_variable_goal_text(media_variable_plan()[0], hypo))
+                st.download_button("보고서용 PDF 저장", pdf,
                                    file_name=f"media_solution_{datetime.now().strftime('%Y-%m-%d')}.pdf",
                                    mime="application/pdf", key="media-btn-variable-solution-download-pdf",
                                    type="primary", icon=":material/picture_as_pdf:", on_click="ignore")
