@@ -13,7 +13,8 @@ import streamlit as st
 from common.common_store import store_get
 from modules.media.media_handoff import (MEDIA_HANDOFF_PLAN, media_handoff_clear_plan, media_handoff_plan,
                                          media_handoff_set_plan, media_handoff_set_solution, media_handoff_solution)
-from modules.media.media_variable_ai import (MEDIA_VARIABLE_AI_RULE_SOURCE, MEDIA_VARIABLE_AI_VERSION, media_variable_generate,
+from modules.media.media_variable_ai import (MEDIA_VARIABLE_AI_RULE_SOURCE, MEDIA_VARIABLE_AI_VERSION, MEDIA_VARIABLE_B_MIN,
+                                             media_variable_b_shortage, media_variable_generate,
                                              media_variable_solution_generate)
 
 MEDIA_VARIABLE_TAB_LABEL = "가설에서 변수 도출"   # 하위 탭 ① 이름 (media_page.py와 다른 하위 탭의 '① 으로 가서 확정하기' 버튼이 씀)
@@ -101,8 +102,9 @@ def media_variable_load() -> None:
         return
     gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
     # 같은 가설이라도 AI 후보에 짧은 If·Because(short)가 없거나(이 칸이 생기기 전에 만든 후보)
-    # 후보를 만드는 규칙의 판(MEDIA_VARIABLE_AI_VERSION)이 바뀌었으면 다시 만듦
-    if (gen.get("text") == hypo["text"] and gen.get("version") == MEDIA_VARIABLE_AI_VERSION
+    # 후보를 만드는 규칙의 판(MEDIA_VARIABLE_AI_VERSION)이 바뀌었거나, AI 후보의 B안이 최소 개수보다 적었으면 다시 만듦
+    ai_short = gen.get("source") != MEDIA_VARIABLE_AI_RULE_SOURCE and gen.get("set") and media_variable_b_shortage(gen["set"])
+    if (gen.get("text") == hypo["text"] and gen.get("version") == MEDIA_VARIABLE_AI_VERSION and not ai_short
             and ((gen.get("set") or {}).get("short") or gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE)):
         return
     listing = media_variable_report_sqp().get("listing")
@@ -492,6 +494,11 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
         if options:
             with head:
                 media_variable_b_box(options, picked, rows.index(variable), plan)
+        if len(options) < MEDIA_VARIABLE_B_MIN:   # AI에게 다시 요청해도 모자랐음 (규칙 후보는 가설의 If 하나뿐)
+            gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
+            st.caption(f"옵션이 {len(options)}개만 나왔어요 (최소 {MEDIA_VARIABLE_B_MIN}개) · "
+                       + ("AI 키를 넣으면 옵션을 더 만들어요" if gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE
+                          else "오른쪽 위 '다시 불러오기'를 누르면 다시 만들어요"))
         # key="media-variable-picked": media_style.css가 구분 칸('A · 대조군')을 한 줄로 유지
         with st.container(key="media-variable-picked"):
             st.markdown("| 구분 | 내용 |\n| --- | --- |\n"

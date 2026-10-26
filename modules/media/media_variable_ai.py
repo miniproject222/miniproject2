@@ -48,27 +48,37 @@ MEDIA_VARIABLE_CONTROL_RULES = [
     (["배경색", "색 배경", "컬러 배경", "회색 배경", "검은 배경", "배경을"], "통제 변수(흰 배경)까지 바뀜"),
     (["다른 색상", "색상을", "색상 변경", "다른 제품", "다른 사이즈"], "통제 변수(제품·색상)까지 바뀜"),
 ]
+MEDIA_VARIABLE_B_MIN = 2            # 진행 가능한 메인 이미지 변수에 보여 줄 B안 최소 수 (모자라면 AI에게 다시 요청)
 MEDIA_VARIABLE_B_MAX = 3            # 변수 하나에 B로 쓸 수 있는 안 최대 수 (넘으면 앞에서부터)
+MEDIA_VARIABLE_B_RETRY = 2          # B안이 MEDIA_VARIABLE_B_MIN개보다 적을 때 다시 요청하는 횟수 (AI 하나당)
 MEDIA_VARIABLE_B_SIMILAR = 0.7      # B안 문장끼리 비슷한 정도(difflib 0~1)가 이 이상이면 뒤의 안을 뺌
-MEDIA_VARIABLE_AI_VERSION = 2       # 후보 묶음 만드는 규칙의 판. 올리면 같은 가설도 '다시 불러오기'에서 새로 만듦
+MEDIA_VARIABLE_AI_VERSION = 4       # 후보 묶음 만드는 규칙의 판. 올리면 같은 가설도 '다시 불러오기'에서 새로 만듦
+# 화면(요약 칩·변수 블럭·A/B 표)에 보이는 칸의 최대 글자 수. AI에게는 더 짧게 쓰라고 하고, 넘으면 코드가 줄임
+# (name: 괄호 설명을 빼고, 그래도 길면 종류 이름 / label: 잘라서 … / b: B로 쓰지 않음)
+MEDIA_VARIABLE_TEXT_MAX = {"name": 16, "label": 12, "b": 60}
 
 MEDIA_VARIABLE_AI_SYSTEM = """너는 amazon.de(독일)에서 냉감패드를 파는 브랜드의 A/B 테스트 설계자야.
 가설 하나를 받아, Amazon Manage Your Experiments로 실험할 "후보 변수" 목록을 만들어.
 
 반드시 지킬 것
+0. 화면에 보이는 칸(name, label, b, short)은 무조건 짧게, 핵심만 써. 꾸밈말·이유·괄호 설명은 빼고, 글자 수를 꼭 지켜.
 1. 변수 하나 = 바꿀 것 하나. 후보는 3~5개.
+   name은 "바꿀 곳 + 무엇"만 담은 명사구 (12자 안쪽).
+   예: "메인 이미지 촬영 구도" (O), "두께와 원단 질감을 드러내는 메인 이미지 구도" (X), "제목 앞 문구 (OEKO-TEX·두께)" (X)
 2. 가설의 If가 바꾸라고 한 변수 딱 하나만 맨 앞에 두고 if_match를 true로 해.
    그 변수의 kind는 If가 말하는 곳과 반드시 같아야 해 (If가 광고·입찰을 바꾸면 ad, 제목이면 title …).
    If가 이미지를 말하지 않으면 main_image 변수를 if_match true로 만들지 마.
    나머지(가설과 다른 대안, 고정해야 할 요소)는 if_match를 false로, reason에 이유, fallback에 대신 쓸 곳("다음 테스트", "고정 요소" 등)을 써.
 3. kind는 main_image, title, bullet, a_plus, price, ad, other 중 하나만 써.
-4. if_match가 true인 변수에만 b_options를 만들어. 규칙 안에서 쓸 수 있는 B안은 2~3개.
+4. if_match가 true인 변수에만 b_options를 만들어. 규칙 안에서 쓸 수 있는 B안(b가 있는 안)은 반드시 정확히 3개.
+   (화면에는 최소 2개, 최대 3개를 보여 줘. 아래 조건에 걸리는 안은 코드가 빼므로, 3개 모두 조건을 지켜야 해.)
+   규칙에 어긋나 B로 못 쓰는 안(rule_break)은 이 3개와 따로 덧붙여도 돼.
    - 단일 변수: B안마다 A(지금 그대로)에서 이 변수 하나만 바꿔. 통제 변수(같은 제품·색상, 흰 배경, 같은 조명과 보정,
      제품 85% 이상, 제목·가격·쿠폰·불릿·A+·광고)는 바꾸지 마. b에는 바뀌는 것만 쓰고, 그대로 두는 것은 쓰지 마.
    - 가설에 맞게: 모든 B안은 가설의 If가 말한 변화를 Because의 이유대로 실현해야 해. If와 다른 방향의 안은 만들지 마.
    - 서로 다르게: 각도 숫자나 표현만 바꾼 비슷한 안은 금지. 같은 If를 실현하는 서로 다른 방법이어야 해.
      예: "모서리를 들어 두께 보이기" / "반 접어 단면 보이기" (O), "45도에서 두께 보이기" / "30도에서 두께 보이기" (X)
-   B안마다 label(버튼 이름, 15자 안쪽)과 b(바꾼 안, 한국어 한 문장)를 써.
+   B안마다 label(버튼 이름, 10자 안쪽 명사구)과 b(바꾼 안, 한국어 한 문장 40자 안쪽)를 써.
    main_image 변수의 B안에는 ref_prompt(영어 레퍼런스 사진 프롬프트: white seamless background, no text, no props 포함)도 붙여.
    아마존 메인 이미지 규칙에 어긋나는 안은 b 대신 rule_break(어긴 규칙)와 fallback(대신 쓸 곳)을 써.
 5. kpi에는 가설의 Then이 말하는 측정 지표 이름만 짧게 써.
@@ -227,6 +237,23 @@ def media_variable_clean_short(raw, source: str) -> dict:
     return out
 
 
+def media_variable_cut(text: str, limit: int) -> str:
+    """limit자를 넘으면 잘라서 끝에 … (넘지 않으면 그대로)."""
+    return text if len(text) <= limit else text[:limit - 1].rstrip() + "…"
+
+
+def media_variable_short_name(name: str, kind: str, taken: list[str]) -> str:
+    """요약 칩·변수 블럭에 보일 변수 이름을 MEDIA_VARIABLE_TEXT_MAX["name"]자 안으로 줄입니다.
+    괄호 설명을 빼고, 그래도 길면 종류 이름(예: '메인 이미지'). 종류 이름이 이미 다른 변수 이름이면 잘라서 …
+    (변수 이름으로 고른 변수를 찾으므로 이름이 겹치지 않게 함)"""
+    limit = MEDIA_VARIABLE_TEXT_MAX["name"]
+    short = re.sub(r"\s*\([^)]*\)", "", name).strip() or name
+    if len(short) <= limit:
+        return short
+    kind_name = MEDIA_VARIABLE_KINDS.get(kind, MEDIA_VARIABLE_KINDS["other"])[0]
+    return kind_name if kind_name not in taken and kind != "other" else media_variable_cut(short, limit)
+
+
 def media_variable_clean_set(raw, source: str = "", if_text: str = "") -> dict | None:
     """후보 묶음(dict 또는 AI 답 문자열)을 정리합니다. 변수가 하나도 안 남으면 None.
     kind는 정해진 종류로만, B안은 이름 + (b 또는 rule_break)가 있는 것만, 메인 이미지 B안은 규칙에 걸리는 말이 있으면 rule_break로 바꿈.
@@ -234,6 +261,7 @@ def media_variable_clean_set(raw, source: str = "", if_text: str = "") -> dict |
     if_match가 아닌 변수의 B안은 버림 (가설과 다른 변수로 실험하지 않게).
     단일 변수: 고른 변수 말고 다른 것까지 바꾸는 B안은 rule_break로 돌림 (media_variable_single_break()).
     서로 다르게: 앞의 B안과 비슷한 B안은 빼고, B로 쓸 수 있는 안은 MEDIA_VARIABLE_B_MAX개까지.
+    간결하게: 변수 이름·B안 이름·B안 문장이 MEDIA_VARIABLE_TEXT_MAX를 넘으면 줄이거나 B로 쓰지 않음.
     short(짧은 If·Because)는 원문 source와 맞춰 본 것만 남김 (source가 없으면 빈 dict)."""
     if_kind = media_variable_kind(if_text) if if_text else "other"
     if isinstance(raw, str):
@@ -257,6 +285,9 @@ def media_variable_clean_set(raw, source: str = "", if_text: str = "") -> dict |
             if not isinstance(o, dict) or not str(o.get("label") or "").strip():
                 continue
             o = {k: str(o[k]).strip() for k in ("label", "b", "ref_prompt", "rule_break", "fallback") if o.get(k)}
+            o["label"] = media_variable_cut(o["label"], MEDIA_VARIABLE_TEXT_MAX["label"])
+            if len(o.get("b", "")) > MEDIA_VARIABLE_TEXT_MAX["b"] and not o.get("rule_break"):   # 길면 A/B 표가 늘어나 B로 쓰지 않음
+                o = {"label": o["label"], "rule_break": "설명이 길어 한눈에 안 읽힘", "fallback": "다시 불러오기"}
             broken = media_variable_rule_break(o.get("b", "")) if kind == "main_image" and not o.get("rule_break") else None
             if broken:
                 o = {"label": o["label"], "rule_break": broken[0], "fallback": broken[1]}
@@ -269,7 +300,8 @@ def media_variable_clean_set(raw, source: str = "", if_text: str = "") -> dict |
                 kept.append(o["b"])
             if o.get("b") or o.get("rule_break"):
                 options.append(o)
-        variables.append({"name": str(v["name"]).strip(), "kind": kind, "if_match": if_match,
+        name = media_variable_short_name(str(v["name"]).strip(), kind, [x["name"] for x in variables])
+        variables.append({"name": name, "kind": kind, "if_match": if_match,
                           "fallback": str(v.get("fallback") or ("다음 테스트" if not if_match else "")), "reason": reason,
                           "b_options": options})
     if not variables:
@@ -306,23 +338,52 @@ def media_variable_rule_set(hypo: dict) -> dict:
     })
 
 
+def media_variable_b_shortage(cset: dict) -> tuple[int, list[str]] | None:
+    """가설에 맞는 메인 이미지 변수(2·3단계로 진행할 변수)의 B안이 MEDIA_VARIABLE_B_MIN개보다 적으면
+    (B로 쓸 수 있는 안 수, 빠진 안의 이유 목록), 충분하거나 그런 변수가 없으면 None."""
+    for v in cset["variables"]:
+        if v["if_match"] and v["kind"] == "main_image":
+            ok = [o for o in v["b_options"] if o.get("b")]
+            if len(ok) < MEDIA_VARIABLE_B_MIN:
+                return len(ok), [f"{o['label']}: {o['rule_break']}" for o in v["b_options"] if o.get("rule_break")]
+    return None
+
+
 def media_variable_generate(hypo: dict, listing: dict) -> tuple[dict, str, str]:
-    """가설 하나 → (후보 묶음, 출처 이름, AI를 못 쓴 이유). 키가 있는 AI를 차례로 시도하고, 모두 안 되면 규칙으로 만듭니다."""
+    """가설 하나 → (후보 묶음, 출처 이름, AI를 못 쓴 이유). 키가 있는 AI를 차례로 시도하고, 모두 안 되면 규칙으로 만듭니다.
+    진행할 메인 이미지 변수의 B안이 코드 확인 뒤 MEDIA_VARIABLE_B_MIN개보다 적으면, 빠진 이유를 붙여 MEDIA_VARIABLE_B_RETRY번까지
+    다시 요청합니다. 한 AI가 끝내 모자라면 다음 AI도 시도하고, 모두 모자라면 B안이 가장 많은 묶음을 씁니다
+    (그래도 모자라면 있는 만큼, 지어내지 않음)."""
     errors = []
+    best, best_provider = None, ""   # 모든 AI를 통틀어 B안이 가장 많은 묶음
+    source = " ".join(str(hypo.get(k) or "") for k in ("text", "if", "because", "then"))
+    if_text = str(hypo.get("if") or hypo["text"].split(", ")[0])   # 규칙 묶음과 같은 방법으로 If를 고름
     for provider, key_name in MEDIA_VARIABLE_AI_PROVIDERS.items():
         if not media_variable_ai_secret(key_name):
             continue
-        try:
-            source = " ".join(str(hypo.get(k) or "") for k in ("text", "if", "because", "then"))
-            if_text = str(hypo.get("if") or hypo["text"].split(", ")[0])   # 규칙 묶음과 같은 방법으로 If를 고름
-            cset = media_variable_clean_set(media_variable_ai_call(provider, media_variable_ai_message(hypo, listing)),
-                                            source, if_text)
-        except RuntimeError as err:
-            errors.append(str(err))
-            continue
-        if cset:
-            return cset, provider, ""
-        errors.append(f"{provider} 답 형식이 맞지 않음")
+        message = media_variable_ai_message(hypo, listing)
+        for _ in range(1 + MEDIA_VARIABLE_B_RETRY):
+            try:
+                cset = media_variable_clean_set(media_variable_ai_call(provider, message), source, if_text)
+            except RuntimeError as err:
+                errors.append(str(err))
+                break
+            if not cset:
+                errors.append(f"{provider} 답 형식이 맞지 않음")
+                continue
+            short = media_variable_b_shortage(cset)
+            if not short:
+                return cset, provider, ""
+            if not best or short[0] > media_variable_b_shortage(best)[0]:
+                best, best_provider = cset, provider
+            # 다시 요청: 앞 답에서 B로 쓸 수 있는 안이 몇 개였고 왜 빠졌는지 알려 줌
+            message = media_variable_ai_message(hypo, listing) + "\n\n" + "\n".join([
+                "[다시 요청]",
+                f"앞 답에서 규칙 안에서 B로 쓸 수 있는 안이 {short[0]}개뿐이었어. 지시 4번대로 서로 다른 B안을 정확히 3개 만들어.",
+                *(f"- 빠진 안 {r}" for r in short[1]),
+                "- 비슷한 안(표현·숫자만 다른 안)과 너무 긴 b도 빠져. b는 40자 안쪽으로."])
+    if best:
+        return best, best_provider, f"B안이 {media_variable_b_shortage(best)[0]}개만 나옴 (최소 {MEDIA_VARIABLE_B_MIN}개)"
     return media_variable_rule_set(hypo), MEDIA_VARIABLE_AI_RULE_SOURCE, " · ".join(errors) or "AI 키가 없음"
 
 
