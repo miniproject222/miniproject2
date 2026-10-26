@@ -74,7 +74,7 @@
   text-align: center;
   color: var(--home-card);
 }
-.home-tpins { position: relative; z-index: 30; display: flex; flex-direction: column; align-items: flex-start; gap: calc(10 * var(--u)); margin-bottom: calc(16 * var(--u)); }
+.home-tpins { position: relative; z-index: 30; display: flex; flex-direction: column; align-items: flex-start; gap: calc(18 * var(--u)); margin-bottom: calc(16 * var(--u)); }
 .home-tpin { position: relative; display: flex; align-items: center; gap: calc(16 * var(--u)); max-width: calc(330 * var(--u)); cursor: default; outline: none; }
 .home-tpin-icon { position: relative; flex: none; transition: transform 0.2s; }
 .home-tpin .home-icon {
@@ -281,11 +281,11 @@
 .home-up { color: var(--home-up); }
 .home-down { color: var(--home-red); }
 .home-flat { color: var(--home-sub); }
-.home-rings { display: flex; flex-direction: column; gap: calc(14 * var(--u)); margin-top: calc(18 * var(--u)); }
+.home-rings { display: flex; flex-direction: column; gap: calc(16 * var(--u)); margin-top: calc(34 * var(--u)); }   /* 2026-10-26 PM: 위 지역 표와 간격 넓게 */
 .home-ring { position: relative; display: flex; align-items: center; gap: calc(12 * var(--u)); }
-.home-ring-img { width: calc(52 * var(--u)); height: calc(52 * var(--u)); }
-.home-ring-num { position: absolute; left: 0; width: calc(52 * var(--u)); font-size: calc(11 * var(--u)); font-weight: 700; text-align: center; }
-.home-ring b { display: block; font-size: calc(13 * var(--u)); }
+.home-ring-img { width: calc(66 * var(--u)); height: calc(66 * var(--u)); }
+.home-ring-num { position: absolute; left: 0; width: calc(66 * var(--u)); font-size: calc(14 * var(--u)); font-weight: 400; text-align: center; }
+.home-ring b { display: block; font-size: calc(14 * var(--u)); font-weight: 500; }
 .home-adpanel:hover .home-adpanel-title { color: var(--home-purple); }
 
 /* 지구본 아래 가운데: 핀 색 안내 + 출처 */
@@ -427,3 +427,31 @@
   .home-adpanel { position: static; width: auto; margin-top: 20px; }
   .home-globe-foot { position: static; align-items: center; margin-top: 8px; }
 }
+
+/* 2026-10-26 PM: 지금 할 일 아래 카드 3개(가설·A/B 소재·경쟁사 가격)를 조금 투명하게 (뒤 지구본·배경이 살짝 비치게) */
+.home-cards .home-float {
+  background: color-mix(in srgb, var(--home-card) 74%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+/* '지금 할 일' 글자를 지워서, 아이콘 줄이 시계 아래 바로 오도록 위 여백 */
+.home-tpins { margin-top: calc(22 * var(--u)); }
+
+/* 2026-10-26 PM: 레퍼런스처럼 바깥 큰 고리 — 지구본에서 멀리 떨어져(구 지름의 약 1.65배) 화면 위아래에서 잘림.
+   구 지름 = 지구본 칸 폭 690 × (500 ÷ 600) ≈ 575, 고리 지름 ≈ 950, 중심은 지구본 그림 가운데 (위에서 345) */
+.home-globe::after {
+  content: "";
+  position: absolute;
+  top: calc(345 * var(--u));
+  left: 50%;
+  width: calc(950 * var(--u));
+  height: calc(950 * var(--u));
+  transform: translate(-50%, -50%);
+  border: calc(12 * var(--u)) solid color-mix(in srgb, #FFFFFF 62%, transparent);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 지금 할 일 아래 카드 3개(가설·A/B 소재·경쟁사 가격): 전체를 조금 위로 */
+.home-cards { margin-bottom: calc(26 * var(--u)); }

@@ -78,17 +78,17 @@
       "category": "Bettwaren & Bettwäsche > Matratzenschutz & Ummantelungen",
       "sub_category": "Matratzenschutz & Ummantelungen",
       "listed_since": "2023-06-26",
-      "rank_root_now": 245133,
+      "rank_root_now": 214609,
       "rank_root_summer_median": 26847,
       "rank_root_summer_best": 6178,
       "rank_sub_now": 122,
       "rank_sub_summer_median": 65,
       "rank_sub_summer_best": 28,
       "rank_drops": {
-        "30": 10,
-        "90": 33,
-        "180": 59,
-        "365": 73
+        "30": 11,
+        "90": 32,
+        "180": 60,
+        "365": 74
       },
       "monthly_sold": [
         {
@@ -138,7 +138,8 @@
         "summer_median": 89.9,
         "median_365": 89.9
       },
-      "type": "냉감 전용"
+      "type": "냉감 전용",
+      "updated_at": "2026-10-26 17:47"
     },
     "B0F2FN34BS": {
       "brand": "Herlag",
@@ -258,14 +259,14 @@
       "category": "Bettwaren & Bettwäsche > Matratzenauflagen & Topper > Matratzenauflagen",
       "sub_category": "Matratzenauflagen",
       "listed_since": "2024-12-12",
-      "rank_root_now": 441010,
+      "rank_root_now": 402472,
       "rank_root_summer_median": 38891,
       "rank_root_summer_best": 4964,
       "rank_sub_now": 133,
       "rank_sub_summer_median": 29,
       "rank_sub_summer_best": 2,
       "rank_drops": {
-        "30": 5,
+        "30": 6,
         "90": 22,
         "180": 73,
         "365": 179
@@ -314,7 +315,8 @@
       },
       "note": "",
       "caveat": "상품군 변형 16개 중 15개는 같은 냉감 패드(특징 'Zwei-Phasen-Kühlung'), 1개(B0DZCWR8HX)는 젤 메모리폼 토퍼, 1개(California King)는 냉감 토퍼 · 10월 판매 순위 441,010은 상품군 전체가 공유 (2026-10-25 확인)",
-      "type": "냉감 전용"
+      "type": "냉감 전용",
+      "updated_at": "2026-10-26 17:47"
     },
     "B0H626BRN9": {
       "brand": "Ehrenkind",
@@ -375,7 +377,7 @@
       "category": "Bettwaren & Bettwäsche > Matratzenauflagen & Topper > Matratzentopper",
       "sub_category": "Matratzentopper",
       "listed_since": "2018-03-01",
-      "rank_root_now": 741150,
+      "rank_root_now": 747419,
       "rank_root_summer_median": 295503,
       "rank_root_summer_best": 73121,
       "rank_sub_now": 546,
@@ -421,7 +423,8 @@
       },
       "note": "",
       "caveat": "Outlast 온도 조절 냉감 패드(Colheim GmbH, 2018년 출시) · 판매가 여름에 몰림(2026 여름 중앙값 295,503 vs 겨울 852,893) · 리뷰 2025년 10건 → 31건",
-      "type": "냉감 전용"
+      "type": "냉감 전용",
+      "updated_at": "2026-10-26 17:47"
     },
     "B0D7HQFXCY": {
       "brand": "PARADIES",

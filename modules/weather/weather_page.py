@@ -53,20 +53,22 @@ def _weather_html(html):
 # ─────────────────────────────────────────────
 # 본문
 # ─────────────────────────────────────────────
+WEATHER_HELP_ABOUT = "독일 4개 권역 예보와 경쟁사 재고로 이번 주 아마존 광고 예산을 날짜별로 나눕니다."
+
+
 def _weather_header():
-    c1, c2 = st.columns([4, 1.2], vertical_alignment="center")
-    with c1:
-        _weather_html(
-            '<div class="weather-title">4. 광고 타이밍</div>'   # 왼쪽 탭 이름과 같게 (①·② 탭 제목처럼 번호)
-            '<div class="weather-subtitle">독일 4개 권역 예보와 경쟁사 재고로 이번 주 아마존 광고 예산을 날짜별로 나눕니다</div>'
-        )
-    with c2, st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center", key="weather-head-right"):
+    """① 탭과 같은 제목 줄: 제목 칸(공통 ui.page_header) · 물음표(설명·데이터 출처) · 오른쪽 끝 폭염 시나리오 토글."""
+    with st.container(horizontal=True, vertical_alignment="center", key="weather-head"):
+        with st.container(key="weather-head-title"):
+            ui.page_header("4. 광고 타이밍")
+        with st.container(key="weather-help"):
+            # 내용(설명 + 데이터 출처)은 weather_render 끝에서 채움
+            src = st.popover("", icon=":material/help:", type="tertiary", help="이 탭 안내 · 데이터 출처")
         on = st.toggle(
             "폭염 시나리오(샘플)", key="weather-toggle-sample", value=True,   # 처음부터 켜짐 (끄면 실제 예보)
             help="실제 예보 대신 여름 폭염 샘플 데이터로 화면과 보고서를 확인합니다. 끄면 Open-Meteo 실제 예보.",
+            width="content",
         )
-        # 데이터 출처(예전 화면 맨 아래 한 줄)는 이 물음표 안에 (한 화면에 들어오게) - 내용은 weather_render 끝에서 채움
-        src = st.popover("", icon=":material/info:", type="tertiary", help="데이터 출처")
     return on, src
 
 
@@ -354,5 +356,5 @@ def weather_render():
         stock = ("샘플 데이터" if is_sample_stock
                  else f"경쟁사 DB 상위 경쟁사 + Keepa 마지막 조회값 ({weather_stock_checked(competitors)}, report 탭에서 갱신)")
         with src_box:
-            st.markdown(f"**데이터 출처**\n\n- 날씨: {source} · 기준 {plan['regions'][0]['updated'].replace('T', ' ')} · 권역 기온은 3개 도시 평균"
+            st.markdown(f"{WEATHER_HELP_ABOUT}\n\n**데이터 출처**\n\n- 날씨: {source} · 기준 {plan['regions'][0]['updated'].replace('T', ' ')} · 권역 기온은 3개 도시 평균"
                         f"\n- 경쟁사 재고: {stock}")

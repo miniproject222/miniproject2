@@ -63,6 +63,36 @@ def media_s3_make_image(prompt: str) -> bytes:
         raise MediaS3AIError(f"사진을 만들지 못했어요: {err}") from err
 
 
+MEDIA_S3_SAME_PRODUCT = (
+    "Edit this exact photo. It must stay the identical physical product: same color, same fabric texture, "
+    "same quilting/stitching pattern and direction, same edge binding, same size proportions, same white background, "
+    "same lighting and camera style. Change ONLY this one thing: {change}. "
+    "Do not redesign, recolor or replace the product. Details for the result: {prompt}"
+)
+
+
+def media_s3_edit_image(base: bytes, change: str, prompt: str) -> bytes:
+    """사진 A(base)를 고쳐서 사진 B를 만듭니다. 처음부터 따로 그리면 다른 제품처럼 나와서, A를 넣고
+    바꿀 것(change) 하나만 바꾸게 합니다 (색·원단·누빔 무늬·배경은 A 그대로)."""
+    text = MEDIA_S3_SAME_PRODUCT.format(change=change, prompt=prompt)
+    image = ("photo_A.png", base, "image/png")
+    try:
+        client = _media_s3_client()
+        try:   # input_fidelity="high": 넣은 사진의 무늬·질감을 최대한 그대로 (지원 안 하는 모델이면 빼고 다시)
+            res = client.images.edit(model=MEDIA_S3_IMAGE_MODEL, image=image, prompt=text, size="1536x1024",
+                                     quality=MEDIA_S3_IMAGE_QUALITY, input_fidelity="high", n=1)
+        except Exception as err:
+            if "input_fidelity" not in str(err):
+                raise
+            res = client.images.edit(model=MEDIA_S3_IMAGE_MODEL, image=image, prompt=text, size="1536x1024",
+                                     quality=MEDIA_S3_IMAGE_QUALITY, n=1)
+        return base64.b64decode(res.data[0].b64_json)
+    except MediaS3AIError:
+        raise
+    except Exception as err:
+        raise MediaS3AIError(f"사진 B를 만들지 못했어요: {err}") from err
+
+
 def media_s3_storyboard_message(src: dict, report: dict) -> str:
     """스토리보드 AI에게 보내는 재료 (2단계 프롬프트 + 리포트 값)."""
     claims = report.get("ad_claims") or {}
