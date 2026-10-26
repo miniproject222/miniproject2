@@ -1,17 +1,67 @@
 {
-  "fetched_at": "2026-10-24",
+  "fetched_at": "2026-10-26 17:37",
   "note": "개발 중 테스트 조회에서 화면에 나온 값을 기록한 것. Novilla·RIBECO의 90일 평균가는 실제 값. Traumnacht(B0DK5548KL)는 2026-10-24 재조회한 실제 값(서리 가정 데이터로 사용). Paradies·potow는 반올림된 변화율만 기록(90일 평균가 없음). 2026-10-24 재조사: Traumnacht 패드(B0DJBVKMY9)·Mara Vital(B0B5RZH8C3)·Herlag(B0F2FN34BS) 실제 값 추가.",
-  "tokens_left": 1192,
+  "tokens_left": 1194,
   "items": {
     "B0DQ8BDT9Z": {
       "title": "Novilla Cooling Matratzenauflage 160x200cm, Gewebe mit Kühlfaktor, Atmungsaktiv und Hautfreundliches, Dreilagiges Air-Layer-Gewebe, 3 cm Stützende Faserpolsterung, 30 cm Elastische Kante, Oeko-TEX",
       "price": 25.66,
-      "avg90": 29.34,
-      "change": -0.12542603953646903,
+      "avg90": 29.23,
+      "change": -0.12213479302086894,
       "rating": 3.6,
       "reviews": 310,
-      "rank": 441010,
-      "in_stock": true
+      "rank": 402472,
+      "in_stock": true,
+      "events": [
+        {
+          "week": "2026-06-08",
+          "brand": "Novilla",
+          "kind": "할인",
+          "detail": "€23.47 (기간 중앙값 €36.01, Keepa)"
+        },
+        {
+          "week": "2026-06-15",
+          "brand": "Novilla",
+          "kind": "할인",
+          "detail": "€23.47 (기간 중앙값 €36.01, Keepa)"
+        },
+        {
+          "week": "2026-07-13",
+          "brand": "Novilla",
+          "kind": "할인",
+          "detail": "€31.34 (기간 중앙값 €36.01, Keepa)"
+        },
+        {
+          "week": "2026-07-20",
+          "brand": "Novilla",
+          "kind": "할인",
+          "detail": "€31.34 (기간 중앙값 €36.01, Keepa)"
+        },
+        {
+          "week": "2026-07-27",
+          "brand": "Novilla",
+          "kind": "할인",
+          "detail": "€27.22 (기간 중앙값 €36.01, Keepa)"
+        },
+        {
+          "week": "2026-08-03",
+          "brand": "Novilla",
+          "kind": "할인",
+          "detail": "€27.22 (기간 중앙값 €36.01, Keepa)"
+        },
+        {
+          "week": "2026-08-10",
+          "brand": "Novilla",
+          "kind": "할인",
+          "detail": "€27.13 (기간 중앙값 €36.01, Keepa)"
+        },
+        {
+          "week": "2026-08-17",
+          "brand": "Novilla",
+          "kind": "할인",
+          "detail": "€27.13 (기간 중앙값 €36.01, Keepa)"
+        }
+      ]
     },
     "B07121YZM5": {
       "title": "RIBECO GERMANY Ganzjahr-Matratzenauflage 90x200cm, 2-in-1 wärmend+kühlend",
@@ -70,8 +120,28 @@
       "change": 0.0,
       "rating": 4.0,
       "reviews": 131,
-      "rank": 245133,
-      "in_stock": true
+      "rank": 214609,
+      "in_stock": true,
+      "events": [
+        {
+          "week": "2026-07-06",
+          "brand": "Mara Vital",
+          "kind": "품절",
+          "detail": "Amazon.de 오퍼 없음 (Keepa)"
+        },
+        {
+          "week": "2026-07-13",
+          "brand": "Mara Vital",
+          "kind": "품절",
+          "detail": "Amazon.de 오퍼 없음 (Keepa)"
+        },
+        {
+          "week": "2026-07-20",
+          "brand": "Mara Vital",
+          "kind": "품절",
+          "detail": "Amazon.de 오퍼 없음 (Keepa)"
+        }
+      ]
     },
     "B0F2FN34BS": {
       "title": "Herlag Matratzenauflage 90x200cm - 2-in-1 Wendeauflage mit Sommer- & Winterseite - Ganzjähriger Matratzenschoner - Cooling-Gewebe & Micro-Flanell - Waschbar & Trocknergeeignet - Öko Tex 100",
@@ -100,8 +170,10 @@
       "change": 0.0,
       "rating": 3.8,
       "reviews": 31,
-      "rank": 741150,
-      "in_stock": true
+      "rank": 747419,
+      "in_stock": true,
+      "events": []
     }
-  }
+  },
+  "auto_day": "2026-10-26"
 }

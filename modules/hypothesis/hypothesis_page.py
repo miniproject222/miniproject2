@@ -684,7 +684,11 @@ def hypothesis_render():
     current = hypothesis_current(saved)
     with st.container(horizontal=True, vertical_alignment="center", key="hypothesis-head"):
         with st.container(key="hypothesis-head-title"):
-            ui.page_header("2. 가설 세우기", "① 문제 분석의 상위 문제로 가설 후보를 자동으로 만들고, 그중 하나를 골라 ③ 광고 소재로 넘겨요.")
+            ui.page_header("2. 가설 세우기")   # ① 탭과 같은 제목 줄 (설명 한 줄은 옆 물음표 안)
+        with st.container(key="hypothesis-help"):
+            with st.popover("", icon=":material/help:", type="tertiary", help="이 탭 안내"):
+                st.markdown("① 문제 분석의 상위 문제로 가설 후보를 자동으로 만들고, 그중 하나를 골라 ③ 광고 소재로 넘겨요.\n\n"
+                            "**순서**: 오른쪽 위 '불러오기' → 가설 1·2·3 중 하나 '선택하기' → '다음으로'(저장하고 ③으로 이동, ③에서 자동으로 불러옴)")
         st.button("불러오기", icon=":material/download:", key="hypothesis-btn-load", on_click=_hypothesis_click_load,
                   help="① 탭에서 저장한 리포트로 가설 후보를 만듭니다 (저장된 리포트가 없으면 ① 탭으로 이동)")
         st.button("다음으로", icon=":material/arrow_forward:", key="hypothesis-btn-store", type="primary",
