@@ -12,14 +12,20 @@ from modules.weather.weather_page import weather_render
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
-# 탭 목록: 작업 순서대로 표시됩니다 (홈 → 문제 분석 → 가설 → 광고 소재·솔루션 → 광고 타이밍)
+# 탭 목록: 작업 순서대로 표시됩니다 (홈 → 문제 분석 → 가설 수립 → 매체 제작 → 날씨 광고 타이밍)
+# image: 왼쪽 아이콘 줄에 보이는 그림 (common/images/). icon은 홈 화면 버튼 등 글자로 쓰는 곳에서 사용
+# "날씨 광고 타이밍"의 ​(보이지 않는 줄바꿈 자리): 띄어쓰기가 줄바꿈 없는 공백으로 바뀌어도 "날씨" 뒤에서 줄이 나뉘게 함
 LAYOUT_TABS = [
-    {"code": "home", "label": "홈", "icon": "🏠", "render": home_render},
-    {"code": "report", "label": "문제 분석", "icon": "🔍", "render": report_render},
-    {"code": "hypothesis", "label": "가설 세우기", "icon": "💡", "render": hypothesis_render},
-    {"code": "media", "label": "광고 소재·솔루션", "icon": "🎨", "render": media_render},
-    {"code": "weather", "label": "광고 타이밍", "icon": "⏰", "render": weather_render},
+    {"code": "home", "label": "홈", "icon": "🏠", "image": "common_logo.png", "render": home_render},
+    {"code": "report", "label": "문제 분석", "icon": "🔍", "image": "common_tab_report.png", "render": report_render},
+    {"code": "hypothesis", "label": "가설 수립", "icon": "💡", "image": "common_tab_hypothesis.png", "render": hypothesis_render},
+    {"code": "media", "label": "매체 제작", "icon": "🎬", "image": "common_tab_media.png", "render": media_render},
+    {"code": "weather", "label": "날씨 ​광고 타이밍", "icon": "🌤", "image": "common_tab_weather.png", "render": weather_render},
 ]
+
+# app.py의 최상위 탭 버튼 (common_style.css와 같은 경로)
+LAYOUT_TAB_SELECTOR = ('[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"]'
+                       ' > div > [role="tablist"] > [role="tab"]')
 
 
 def layout_load_css():
@@ -27,10 +33,12 @@ def layout_load_css():
     files = [ROOT_DIR / "common" / "common_style.css"]
     files += [ROOT_DIR / "modules" / t["code"] / f"{t['code']}_style.css" for t in LAYOUT_TABS]
     css = "\n".join(p.read_text(encoding="utf-8") for p in files if p.exists())
-    # 왼쪽 아이콘 줄의 홈 로고: CSS 파일에서는 이미지 경로를 쓸 수 없어 base64로 넘김 (--common-logo)
-    logo = ROOT_DIR / "common" / "images" / "common_logo.png"
-    if logo.exists():
-        css += f'\n:root {{ --common-logo: url("data:image/png;base64,{base64.b64encode(logo.read_bytes()).decode()}"); }}'
+    # 왼쪽 아이콘 줄의 탭 그림: CSS 파일에서는 이미지 경로를 쓸 수 없어 탭마다 base64로 넘김 (--common-tab-img)
+    for i, t in enumerate(LAYOUT_TABS, start=1):
+        img = ROOT_DIR / "common" / "images" / t.get("image", "")
+        if img.is_file():
+            data = base64.b64encode(img.read_bytes()).decode()
+            css += f'\n{LAYOUT_TAB_SELECTOR}:nth-of-type({i}) {{ --common-tab-img: url("data:image/png;base64,{data}"); }}'
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 
