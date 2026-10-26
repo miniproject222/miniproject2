@@ -45,8 +45,9 @@ MEDIA_VARIABLE_SQP_LABEL = "가상 데이터"
 MEDIA_VARIABLE_STAGE_KIND = "main_image"   # 2·3단계(프롬프트 → 매체 제작)가 이어받을 수 있는 변수 종류
 # 판정 값: 2·3단계로 진행 / 메인 이미지 변수가 아님 / 메인 이미지 변수지만 B안이 없음 (뒤 둘은 골라도 확정만 막음)
 MEDIA_VARIABLE_PASS = "✅ 이미지로 진행"
-MEDIA_VARIABLE_NOT_IMAGE = "⚠️ 이미지로 해결 불가"
-MEDIA_VARIABLE_NO_B = "⚠️ B안 없음"
+# 진행할 수 없는 두 판정은 경고가 아니라 '솔루션으로 해결' 안내라서 부드러운 말·색으로 보여 줌
+MEDIA_VARIABLE_NOT_IMAGE = "💡 이미지 외 변수"
+MEDIA_VARIABLE_NO_B = "💡 B안 없음"
 # 진행할 수 없는 변수를 골랐을 때 오른쪽 안내 (경고 대신, 블럭의 '솔루션 보러가기'로 이끔) {판정: 안내}
 MEDIA_VARIABLE_BLOCK_MSG = {
     MEDIA_VARIABLE_NOT_IMAGE: "이미지로 바꿀 수 있는 변수가 아니에요.",
@@ -56,7 +57,7 @@ MEDIA_VARIABLE_SOLUTION_LINE = "매체 제작 대신 솔루션으로 해결"   #
 MEDIA_VARIABLE_SOLUTION_KEY = "media-variable-solutions"       # 만든 솔루션 {"가설|변수": {"solution", "source", "error"}} (session_state)
 MEDIA_VARIABLE_SOLUTION_OPEN_KEY = "media-variable-solution-open"   # 솔루션 팝업을 띄울 변수 이름 (session_state)
 # 판정 배지 색 (Streamlit 마크다운 배지 :색-badge[...])
-MEDIA_VARIABLE_VERDICT_BADGE = {MEDIA_VARIABLE_PASS: "green", MEDIA_VARIABLE_NOT_IMAGE: "orange", MEDIA_VARIABLE_NO_B: "orange"}
+MEDIA_VARIABLE_VERDICT_BADGE = {MEDIA_VARIABLE_PASS: "green", MEDIA_VARIABLE_NOT_IMAGE: "blue", MEDIA_VARIABLE_NO_B: "blue"}
 MEDIA_VARIABLE_SHOW = 3   # 변수 블럭을 보여 줄 수 (가설·후보 목록이 바뀌어도 이 수만큼만)
 MEDIA_VARIABLE_VAR_KEY = "media-variable-var"       # 사용자가 블럭에서 고른 변수 이름 (session_state)
 MEDIA_VARIABLE_PICK_KEY = "media-variable-pick"     # B안 체크박스 (st.checkbox) key 앞부분 (뒤에 변수 번호-B안 번호)
@@ -217,7 +218,7 @@ def media_variable_judge(v: dict) -> tuple[bool, str, str]:
     가설의 If와 맞는지(if_match)는 진행 조건이 아니라 이유 칸에 참고로만 적습니다."""
     off_if = "" if v.get("if_match") else " · 가설의 If와 다름"
     if v.get("kind") != MEDIA_VARIABLE_STAGE_KIND:
-        return False, MEDIA_VARIABLE_NOT_IMAGE, "지금은 메인 이미지 문제만 해결 가능" + off_if
+        return False, MEDIA_VARIABLE_NOT_IMAGE, "메인 이미지가 아닌 변수" + off_if
     ok, broken = media_variable_b_options(v)
     if not ok:   # AI는 가설의 If와 맞는 변수에만 B안을 만듦 (media_variable_ai.py)
         why = "가설의 If와 달라 B안을 만들지 않음" if off_if else "메인 이미지 규칙 안에서 만들 B안이 없음"
@@ -448,8 +449,9 @@ def media_variable_derive_step(plan: dict, price: str, defaults: list[str], cand
             "(판정은 아래 기준으로 코드가 다시 계산)\n\n"
             f"**{MEDIA_VARIABLE_PASS}**: 2·3단계가 이어받을 수 있는 메인 이미지 변수이고, "
             "아마존 메인 이미지 규칙 안에서 Manage Your Experiments로 돌릴 B안이 있어요.\n\n"
-            f"**{MEDIA_VARIABLE_NOT_IMAGE} · {MEDIA_VARIABLE_NO_B}**: 골라도 되지만 다음 단계로 확정할 수는 없어요 "
-            "(지금은 메인 이미지 문제만 해결 가능, 기능 업데이트 예정). 가설의 If와 다른 변수는 블럭 아랫줄 이유에 적어요."
+            f"**{MEDIA_VARIABLE_NOT_IMAGE} · {MEDIA_VARIABLE_NO_B}**: 사진·영상으로 A/B를 만들 수 없는 변수라 "
+            f"{MEDIA_VARIABLE_SOLUTION_LINE}해요. 블럭의 '솔루션 보러가기'로 AI 솔루션을 보고, 확정하면 1번 문제 분석 탭으로 넘겨요. "
+            "가설의 If와 다른 변수는 블럭 아랫줄 이유에 적어요."
             + ("\n\n**화면에 안 보이는 변수**: " + ", ".join(f"{v['name']} ({v['verdict']})" for v in hidden)
                if hidden else "")))
         if rows:
