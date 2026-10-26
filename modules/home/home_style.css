@@ -75,11 +75,11 @@
 /* ── 왼쪽: 제목 → 큰 숫자 → 아이콘 숫자 → 카드 (레퍼런스 배치) ── */
 .home-left { grid-area: left; position: relative; z-index: 2; display: flex; flex-direction: column; min-height: 0; animation: home-rise 0.5s ease-out both; }
 .home-left .home-title { font-size: calc(26 * var(--u)); font-weight: 500; }
-.home-hero-label { display: flex; align-items: center; gap: calc(10 * var(--u)); margin-top: calc(34 * var(--u)); font-size: calc(14 * var(--u)); font-weight: 700; }
+.home-hero-label { display: flex; align-items: center; gap: calc(10 * var(--u)); margin-top: calc(22 * var(--u)); font-size: calc(14 * var(--u)); font-weight: 700; }
 .home-hero { font-size: calc(68 * var(--u)); font-weight: 500; line-height: 1.1; letter-spacing: -0.02em; }
 .home-hero-why { font-size: calc(12 * var(--u)); }
 .home-hero-why b { color: var(--home-purple); }
-.home-minis { display: flex; gap: calc(28 * var(--u)); margin: calc(30 * var(--u)) 0 calc(28 * var(--u)); }
+.home-minis { display: flex; gap: calc(28 * var(--u)); margin: calc(20 * var(--u)) 0 calc(18 * var(--u)); }
 .home-mini {   /* 누르면 ④ 광고 타이밍으로: 마우스를 올리면 살짝 떠오름 */
   display: flex;
   align-items: center;
@@ -102,7 +102,7 @@
 
 .home-cards { display: grid; grid-template-columns: 1fr 1fr; gap: calc(16 * var(--u)); align-items: stretch; }
 .home-cards-col { display: flex; flex-direction: column; gap: calc(16 * var(--u)); }
-.home-card-sm, .home-card-heat { padding: calc(20 * var(--u)) calc(22 * var(--u)); }
+.home-card-sm, .home-card-heat { padding: calc(16 * var(--u)) calc(22 * var(--u)); }
 .home-cards-col .home-card-sm { flex: 1; }
 .home-card-num { margin: calc(4 * var(--u)) 0; font-size: calc(28 * var(--u)); font-weight: 500; }
 .home-card-num .home-sub { margin-left: calc(6 * var(--u)); font-size: calc(10 * var(--u)); }
@@ -118,12 +118,18 @@
   font-size: calc(8 * var(--u));
 }
 .home-heat-day { text-align: center; color: var(--home-sub); }
+.home-heat-today { font-weight: 700; color: var(--home-purple); }
+
+/* 작은 7일 꺾은선 (매출 / 평균 최고 기온) */
+.home-spark { margin-top: calc(8 * var(--u)); }
+.home-spark-img { display: block; width: 100%; height: calc(32 * var(--u)); }
+.home-spark .home-sub { margin-top: calc(2 * var(--u)); font-size: calc(8 * var(--u)); }
 .home-heat-city { display: flex; align-items: center; color: var(--home-sub); white-space: nowrap; }
 .home-heat-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: calc(25 * var(--u));
+  height: calc(22 * var(--u));
   border-radius: calc(4 * var(--u));
   font-weight: 700;
   color: var(--home-card);
@@ -226,25 +232,27 @@
   padding-bottom: calc(30 * var(--u));   /* 오른쪽 아래 할 일 안내 말풍선과 지구본 아래 글씨가 겹치지 않게 위로 */
   animation: home-fade 0.8s ease-out both;
 }
-.home-globe-wrap {   /* 540 → 620: 더 크게, 왼쪽으로 50 당겨 화면 가운데 쪽으로 (바깥 고리는 왼쪽 카드 뒤로) */
+.home-globe-wrap {   /* 540 → 620 → 680: 더 크게, 왼쪽으로 90 당겨 화면 가운데 쪽으로 (바깥 고리는 왼쪽 카드 뒤로)
+                        위아래는 옅은 빛 번짐 여백만 겹치게 줄여, 커져도 화면 밖으로 잘리지 않게 */
   position: relative;
-  left: calc(-50 * var(--u));
-  width: calc(620 * var(--u));
+  left: calc(-90 * var(--u));
+  width: calc(680 * var(--u));
   max-width: none;
+  margin: calc(-30 * var(--u)) 0 calc(-40 * var(--u));
   animation: home-bob 7s ease-in-out infinite;
 }
 .home-globe-svg { display: block; width: 100%; height: auto; }
-.home-globe-cap { position: relative; left: calc(-50 * var(--u)); margin-top: calc(4 * var(--u)); font-size: calc(9 * var(--u)); color: var(--home-sub); text-align: center; }
+.home-globe-cap { position: relative; left: calc(-90 * var(--u)); margin-top: calc(4 * var(--u)); font-size: calc(9 * var(--u)); color: var(--home-sub); text-align: center; }
 
 /* 지구본 아래: 기온 색 안내 */
 .home-legend {
   position: relative;
-  left: calc(-50 * var(--u));   /* 지구본과 같이 가운데 쪽으로 */
+  left: calc(-90 * var(--u));   /* 지구본과 같이 가운데 쪽으로 */
   z-index: 2;   /* 위로 올린 만큼 지구본 빛 번짐이 덮지 않게 */
   display: flex;
   align-items: center;
   gap: calc(12 * var(--u));
-  margin-top: calc(-30 * var(--u));   /* 지구본 빛 번짐 여백만큼 올림 */
+  margin-top: calc(-6 * var(--u));
   padding: calc(4 * var(--u)) calc(12 * var(--u));
   border-radius: 999px;
   background: var(--home-card);
@@ -544,7 +552,7 @@
   }
   .home-cards { grid-template-columns: minmax(0, 1fr); }
   .home-globe-wrap, .home-legend, .home-globe-cap { left: 0; }
-  .home-globe-wrap { width: 100%; }
+  .home-globe-wrap { width: 100%; margin: 0; }
   .home-globe-wrap { width: 100%; max-width: none; }
   .home-fab { position: fixed; right: 16px; bottom: 16px; }
   .home-fab-panel { width: min(400px, calc(100vw - 32px)); max-height: 70vh; }

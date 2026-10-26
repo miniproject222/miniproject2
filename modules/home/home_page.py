@@ -206,8 +206,25 @@ def home_card_head(title, tabs, code):
     return f'<div class="home-row-between"><span class="home-sub">{title}</span>{home_go(tabs, code, "자세히", "home-go home-go-sm")}</div>'
 
 
+def home_spark_html(values, labels):
+    """작은 7일 꺾은선 (카드 아래 빈 곳을 채움). values: 숫자 목록, labels: 처음·끝 글자"""
+    if len(values) < 2:
+        return ""
+    lo, hi = min(values), max(values)
+    span = (hi - lo) or 1
+    pts = [(i / (len(values) - 1) * 200, 44 - (v - lo) / span * 36) for i, v in enumerate(values)]
+    line = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -4 200 52" preserveAspectRatio="none">'
+           f'<polygon points="0,48 {line} 200,48" fill="{C["purple"]}" fill-opacity="0.12"/>'
+           f'<polyline points="{line}" fill="none" stroke="{C["purple"]}" stroke-width="2.5" '
+           f'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>'
+           f'<circle cx="{pts[-1][0]:.1f}" cy="{pts[-1][1]:.1f}" r="4" fill="{C["purple"]}"/></svg>')
+    return (f'<div class="home-spark">{home_svg_img(svg, "home-spark-img")}'
+            f'<div class="home-row-between home-sub"><span>{labels[0]}</span><span>{labels[1]}</span></div></div>')
+
+
 def home_card_sales_html(report, is_demo, temps, tabs):
-    """작은 카드 1: 전날 매출 (데이터가 없으면 내일 평균 최고 기온, 오늘과 비교)"""
+    """작은 카드 1: 전날 매출 + 7일 매출 꺾은선 (데이터가 없으면 내일 평균 최고 기온 + 7일 평균 최고 기온 꺾은선)"""
     sales = report.get("yesterday_sales")
     if sales is not None:
         return f"""
@@ -215,14 +232,18 @@ def home_card_sales_html(report, is_demo, temps, tabs):
     {home_card_head(f"전날 매출 {home_demo_tag(is_demo)}", tabs, "report")}
     <div class="home-card-num">€{sales:,.0f}{home_delta(report.get("sales_delta", 0))}</div>
     <div class="home-sub">전일 대비</div>
+    {home_spark_html(report.get("sales_7d") or [], ("7일 전", "어제"))}
   </div>"""
     now = sum(p["temp"] for p in temps) / len(temps)
     tomorrow = sum(p.get("tomorrow", p["temp"]) for p in temps) / len(temps)
+    days = [[d["max"] for d in (p.get("daily") or [])] for p in temps]
+    avg = [sum(col) / len(col) for col in zip(*days)] if all(days) else []
     return f"""
   <div class="home-float home-card-sm">
     {home_card_head("내일 평균 최고 기온", tabs, "weather")}
     <div class="home-card-num">{tomorrow:.0f}°C{home_delta(tomorrow - now, "°")}</div>
     <div class="home-sub">지금 평균 {now:.0f}°C 대비 · 독일 {len(temps)}개 도시</div>
+    {home_spark_html(avg, ("오늘", "7일 뒤"))}
   </div>"""
 
 
@@ -258,7 +279,8 @@ def home_heatmap_html(temps, tabs):
     days = [d["day"] for d in (temps[0].get("daily") or [])][:7]
     values = [d["max"] for p in temps for d in (p.get("daily") or [])[:7]]
     lo, hi = min(values, default=0), max(values, default=1)
-    head = '<span></span>' + "".join(f'<span class="home-heat-day">{"오늘" if i == 0 else d}</span>' for i, d in enumerate(days))
+    head = '<span></span>' + "".join(f'<span class="home-heat-day{" home-heat-today" if i == 0 else ""}">{"오늘" if i == 0 else d}</span>'
+                                     for i, d in enumerate(days))
 
     def cell(p, d):
         hot = d["max"] >= HOME_HEAT_TEMP
