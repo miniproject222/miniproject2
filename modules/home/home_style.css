@@ -582,3 +582,36 @@
 .home-left .home-tpin-pop,
 .home-left .home-gap,
 .home-left .home-contact { pointer-events: auto; }
+
+/* 2026-10-27 PM: 진행 카드 3개(가설·A/B 소재·경쟁사 가격) — 지금 할 일 아이콘 바로 아래에 세로 한 줄로 쌓고, 평소에는 제목 줄만.
+   마우스를 올리면 내용이 카드 오른쪽에 떠 있는 상자로 나타남 (카드 자리는 그대로라 다른 카드가 밀리지 않음) */
+.home-cards {
+  display: flex;
+  flex-direction: column;
+  gap: calc(12 * var(--u));
+  width: calc(232 * var(--u));
+  margin-top: calc(34 * var(--u));
+  margin-bottom: 0;
+}
+.home-cards-col { display: contents; }
+.home-cards .home-card { position: relative; flex: none; gap: 0; padding: calc(15 * var(--u)) calc(18 * var(--u)); }
+.home-cards .home-card-title { font-size: calc(13.5 * var(--u)); font-weight: 600; }
+.home-card-body {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 12 * var(--u));
+  z-index: 6;
+  width: calc(270 * var(--u));
+  padding: calc(14 * var(--u)) calc(18 * var(--u));
+  border-radius: calc(10 * var(--u));
+  background: var(--home-card);
+  box-shadow: 0 calc(14 * var(--u)) calc(34 * var(--u)) color-mix(in srgb, var(--home-purple) 18%, transparent);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(calc(-6 * var(--u)));
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  cursor: pointer;
+}
+.home-card-inner { display: flex; flex-direction: column; gap: calc(5 * var(--u)); }
+.home-card:hover .home-card-body { opacity: 1; visibility: visible; transform: none; }
+.home-card-tall .home-card-inner .home-card-sub { margin-top: calc(4 * var(--u)); }
