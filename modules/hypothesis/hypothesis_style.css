@@ -949,3 +949,16 @@
 }
 .st-key-hypothesis-btn-pdf button:not(:disabled) p,
 .st-key-hypothesis-btn-pdf button:not(:disabled) span { color: #7B6CF2 !important; }
+
+/* 불러오기·PDF 다운로드: 마우스를 올리면 공통 버튼 hover(진한 배경) 대신 연보라 + 살짝 떠오름 (① 탭과 같게, 2026-10-27) */
+.st-key-hypothesis-btn-load button,
+.st-key-hypothesis-btn-pdf button {
+  transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.st-key-hypothesis-btn-load button:hover,
+.st-key-hypothesis-btn-pdf button:not(:disabled):hover {
+  background: color-mix(in srgb, #7B6CF2 8%, var(--color-card)) !important;
+  border-color: #7B6CF2 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px color-mix(in srgb, #7B6CF2 18%, transparent);
+}
