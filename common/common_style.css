@@ -1,92 +1,172 @@
 /* 공통 디자인 (PM) - 모듈에서는 아래 변수만 사용합니다 */
+/* 값은 design.md의 THEME(ui_theme.py)과 .streamlit/config.toml의 [theme]과 같습니다 */
 :root {
-  --color-primary: #3b6ef5;
-  --color-bg: #f4f6fa;
-  --color-card: #ffffff;
-  --color-text: #1f2430;
-  --color-sub: #6b7280;
-  --color-border: #e5e7eb;
-  --radius: 12px;
+  --color-primary: #504E76;
+  --color-bg: #F5F6FB;
+  --color-card: #FFFFFF;
+  --color-text: #504E76;
+  --color-sub: #8C8AA8;
+  --color-border: #EFEDE0;
+  --radius: 18px;
   --font-main: "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
-  --sidebar-width: 220px;
+  --color-point: #7B6CF2;   /* 밝은 보라: 버튼·선택 강조 (①②③④ 탭과 같은 색, 2026-10-27) */
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: var(--color-bg);
+/* 사이드바 로고 */
+.common-logo {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--color-text);
-  font-family: var(--font-main);
 }
 
-.common-app {
-  display: flex;
-  min-height: 100vh;
+/* 왼쪽 세로 아이콘 줄: app.py의 최상위 탭(st.tabs)을 화면 왼쪽에 고정
+   (모듈 안에서 쓰는 st.tabs에는 적용되지 않도록 최상위 경로만 지정) */
+:root {
+  --common-rail-w: 66px;
 }
 
-/* 사이드바 */
-.common-sidebar {
-  flex: 0 0 var(--sidebar-width);
+/* 아이콘 줄 폭만큼 본문을 오른쪽으로 밀고 그만큼 좁힘 */
+[data-testid="stAppViewContainer"] {
+  box-sizing: border-box;
+  padding-left: var(--common-rail-w);
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 999990;
+  width: var(--common-rail-w);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;   /* 칸 사이 간격 (2026-10-27 8px → 14px) */
+  box-sizing: border-box;
+  padding: 12px 3px 16px;
+  overflow-y: auto;
   background: var(--color-card);
   border-right: 1px solid var(--color-border);
-  padding: 24px 12px;
 }
 
-.common-logo {
-  margin: 0 12px 24px;
-  font-size: 18px;
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"] {
+  position: relative;
+  overflow: visible;
+  height: auto;
+  min-height: 48px;
+  justify-content: center;
+  padding: 26px 1px 5px !important;
+  border-radius: 14px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--color-text) !important;
 }
 
-.common-menu {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* 탭 그림은 윗줄, 이름은 아랫줄 (그림은 common_layout.py가 탭마다 --common-tab-img로 넘김)
+   선택·마우스 올림 배경색이 유지되도록 background 대신 background-image 등을 따로 지정 */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"] {
+  background-image: var(--common-tab-img) !important;
+  background-position: center 5px !important;
+  background-size: 18px !important;
+  background-repeat: no-repeat !important;
 }
 
-.common-menu-item {
-  display: block;
+/* 이름의 띄어쓰기는 app.py에서 줄바꿈 없는 공백으로 바꿔 둠 */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"] p {
+  width: min-content;
+  margin: 0 auto;
+  white-space: normal;
+  word-break: keep-all;
+  font-size: 10.5px;
+  line-height: 1.4;
+  text-align: center;
+  color: inherit !important;
+}
+
+/* 맨 앞 글자(이모지 icon)는 그림이 대신하므로 숨김.
+   한 줄 전체 폭의 1px 높이 float로 만들어, 이름이 이모지 옆 첫 줄에 붙지 않고 항상 그 아래 줄부터 시작하게 함 */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"] p::first-letter {
+  float: left;
   width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 4px;
-  border: 0;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  height: 1px;
+  font-size: 0;
 }
 
-.common-menu-item:hover {
-  background: var(--color-bg);
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:hover {
+  background-color: color-mix(in srgb, var(--color-point) 5%, transparent) !important;
 }
 
-.common-menu-item.is-active {
-  background: var(--color-primary);
-  color: var(--color-card);
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"][aria-selected="true"] {
+  background-color: color-mix(in srgb, var(--color-point) 8%, transparent) !important;   /* 2026-10-27 회보라(남색 12%) → 연보라 */
+  color: var(--color-primary) !important;
 }
 
-/* 본문 */
-.common-main {
-  flex: 1;
-  padding: 32px;
-  min-width: 0;
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"][aria-selected="true"] p {
+  font-weight: 700;
 }
 
-.common-tab {
+/* 첫 번째 탭(홈)은 이름 없이 로고만 가운데에 표시 */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(1) {
+  min-height: 52px;
+  padding: 6px 1px !important;
+  background-position: center !important;
+  background-size: 32px !important;
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(1) p {
   display: none;
 }
 
-.common-tab.is-active {
-  display: block;
+/* 로고 아래 메뉴는 로고와 떨어뜨려 더 아래에서 시작 (로고 자리는 그대로, 2026-10-27) */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2) {
+  margin-top: 40px;
+}
+
+/* 문제 분석 → 가설 수립 → 매체 제작은 이어지는 흐름: 탭 사이를 띄우고 아래 방향 화살표 */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2),
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(3) {
+  margin-bottom: 20px;
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2)::after,
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(3)::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -21px;
+  width: 7px;
+  height: 7px;
+  margin-left: -5px;
+  border-right: 2px solid var(--color-sub);
+  border-bottom: 2px solid var(--color-sub);
+  transform: rotate(45deg);
+}
+
+/* 날씨 광고 타이밍은 별도 단계: 화살표 없이 띄우고 구분선 */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(5) {
+  margin-top: 20px;
+}
+
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(5)::before {
+  content: "";
+  position: absolute;
+  top: -17px;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-sub) 45%, transparent);
+}
+
+/* 세로 줄에서는 필요 없는 탭 밑줄과 좌우 스크롤 화살표 숨기기 */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"] > div:not([data-testid]),
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div:not(:has([role="tablist"])) {
+  display: none;
 }
 
 /* 카드 */
 .common-card {
   background: var(--color-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 20px;
 }

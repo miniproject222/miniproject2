@@ -1,10 +1,617 @@
-/* 홈 - class는 home- 로 시작, 색상은 공통 변수만 사용 */
-.home-card {
-  background: var(--color-card);
-  border-radius: var(--radius);
-  padding: 20px;
+/* 홈 - class는 home- 로 시작 */
+/* 홈 판(.home-board)의 색은 home_page.py의 HOME_COLORS가 --home-* 변수로 넣어 줍니다 (보라 한 계열 + 경고색만) */
+
+/* 판: 홈 탭이 열려 있으면 왼쪽 아이콘 줄 오른쪽 화면 전체를 채움 (다른 탭을 열면 함께 숨겨짐)
+   배치 (레퍼런스 'General statistics' 그대로): 왼쪽 글자·아이콘·카드 위에, 오른쪽을 채우는 큰 하얀 지구본이 뒤에 깔림
+   크기 단위 --u: 기준 화면(1300 x 740)을 1px로 보고 화면에 맞게 통째로 확대/축소 (가로·세로 중 작은 쪽) */
+.home-board {
+  --rail: var(--common-rail-w, 0px);
+  --u: min(calc((100vw - var(--rail)) / 1300), calc(100vh / 740));
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--rail);
+  z-index: 10;
+  box-sizing: border-box;
+  padding: calc(40 * var(--u)) calc(56 * var(--u)) calc(30 * var(--u));
+  overflow: hidden;
+  background: linear-gradient(135deg, #F4F4FB 0%, #ECECF8 100%);
+  color: var(--home-text);
+  font-family: var(--font-main);
+  font-size: calc(13 * var(--u));
 }
 
-.home-desc {
-  color: var(--color-sub);
+/* 공통 글자 */
+.home-title { font-size: calc(28 * var(--u)); font-weight: 500; letter-spacing: -0.01em; }
+.home-sub { font-size: calc(10 * var(--u)); color: var(--home-sub); }
+.home-row-between { display: flex; justify-content: space-between; align-items: center; gap: calc(8 * var(--u)); }
+.home-clamp-1, .home-clamp-2, .home-clamp-3 { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.home-clamp-1 { -webkit-line-clamp: 1; }
+.home-clamp-2 { -webkit-line-clamp: 2; }
+.home-clamp-3 { -webkit-line-clamp: 3; }
+
+/* 카드 (레퍼런스처럼 하얗고 반투명, 그림자 옅게) */
+.home-float {
+  background: color-mix(in srgb, var(--home-card) 94%, transparent);
+  border-radius: calc(10 * var(--u));
+  box-shadow: 0 calc(10 * var(--u)) calc(30 * var(--u)) color-mix(in srgb, var(--home-purple) 10%, transparent);
+  backdrop-filter: blur(6px);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  animation: home-rise 0.6s ease-out both;
 }
+
+/* 누르면 탭 이동하는 카드: 마우스를 올리면 떠오르고 → 표시 */
+.home-click { cursor: pointer; }
+.home-card-go { color: var(--home-purple); font-weight: 700; opacity: 0; transform: translateX(-4px); transition: opacity 0.2s, transform 0.2s; }
+.home-click:hover .home-card-go { opacity: 1; transform: none; }
+.home-float.home-click:hover {
+  transform: translateY(calc(-3 * var(--u)));
+  box-shadow: 0 calc(16 * var(--u)) calc(36 * var(--u)) color-mix(in srgb, var(--home-purple) 18%, transparent);
+}
+
+/* ── 왼쪽 (글자·아이콘·카드는 지구본 위에) ── */
+.home-left { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; animation: home-rise 0.5s ease-out both; }
+
+/* 큰 숫자 자리: 독일 시간 */
+.home-clock { margin-top: calc(18 * var(--u)); }
+.home-clock-label { display: flex; align-items: center; gap: calc(7 * var(--u)); font-size: calc(14 * var(--u)); font-weight: 700; }
+.home-clock-label i { width: calc(7 * var(--u)); height: calc(7 * var(--u)); border-radius: 50%; background: var(--home-up); animation: home-blink 2s ease-in-out infinite; }
+.home-clock-time { font-size: calc(62 * var(--u)); font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.home-clock-time span { margin-left: calc(4 * var(--u)); font-size: calc(26 * var(--u)); font-weight: 500; color: var(--home-sub); }
+.home-clock-sub { font-size: calc(11 * var(--u)); color: var(--home-sub); }
+
+/* 지금 할 일: 레퍼런스 'Dynamics / Sales'처럼 아이콘 세로 줄 (마우스를 올리면 오른쪽에 카드 팝업) */
+.home-section-label { display: flex; align-items: center; gap: calc(8 * var(--u)); margin: calc(22 * var(--u)) 0 calc(10 * var(--u)); font-size: calc(13 * var(--u)); font-weight: 700; }
+.home-section-label .home-sub { font-weight: 400; }
+.home-count {
+  display: inline-block;
+  min-width: calc(18 * var(--u));
+  padding: 0 calc(6 * var(--u));
+  border-radius: 999px;
+  background: var(--home-red);
+  font-size: calc(11 * var(--u));
+  text-align: center;
+  color: var(--home-card);
+}
+.home-tpins { position: relative; z-index: 30; display: flex; flex-direction: column; align-items: flex-start; gap: calc(18 * var(--u)); margin-bottom: calc(16 * var(--u)); }
+.home-tpin { position: relative; display: flex; align-items: center; gap: calc(16 * var(--u)); max-width: calc(330 * var(--u)); cursor: default; outline: none; }
+.home-tpin-icon { position: relative; flex: none; transition: transform 0.2s; }
+.home-tpin .home-icon {
+  width: calc(46 * var(--u));
+  height: calc(46 * var(--u));
+  border-radius: calc(14 * var(--u));
+  box-shadow: 0 calc(8 * var(--u)) calc(18 * var(--u)) color-mix(in srgb, var(--home-text) 14%, transparent);
+}
+.home-tpin .home-icon-img { width: calc(26 * var(--u)); height: calc(26 * var(--u)); }
+.home-tpin:hover .home-tpin-icon, .home-tpin:focus-within .home-tpin-icon { transform: translateY(-2px) scale(1.05); }
+.home-tpin-num {
+  position: absolute;
+  top: calc(-5 * var(--u));
+  right: calc(-5 * var(--u));
+  min-width: calc(19 * var(--u));
+  height: calc(19 * var(--u));
+  box-sizing: border-box;
+  border: calc(2 * var(--u)) solid #F2F2FA;
+  border-radius: 999px;
+  font-size: calc(10 * var(--u));
+  font-weight: 700;
+  line-height: calc(15 * var(--u));
+  text-align: center;
+  color: var(--home-card);
+}
+.home-tpin-text { display: flex; flex-direction: column; align-items: flex-start; gap: calc(3 * var(--u)); min-width: 0; }
+.home-tpin-text b { max-width: 100%; overflow: hidden; font-size: calc(14 * var(--u)); text-overflow: ellipsis; white-space: nowrap; transition: color 0.2s; }
+.home-tpin-text .home-when { font-size: calc(10 * var(--u)); }
+.home-tpin:hover .home-tpin-text b { color: var(--home-purple); }
+.home-tpin-pop {   /* 오른쪽 팝업: 왼쪽 여백(padding-left)이 아이콘과 팝업 사이 다리가 돼 옮기는 동안 닫히지 않음 */
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: calc(380 * var(--u));
+  padding-left: calc(14 * var(--u));
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(calc(-6 * var(--u)), -50%);
+  transition: opacity 0.18s, transform 0.18s, visibility 0.18s;
+}
+.home-tpin:hover .home-tpin-pop, .home-tpin:focus-within .home-tpin-pop { opacity: 1; visibility: visible; transform: translate(0, -50%); transition-delay: 0.05s; }
+.home-todo-card {
+  padding: calc(16 * var(--u)) calc(18 * var(--u));
+  border-radius: calc(14 * var(--u));
+  background: var(--home-card);
+  box-shadow: 0 calc(18 * var(--u)) calc(44 * var(--u)) color-mix(in srgb, var(--home-text) 22%, transparent);
+}
+.home-when {
+  display: inline-block;
+  margin-right: calc(6 * var(--u));
+  padding: 0 calc(7 * var(--u));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--w) 14%, transparent);
+  font-size: calc(9 * var(--u));
+  font-weight: 700;
+  color: var(--w);
+}
+.home-num-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: calc(20 * var(--u));
+  height: calc(20 * var(--u));
+  margin-right: calc(8 * var(--u));
+  border-radius: 50%;
+  font-size: calc(10 * var(--u));
+  font-weight: 700;
+  color: var(--home-card);
+}
+.home-first-top { display: flex; align-items: center; margin-bottom: calc(8 * var(--u)); }
+.home-first-top .home-sub { font-weight: 600; }
+.home-first-title { font-size: calc(15 * var(--u)); font-weight: 700; line-height: 1.4; word-break: keep-all; }
+.home-first-why { margin: calc(8 * var(--u)) 0 calc(12 * var(--u)); font-size: calc(11 * var(--u)); line-height: 1.55; }
+.home-first-why b { color: var(--home-purple); }
+.home-first-foot { flex-wrap: wrap; }
+.home-next { font-size: calc(10 * var(--u)); font-weight: 600; color: var(--home-purple); }
+
+/* 진행 카드: 레퍼런스처럼 왼쪽 아래에 작은 카드 2개(세로) + 긴 카드 1개 */
+.home-cards { display: grid; grid-template-columns: calc(232 * var(--u)) calc(232 * var(--u)); gap: calc(14 * var(--u)); margin-top: auto; align-items: stretch; min-height: 0; }
+.home-cards-col { display: flex; flex-direction: column; gap: calc(14 * var(--u)); }
+.home-cards-col .home-card { flex: 1; }
+.home-card { display: flex; flex-direction: column; gap: calc(5 * var(--u)); padding: calc(14 * var(--u)) calc(18 * var(--u)); }
+.home-card-title { font-size: calc(11.5 * var(--u)); font-weight: 500; color: var(--home-text); }
+.home-card-main { font-size: calc(14 * var(--u)); font-weight: 600; line-height: 1.4; word-break: keep-all; }
+.home-card-main b { color: var(--home-purple); }
+.home-card-sub { font-size: calc(9.5 * var(--u)); line-height: 1.5; color: var(--home-sub); }
+.home-card-sub b { color: var(--home-purple); }
+.home-chip {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: calc(2 * var(--u)) calc(8 * var(--u));
+  border-radius: 999px;
+  background: var(--home-soft);
+  font-size: calc(9 * var(--u));
+  font-weight: 600;
+  color: var(--home-purple);
+}
+.home-ab { display: flex; align-items: center; gap: calc(6 * var(--u)); font-size: calc(10 * var(--u)); }
+.home-ab-tag {
+  flex: none;
+  width: calc(16 * var(--u));
+  height: calc(16 * var(--u));
+  border-radius: calc(5 * var(--u));
+  background: var(--home-line);
+  font-size: calc(9 * var(--u));
+  font-weight: 700;
+  line-height: calc(16 * var(--u));
+  text-align: center;
+}
+.home-ab-b { background: var(--home-purple); color: var(--home-card); }
+
+/* 경쟁사 가격 막대 (레퍼런스 'January 613' 막대 모양, 우리만 보라) */
+.home-price-row { font-size: calc(10 * var(--u)); }
+.home-price-row + .home-price-row { margin-top: calc(6 * var(--u)); }
+.home-price-row .home-sub { margin-top: calc(2 * var(--u)); font-size: calc(9 * var(--u)); font-weight: 400; }
+.home-price-row i { margin-left: calc(4 * var(--u)); padding: 0 calc(5 * var(--u)); border-radius: 999px; background: color-mix(in srgb, var(--home-red) 14%, transparent); font-size: calc(8.5 * var(--u)); font-style: normal; font-weight: 700; color: var(--home-red); }
+.home-bar { height: calc(5 * var(--u)); margin-top: calc(4 * var(--u)); border-radius: 999px; background: var(--home-line); overflow: hidden; }
+.home-bar > span { display: block; height: 100%; border-radius: 999px; background: #C9CBD8; animation: home-grow 1s ease-out 0.2s both; }
+.home-price-us { font-weight: 700; }
+.home-price-us .home-bar > span { background: var(--home-purple); }
+.home-card-tall .home-card-sub { margin-top: auto; }
+
+/* 아이콘 */
+.home-icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: calc(36 * var(--u)); height: calc(36 * var(--u)); border-radius: calc(11 * var(--u)); }
+.home-icon-img { width: calc(20 * var(--u)); height: calc(20 * var(--u)); }
+
+/* 탭 이동 버튼 (할 일 팝업 안) */
+.home-go {
+  display: inline-flex;
+  align-items: center;
+  padding: calc(5 * var(--u)) calc(12 * var(--u));
+  border: none;
+  border-radius: 999px;
+  background: var(--home-purple);
+  font: inherit;
+  font-size: calc(10 * var(--u));
+  font-weight: 600;
+  color: var(--home-card);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+}
+.home-go:hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 calc(6 * var(--u)) calc(14 * var(--u)) color-mix(in srgb, var(--home-purple) 35%, transparent); }
+.home-go-lg { padding: calc(7 * var(--u)) calc(16 * var(--u)); font-size: calc(11.5 * var(--u)); }
+
+/* ── 가운데: 테두리 있는 지구본 (레퍼런스처럼 왼쪽 카드와 오른쪽 패널 사이, 카드 뒤로 살짝 깔림) ── */
+.home-globe {
+  position: absolute;
+  top: calc(22 * var(--u));
+  left: calc(50% - 275 * var(--u));   /* 기준 화면에서 375, 넓은 화면에서는 가운데 쪽으로 같이 이동 */
+  z-index: 1;
+  width: calc(690 * var(--u));        /* 620 → 690: 더 크게 (구 지름 ≈ 0.83 × 폭) */
+  animation: home-fade 0.9s ease-out both;
+}
+.home-globe::before {   /* 테두리 바깥 아주 옅은 빛 (고리 2개가 또렷하게 보이도록 약하게) */
+  content: "";
+  position: absolute;
+  inset: -3%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, #FFFFFF 30%, transparent) 90%, transparent 100%);
+}
+.home-globe-wrap { position: relative; width: 100%; animation: home-bob 7s ease-in-out infinite; }
+.home-globe-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 calc(26 * var(--u)) calc(34 * var(--u)) color-mix(in srgb, var(--home-text) 16%, transparent));
+}
+/* 바닥 그림자: 떠 있는 느낌 (구가 올라가면 작고 옅게) */
+.home-globe-shadow {
+  width: 56%;
+  height: calc(26 * var(--u));
+  margin: calc(-34 * var(--u)) auto 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--home-text) 30%, transparent), transparent);
+  filter: blur(calc(5 * var(--u)));
+  animation: home-shadow 7s ease-in-out infinite;
+}
+
+/* 오른쪽 위: 지역별 광고 비중 (레퍼런스 'Quantity of data' 자리, 모든 글씨는 독일 시간보다 작게) */
+.home-adpanel {
+  position: absolute;
+  top: calc(64 * var(--u));   /* 화면 오른쪽 위 Streamlit 메뉴(Deploy)와 겹치지 않게 */
+  right: calc(48 * var(--u));
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: calc(4 * var(--u));
+  width: calc(214 * var(--u));
+  animation: home-rise 0.6s ease-out 0.15s both;
+}
+.home-adpanel-title { display: flex; align-items: center; gap: calc(6 * var(--u)); font-size: calc(14 * var(--u)); font-weight: 700; }
+.home-adpanel-big { margin-top: calc(8 * var(--u)); font-size: calc(34 * var(--u)); font-weight: 600; line-height: 1.1; color: var(--home-text); }
+.home-adpanel-big small { margin-left: calc(2 * var(--u)); font-size: calc(16 * var(--u)); font-weight: 600; }
+.home-line { margin-top: calc(8 * var(--u)); }
+.home-line-img { display: block; width: 100%; height: calc(50 * var(--u)); }
+.home-line .home-sub { font-size: calc(8.5 * var(--u)); }
+.home-share { display: flex; flex-direction: column; gap: calc(6 * var(--u)); margin: calc(10 * var(--u)) 0 calc(4 * var(--u)); }
+.home-share-row { display: grid; grid-template-columns: 1fr calc(48 * var(--u)) calc(36 * var(--u)) calc(44 * var(--u)) calc(12 * var(--u)); align-items: center; gap: calc(4 * var(--u)); font-size: calc(10.5 * var(--u)); }
+.home-share-row b { text-align: right; }
+.home-share-row .home-sub { text-align: right; font-size: calc(9 * var(--u)); }
+.home-share-row i { font-size: calc(8 * var(--u)); font-style: normal; text-align: right; }
+.home-up { color: var(--home-up); }
+.home-down { color: var(--home-red); }
+.home-flat { color: var(--home-sub); }
+.home-rings { display: flex; flex-direction: column; gap: calc(16 * var(--u)); margin-top: calc(34 * var(--u)); }   /* 2026-10-26 PM: 위 지역 표와 간격 넓게 */
+.home-ring { position: relative; display: flex; align-items: center; gap: calc(12 * var(--u)); }
+.home-ring-img { width: calc(66 * var(--u)); height: calc(66 * var(--u)); }
+.home-ring-num { position: absolute; left: 0; width: calc(66 * var(--u)); font-size: calc(14 * var(--u)); font-weight: 400; text-align: center; }
+.home-ring b { display: block; font-size: calc(14 * var(--u)); font-weight: 500; }
+.home-adpanel:hover .home-adpanel-title { color: var(--home-purple); }
+
+/* 지구본 아래 가운데: 핀 색 안내 + 출처 */
+/* 핀 색 안내 + 출처: 커진 지구본 아래 고리와 겹치지 않게 오른쪽 아래로 */
+.home-globe-foot { position: absolute; right: calc(48 * var(--u)); bottom: calc(24 * var(--u)); z-index: 3; display: flex; flex-direction: column; align-items: flex-end; gap: calc(4 * var(--u)); }
+.home-legend {
+  display: flex;
+  align-items: center;
+  gap: calc(12 * var(--u));
+  padding: calc(4 * var(--u)) calc(12 * var(--u));
+  border-radius: 999px;
+  background: var(--home-card);
+  box-shadow: 0 calc(4 * var(--u)) calc(14 * var(--u)) color-mix(in srgb, var(--home-text) 8%, transparent);
+  font-size: calc(10 * var(--u));
+}
+.home-legend span { display: inline-flex; align-items: center; gap: calc(4 * var(--u)); }
+.home-legend i { width: calc(8 * var(--u)); height: calc(8 * var(--u)); border-radius: 50%; }
+.home-legend-pop { padding-left: calc(10 * var(--u)); border-left: 1px solid var(--home-line); color: var(--home-sub); }
+.home-legend-pop i { width: calc(12 * var(--u)); height: calc(12 * var(--u)); background: color-mix(in srgb, var(--home-purple) 25%, transparent); }
+.home-globe-cap { font-size: calc(9 * var(--u)); color: var(--home-sub); }
+
+/* 이웃 나라 이름 (회색 작은 글씨) */
+.home-country {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: calc(12 * var(--u));
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #9A9CB0;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* 도시 핀 (레퍼런스 모양): 위 하얀 말풍선(색 칸 기온 + 이름) + 점 + 반투명 원. 경보 도시만 주황/빨강 */
+.home-city { position: absolute; width: 0; height: 0; }
+.home-city:hover { z-index: 5; }
+.home-city-halo {
+  position: absolute;
+  left: calc(var(--halo) * -0.5 * var(--u));
+  top: calc(var(--halo) * -0.5 * var(--u));
+  width: calc(var(--halo) * var(--u));
+  height: calc(var(--halo) * var(--u));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c) 22%, transparent);
+}
+.home-city-alert .home-city-halo { animation: home-pulse 1.6s ease-out infinite; }
+.home-city-dot {
+  position: absolute;
+  left: calc(-7 * var(--u));
+  top: calc(-7 * var(--u));
+  width: calc(14 * var(--u));
+  height: calc(14 * var(--u));
+  box-sizing: border-box;
+  border: calc(3 * var(--u)) solid var(--home-card);
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 calc(2 * var(--u)) calc(6 * var(--u)) color-mix(in srgb, var(--home-text) 25%, transparent);
+}
+.home-city-chip {
+  position: absolute;
+  left: 0;
+  bottom: calc(16 * var(--u));
+  display: inline-flex;
+  align-items: center;
+  gap: calc(5 * var(--u));
+  padding: calc(4 * var(--u)) calc(8 * var(--u)) calc(4 * var(--u)) calc(4 * var(--u));
+  border-radius: calc(9 * var(--u));
+  background: var(--home-card);
+  box-shadow: 0 calc(6 * var(--u)) calc(14 * var(--u)) color-mix(in srgb, var(--home-text) 14%, transparent);
+  font-size: calc(10 * var(--u));
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  cursor: default;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.home-city-chip::after {   /* 말풍선 꼬리 */
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(-4 * var(--u));
+  width: calc(8 * var(--u));
+  height: calc(8 * var(--u));
+  background: var(--home-card);
+  transform: translateX(-50%) rotate(45deg);
+}
+.home-city-chip b {
+  padding: calc(3 * var(--u)) calc(6 * var(--u));
+  border-radius: calc(6 * var(--u));
+  background: var(--c);
+  color: var(--home-card);
+}
+.home-city-chip > span { display: flex; flex-direction: column; line-height: 1.15; }
+.home-city-chip em { font-size: calc(11 * var(--u)); font-style: normal; font-weight: 700; color: var(--home-text); }   /* 권역 이름 (크게) */
+.home-city-chip > span { font-size: calc(9 * var(--u)); font-weight: 500; color: var(--home-sub); }   /* 대표 도시 (작게) */
+.home-city-warn { font-size: calc(8 * var(--u)); font-style: normal; font-weight: 700; color: var(--c); }
+.home-city:hover .home-city-chip { transform: translateX(-50%) scale(1.06); box-shadow: 0 calc(8 * var(--u)) calc(18 * var(--u)) color-mix(in srgb, var(--home-text) 20%, transparent); }
+.home-city-tip {
+  position: absolute;
+  left: calc(10 * var(--u));
+  top: calc(12 * var(--u));
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 * var(--u));
+  padding: calc(8 * var(--u)) calc(10 * var(--u));
+  border-radius: calc(10 * var(--u));
+  background: var(--home-card);
+  box-shadow: 0 calc(10 * var(--u)) calc(24 * var(--u)) color-mix(in srgb, var(--home-text) 18%, transparent);
+  font-size: calc(10 * var(--u));
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(calc(-4 * var(--u)));
+  transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
+}
+.home-city-tip em { font-style: normal; font-weight: 600; color: var(--c); }
+.home-city:hover .home-city-tip { opacity: 1; visibility: visible; transform: none; }
+
+/* 움직임 */
+@keyframes home-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes home-fade { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes home-pulse { 0% { transform: scale(0.7); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+@keyframes home-grow { from { width: 0; } }
+@keyframes home-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes home-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(calc(-8 * var(--u))); } }
+@keyframes home-shadow { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.9); opacity: 0.7; } }
+@media (prefers-reduced-motion: reduce) {
+  .home-board *, .home-board *::before, .home-board *::after { animation: none !important; transition: none !important; }
+}
+
+/* 좁은 화면: 위아래로 쌓기 (화면 고정 해제, 스크롤로 보기) */
+@media (max-width: 1100px) {
+  .home-board { --u: 1px; position: static; padding: 24px 16px; border-radius: 20px; overflow: hidden; }
+  .home-left { height: auto; }
+  .home-cards { grid-template-columns: minmax(0, 1fr); margin-top: 20px; }
+  .home-tpin-pop { top: 100%; left: 0; width: min(380px, calc(100vw - 48px)); padding: 10px 0 0; transform: none; }
+  .home-tpin:hover .home-tpin-pop, .home-tpin:focus-within .home-tpin-pop { transform: none; }
+  .home-globe { position: relative; top: 0; left: 0; width: 100%; margin-top: 20px; }
+  .home-adpanel { position: static; width: auto; margin-top: 20px; }
+  .home-globe-foot { position: static; align-items: center; margin-top: 8px; }
+}
+
+/* 2026-10-26 PM: 지금 할 일 아래 카드 3개(가설·A/B 소재·경쟁사 가격)를 조금 투명하게 (뒤 지구본·배경이 살짝 비치게) */
+.home-cards .home-float {
+  background: color-mix(in srgb, var(--home-card) 74%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+/* '지금 할 일' 글자를 지워서, 아이콘 줄이 시계 아래 바로 오도록 위 여백 */
+.home-tpins { margin-top: calc(22 * var(--u)); }
+
+/* 2026-10-26 PM: 레퍼런스처럼 바깥 큰 고리 — 지구본에서 멀리 떨어져(구 지름의 약 1.65배) 화면 위아래에서 잘림.
+   구 지름 = 지구본 칸 폭 690 × (500 ÷ 600) ≈ 575, 고리 지름 ≈ 950, 중심은 지구본 그림 가운데 (위에서 345) */
+.home-globe::after {
+  content: "";
+  position: absolute;
+  top: calc(345 * var(--u));
+  left: 50%;
+  width: calc(950 * var(--u));
+  height: calc(950 * var(--u));
+  transform: translate(-50%, -50%);
+  border: calc(12 * var(--u)) solid color-mix(in srgb, #FFFFFF 62%, transparent);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 지금 할 일 아래 카드 3개(가설·A/B 소재·경쟁사 가격): 전체를 조금 위로 */
+.home-cards { margin-bottom: calc(26 * var(--u)); }
+
+/* 2026-10-26 PM: 레퍼런스 비율로 지구본 크게 — 구 지름 ≈ 판 높이(740)의 93% ≈ 690
+   (칸 폭 828 × 500/600 = 690), 판 가운데 · 위아래가 판 끝 가까이 (중심이 위에서 약 355) */
+.home-globe {
+  top: calc(-59 * var(--u));
+  left: calc(50% - 394 * var(--u));
+  width: calc(828 * var(--u));
+}
+
+/* 바깥 반투명 고리: 구 지름의 1.2배(≈ 828) — 판 높이보다 커서 위아래가 잘림, 구에 붙은 흰 띠 바깥에 한 겹 더 */
+.home-globe::after {
+  top: calc(414 * var(--u));
+  width: calc(828 * var(--u));
+  height: calc(828 * var(--u));
+  border-width: calc(10 * var(--u));
+  border-color: color-mix(in srgb, #FFFFFF 55%, transparent);
+}
+
+/* 2026-10-26 PM: 'ANY Currency' 레퍼런스처럼 — 옅은 빛·큰 반투명 고리는 빼고
+   지구본 조금 작게: 칸 폭 828 → 760 (구 지름 ≈ 633), 중심 위치는 그대로 (가운데 + 20, 위에서 355) */
+.home-globe {
+  top: calc(-5 * var(--u));   /* 2026-10-26 PM: -25 → -5, 위 흰 띠가 잘리지 않게 살짝 내림 */
+  left: calc(50% - 360 * var(--u));
+  width: calc(760 * var(--u));
+}
+.home-globe::before,
+.home-globe::after { content: none; display: none; }
+
+/* (2026-10-26 PM) 얇은 선 고리(.home-orbit)는 빼고, 구를 감싼 두꺼운 반투명 흰 띠 + 간격 둔 얇은 흰 선을 SVG(home_globe_svg)로 그림 */
+
+/* 2026-10-26 PM: 굵은 흰 띠 바깥의 반투명 흰 얇은 선을 멀리 — 구 반지름(760 × 250/600 ≈ 317)의 약 1.55배 ≈ 490,
+   지름 ≈ 980 (판 높이보다 커서 위아래가 잘림). 중심은 지구본 그림 가운데 (위에서 380) */
+.home-globe::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: calc(380 * var(--u));
+  left: 50%;
+  width: calc(980 * var(--u));
+  height: calc(980 * var(--u));
+  transform: translate(-50%, -50%);
+  border: calc(2.5 * var(--u)) solid color-mix(in srgb, #FFFFFF 70%, transparent);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 2026-10-26 PM: 얇은 흰 선 + 선 위 흰 동그라미 포인트 (왼쪽 위 1개, 오른쪽 위 큰 점·작은 점 2개, 반지름 4.5·5·3).
+   CSS 테두리(border)는 배경 그림 위에 그려져 점을 반투명하게 덮어 잘려 보였음 → 테두리를 없애고,
+   선과 점을 같은 SVG 그림 하나에 그려 점이 선 위에 완전한 흰 원으로 올라가게 함 (점 테두리 없음) */
+.home-globe::after {
+  border: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 980 980'%3E%3Ccircle cx='490' cy='490' r='488.75' fill='none' stroke='white' stroke-opacity='0.7' stroke-width='2.5'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+
+/* 2026-10-26 PM: 지구본 위아래 흔들림(home-bob)과 그림자 숨쉬기(home-shadow) 없앰 */
+.home-globe-wrap, .home-globe-shadow { animation: none; }
+
+/* 2026-10-26 PM: '독일 시간 · 베를린' 옆 연락 가능 표시 (독일 오전 9시~오후 5시 🟢 연락 가능 시간, 그 밖 🔴 근무 외 시간) */
+.home-contact {
+  margin-left: calc(4 * var(--u));
+  padding: calc(2 * var(--u)) calc(9 * var(--u));
+  border-radius: 999px;
+  font-size: calc(12 * var(--u));
+  font-weight: 600;
+  color: #1E7A4E;
+  background: color-mix(in srgb, #2EB872 12%, transparent);
+  white-space: nowrap;
+}
+.home-contact.home-contact-off { color: #B4383A; background: color-mix(in srgb, #E5484D 11%, transparent); }
+
+/* 2026-10-26 PM: 라벨 옆 한국과 시차 (작게, 마우스를 올리면 '한국보다 8시간 느려요') */
+.home-gap {
+  margin-left: calc(6 * var(--u));
+  font-size: calc(11 * var(--u));
+  font-weight: 500;
+  color: var(--home-sub);
+  cursor: default;
+}
+.home-clock-sub { display: flex; align-items: center; gap: calc(6 * var(--u)); }
+
+/* 2026-10-26 PM: 지구본 아래 바닥 그림자 없앰 */
+.home-globe-shadow { display: none; }
+
+/* 2026-10-26 PM: 지구본을 아주 조금 축소 (칸 폭 760 → 732, 약 96%) — 위쪽 흰 띠 위치는 그대로 두고
+   아래 흰 띠도 위쪽만큼 여백이 보이게. 가운데 위치 유지 (왼쪽 +14), 바깥 얇은 선 중심도 새 가운데(위에서 366)로 */
+.home-globe {
+  left: calc(50% - 346 * var(--u));
+  width: calc(732 * var(--u));
+}
+.home-globe::after { top: calc(366 * var(--u)); }
+
+/* 2026-10-26 PM: 점이 반원으로 잘리던 원인 = 원 모양(border-radius 50%)이 상자 가장자리에 걸친 점의 바깥 절반을 잘라 냄.
+   선·점은 SVG 그림이 그리므로 상자는 네모로 둬서 점이 선 중심에 완전한 원으로 보이게 함 */
+.home-globe::after { border-radius: 0; }
+
+/* 2026-10-26 PM: 흰 동그라미 포인트는 선 그림과 따로 (home_page.py home_ring_dots_html, 점 중심 = 선 위) */
+.home-ring-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #FFFFFF;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 2026-10-26 PM: 권역 핀(북부·동부·서부·남부) 호버 효과 더 또렷하게 —
+   말풍선이 살짝 떠오르며 커지고(+ 권역 색 테두리·그림자), 점은 커지고, 반투명 원은 진해지며 커짐 */
+.home-city-chip { transition: transform 0.22s ease, box-shadow 0.22s ease; }
+.home-city-dot, .home-city-halo { transition: transform 0.22s ease, background 0.22s ease; }
+.home-city:hover .home-city-chip {
+  transform: translateX(-50%) translateY(calc(-4 * var(--u))) scale(1.1);
+  box-shadow: 0 0 0 calc(1.5 * var(--u)) color-mix(in srgb, var(--c) 55%, transparent),
+              0 calc(10 * var(--u)) calc(22 * var(--u)) color-mix(in srgb, var(--c) 30%, transparent);
+}
+.home-city:hover .home-city-dot { transform: scale(1.3); }
+.home-city:hover .home-city-halo { transform: scale(1.25); background: color-mix(in srgb, var(--c) 34%, transparent); }
+
+/* 2026-10-26 PM: 권역 핀 호버가 안 되던 원인 = 왼쪽 칸(.home-left, z-index 2)이 판 전체 폭이라 지구본(z-index 1)을 덮음.
+   왼쪽 칸 빈 곳은 마우스가 통과하게 하고, 실제로 누르거나 마우스를 올리는 것(카드·지금 할 일 아이콘·시차·연락 표시)만 받게 함 */
+.home-left { pointer-events: none; }
+.home-left .home-float,
+.home-left .home-tpin-icon,
+.home-left .home-tpin-text,
+.home-left .home-tpin-pop,
+.home-left .home-gap,
+.home-left .home-contact { pointer-events: auto; }
+
+/* 2026-10-27 PM: 진행 카드 3개(가설·A/B 소재·경쟁사 가격) — 지금 할 일 아이콘 바로 아래에 세로 한 줄로 쌓고, 평소에는 제목 줄만.
+   마우스를 올리면 내용이 카드 오른쪽에 떠 있는 상자로 나타남 (카드 자리는 그대로라 다른 카드가 밀리지 않음) */
+.home-cards {
+  display: flex;
+  flex-direction: column;
+  gap: calc(12 * var(--u));
+  width: calc(232 * var(--u));
+  margin-top: calc(34 * var(--u));
+  margin-bottom: 0;
+}
+.home-cards-col { display: contents; }
+.home-cards .home-card { position: relative; flex: none; gap: 0; padding: calc(15 * var(--u)) calc(18 * var(--u)); }
+.home-cards .home-card-title { font-size: calc(13.5 * var(--u)); font-weight: 600; }
+.home-card-body {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 12 * var(--u));
+  z-index: 6;
+  width: calc(270 * var(--u));
+  padding: calc(14 * var(--u)) calc(18 * var(--u));
+  border-radius: calc(10 * var(--u));
+  background: var(--home-card);
+  box-shadow: 0 calc(14 * var(--u)) calc(34 * var(--u)) color-mix(in srgb, var(--home-purple) 18%, transparent);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(calc(-6 * var(--u)));
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  cursor: pointer;
+}
+.home-card-inner { display: flex; flex-direction: column; gap: calc(5 * var(--u)); }
+.home-card:hover .home-card-body { opacity: 1; visibility: visible; transform: none; }
+.home-card-tall .home-card-inner .home-card-sub { margin-top: calc(4 * var(--u)); }

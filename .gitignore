@@ -1,3 +1,4 @@
+.streamlit/secrets.toml
 .env
 venv/
 __pycache__/
@@ -6,3 +7,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+.claude/settings.local.json
+.streamlit/hf_mcp_token.json
+modules/media/media_stage3/data/workspace/

@@ -1,0 +1,15 @@
+{
+  "note": "메인 이미지 A/B 테스트 결과 (가상). 실제 테스트는 성수기(5월) 전에 Manage Your Experiments로 4~10주 진행하고, 결과가 나오면 이 파일을 실제 값으로 바꿉니다. 시장 CTR은 같은 기간 검색어 성과 리포트의 시장 평균입니다.",
+  "source": "가상",
+  "period": "2027-03-29 ~ 2027-05-09 (6주, 계획)",
+  "query": "kühlende matratzenauflage",
+  "market_ctr": 0.030,
+  "variants": [
+    {"name": "A", "desc": "현재: 접힌 패드", "impressions": 50200, "clicks": 951, "sessions": 1010, "units": 87},
+    {"name": "B", "desc": "제안: 펼친 패드, 모서리를 들어 두께·원단 질감", "impressions": 49800, "clicks": 1255, "sessions": 1322, "units": 112}
+  ],
+  "cac": {
+    "before": {"label": "적용 전 4주", "spend": 2410.0, "new_to_brand_orders": 96, "sales": 9033.6},
+    "after": {"label": "적용 후 4주", "spend": 2365.0, "new_to_brand_orders": 118, "sales": 10333.4}
+  }
+}

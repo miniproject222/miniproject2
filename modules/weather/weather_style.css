@@ -1,10 +1,663 @@
-/* 4. 날씨 광고 타이밍 - class는 weather- 로 시작, 색상은 공통 변수만 사용 */
-.weather-card {
-  background: var(--color-card);
-  border-radius: var(--radius);
-  padding: 20px;
+/* 4. 날씨 광고 타이밍 - class는 weather- 로 시작, 색상은 공통 변수만 사용
+   (온도별 카드·막대·배지 색은 weather_page.py가 ui_theme 팔레트로 넣습니다) */
+
+/* ── 화면 폭·여백: 광고 타이밍 탭(최상위 탭 줄 5번째)을 연 동안만. 위 여백은 ①·② 탭과 같은 1rem
+   (예전 5.5rem은 다른 페이지보다 위가 비어 보였음). 최상위 탭 줄만 보도록 좁혀, ③ 탭 안 하위 탭(5개)에는 걸리지 않게
+   (탭 순서가 바뀌면 nth-of-type 숫자를 맞춰야 함) */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(5)[aria-selected="true"]) {
+    max-width: 1720px !important;
+    padding: 1rem 3.5rem 3rem !important;
+  }
 }
 
-.weather-desc {
+.st-key-weather-root {
+  gap: 1.75rem;
+}
+
+/* 본문·오른쪽 열: 카드 사이 세로 간격 */
+.st-key-weather-main,
+.st-key-weather-side {
+  gap: 1.5rem;
+}
+
+/* 글꼴: ① 문제 분석 탭과 같은 앱 기본 글꼴 (예전 SUIT 글꼴은 ①과 글씨가 달라 보여서 뺌) */
+
+/* ── 날씨 카드를 뺀 모든 박스: 흰 카드 배경 */
+[class*="st-key-weather-card-"] {
+  padding: 20px 22px !important;
+  background: var(--color-card);
+  border: none !important;
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 7%, transparent);
+}
+
+/* ── 칸 높이 맞춤: 가운데 줄(예산 | 채널)과 오른쪽 열의 마지막 카드가 남는 높이를 채움 */
+[data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > [data-testid="stLayoutWrapper"] > .st-key-weather-card-budget)
+  > [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > [data-testid="stLayoutWrapper"]:last-child,
+[data-testid="stLayoutWrapper"]:has(> .st-key-weather-main),
+[data-testid="stLayoutWrapper"]:has(> .st-key-weather-side),
+.st-key-weather-side > [data-testid="stLayoutWrapper"]:last-child {
+  flex: 1 1 auto;
+}
+
+/* ── 머리글 */
+.weather-title {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+.weather-subtitle {
+  margin-top: 4px;
+  font-size: 13px;
   color: var(--color-sub);
+}
+
+.st-key-weather-toggle-sample {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── 카드 공통 */
+.weather-card-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.weather-card-title > span:not(.weather-chip) {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-sub);
+}
+
+.weather-flat {
+  margin-bottom: 0;
+}
+
+.weather-card-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-sub);
+}
+
+.weather-chip {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-sub);
+}
+
+/* ── 권역 날씨 카드 4칸 (가로 한 줄) */
+.weather-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;   /* 아래 줄 st.columns(gap="small")과 같은 간격 → 카드 가장자리가 세로로 맞음 */
+  margin-bottom: 1rem;
+}
+
+.weather-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 18px;   /* 위아래 폭 줄임 (예전 18px) */
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 7%, transparent);
+}
+
+.weather-kpi-fail {
+  background: var(--color-card);
+  color: var(--color-sub);
+}
+
+.weather-kpi-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.weather-kpi-head em {
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
+  opacity: 0.65;
+}
+
+.weather-kpi-emoji {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-card) 70%, transparent);
+  font-size: 19px;
+}
+
+.weather-kpi-temp {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.weather-kpi-temp small {
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.weather-kpi-chip {
+  align-self: flex-start;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-card) 70%, transparent);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.weather-kpi-cities {
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  font-size: 11.5px;
+  opacity: 0.8;
+  white-space: nowrap;      /* 도시 줄이 두 줄로 꺾여 카드가 높아지지 않게 (넘치면 …, 마우스를 올리면 전체) */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 예산 카드 */
+.weather-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-sub);
+}
+
+/* 항목 이름(왼쪽) + 현재 값(오른쪽) 한 줄 */
+.weather-field {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.weather-field b {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.weather-range-note {
+  margin: 2px 0 1rem;   /* 채널 비율의 토글 줄과 같은 높이를 차지하게 해 두 슬라이더 위치를 맞춤 */
+}
+
+.weather-field-gap {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* 큰 숫자로 값을 보여 주므로 슬라이더 손잡이 위 숫자는 숨기고, 비워 둔 자리만큼 위로 붙임 */
+.st-key-weather-budget-week [data-testid="stSliderThumbValue"],
+.st-key-weather-meta-share [data-testid="stSliderThumbValue"] {
+  display: none;
+}
+
+.st-key-weather-budget-week,
+.st-key-weather-meta-share {
+  margin-top: -14px;
+}
+
+/* 결과 금액 2칸 */
+.weather-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.weather-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--color-bg);
+}
+
+.weather-result span {
+  font-size: 12px;
+  color: var(--color-sub);
+}
+
+.weather-result i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+}
+
+.weather-result b {
+  font-size: 18px;
+  color: var(--color-text);
+}
+
+.weather-result em {
+  font-size: 12px;
+  font-style: normal;
+  color: var(--color-sub);
+}
+
+/* 세 구역(주간 예산 · 채널 비율 · 결과)을 같은 구분선·간격으로 나눔 */
+.weather-results {
+  margin-top: 4px;
+  margin-bottom: 1rem;   /* Streamlit 글 블록의 아래 -1rem 여백을 메워 카드 아래 여백 확보 */
+  padding-top: 18px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ── 채널별 추천 액션 */
+.weather-channel-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.weather-gap {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.weather-alloc {
+  display: grid;
+  grid-template-columns: 36px 1fr 72px 46px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.weather-alloc b {
+  text-align: right;
+}
+
+.weather-alloc-name {
+  color: var(--color-sub);
+}
+
+.weather-alloc-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.weather-alloc-track span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.weather-diff {
+  font-size: 11.5px;
+  font-style: normal;
+  text-align: right;
+  color: var(--color-sub);
+}
+
+.weather-diff.up {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.weather-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.weather-pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  font-size: 12px;
+  color: var(--color-text);
+}
+
+/* ── 그래프 카드 */
+.weather-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.weather-chart-total {
+  font-size: 13px;
+  color: var(--color-sub);
+}
+
+.weather-chart-total b {
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.weather-empty {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-sub);
+}
+
+.weather-empty b {
+  color: var(--color-text);
+}
+
+/* ── 오른쪽: 경쟁사 재고 */
+.weather-stock-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--color-bg);
+  text-align: center;
+}
+
+.weather-stock-summary b {
+  display: block;
+  font-size: 20px;
+  color: var(--color-text);
+}
+
+.weather-stock-summary span {
+  font-size: 11.5px;
+  color: var(--color-sub);
+}
+
+.weather-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--color-text);
+}
+
+.weather-row:last-child {
+  border-bottom: none;
+}
+
+.weather-row small {
+  font-size: 12px;
+  color: var(--color-sub);
+}
+
+.weather-badge {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* ── 오른쪽: 오늘의 추천 */
+.st-key-weather-btn-pdf button {
+  min-height: 34px;
+  padding: 0 12px;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 10px;
+  color: var(--color-card);
+  font-weight: 600;
+}
+
+.st-key-weather-btn-pdf button p {
+  font-size: 13px;
+  color: var(--color-card);
+}
+
+.st-key-weather-btn-pdf button:hover {
+  background: color-mix(in srgb, var(--color-primary) 85%, var(--color-card));
+  color: var(--color-card);
+}
+
+.weather-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.weather-task {
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.weather-task-tag {
+  margin-bottom: 3px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-sub);
+}
+
+.weather-task-text {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+/* ── 한 화면에 들어오게 (2026-10-26, 1782×790 기준 넘침 295px → 0): 여백·간격·막대 줄 간격을 줄임 ── */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(5)[aria-selected="true"]) {
+    padding-bottom: 1rem !important;
+  }
+}
+
+.st-key-weather-root {
+  gap: 1rem;
+}
+
+.st-key-weather-main,
+.st-key-weather-side {
+  gap: 1rem;
+}
+
+.weather-kpis {
+  margin-bottom: 12px;   /* 글 블록의 아래 -1rem 여백 때문에 0이면 아래 카드와 붙음 */
+}
+
+[class*="st-key-weather-card-"] {
+  padding: 14px 18px !important;
+}
+
+.weather-alloc {
+  padding: 3px 0;
+}
+
+.weather-gap {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.weather-results {
+  padding-top: 12px;
+}
+
+.weather-field-gap {
+  padding-top: 12px;
+}
+
+/* 제목 줄 오른쪽: 폭염 시나리오 토글 + 데이터 출처 물음표 */
+.st-key-weather-head-right .stPopover button {
+  min-height: 0;
+  padding: 2px 4px;
+}
+
+
+/* 권역 카드 위아래 여백 조금 더 줄임 (한 화면) */
+.weather-kpi {
+  padding: 10px 18px;
+}
+
+/* ── 더 줄이기 (2026-10-26 2차): 작은 화면에서도 스크롤 없이. 제목·권역 카드·카드 안 여백·글자 크기 축소 ── */
+.weather-title { font-size: 22px; }
+.weather-subtitle { margin-top: 2px; font-size: 12px; }
+.weather-kpi { gap: 2px; padding: 8px 14px; }
+.weather-kpi-head { font-size: 14px; }
+.weather-kpi-head em { font-size: 12px; }
+.weather-kpi-emoji { width: 26px; height: 26px; border-radius: 8px; font-size: 16px; }
+.weather-kpi-temp { font-size: 22px; }
+.weather-kpi-temp small { font-size: 12px; }
+.weather-kpi-chip { font-size: 11px; padding: 1px 8px; }
+.weather-kpi-cities { padding-top: 4px; font-size: 11px; }
+.weather-kpis { margin-bottom: 10px; }
+[class*="st-key-weather-card-"] { padding: 10px 16px !important; }
+.st-key-weather-main, .st-key-weather-side { gap: 0.75rem; }
+.st-key-weather-root { gap: 0.75rem; }
+.weather-card-title { font-size: 14px; }
+.weather-card-desc, .weather-note { font-size: 11.5px; }
+.weather-channel-head { margin-bottom: 4px; font-size: 13px; }
+.weather-alloc { padding: 1px 0; font-size: 12px; }
+.weather-gap { margin-top: 6px; padding-top: 6px; }
+.weather-results { padding-top: 8px; gap: 8px; }
+.weather-result { padding: 7px 12px; }
+.weather-result b { font-size: 15px; }
+.weather-result span, .weather-result em { font-size: 11px; }
+
+/* ── 가운데 두 카드 줄이기 (2026-10-26 3차): 오른쪽 '이번 주 광고 예산'의 간격을 줄이면
+   두 카드가 같은 높이로 함께 줄어 왼쪽 '추천 집행 액션' 아래 빈칸도 사라짐 ── */
+.st-key-weather-card-budget { gap: 0.4rem; }
+.weather-range-note { margin: 0 0 4px; }
+.st-key-weather-budget-week { margin-top: -4px; }
+.st-key-weather-card-budget .weather-results { margin-top: 0; padding-top: 8px; margin-bottom: 0.75rem; }
+.st-key-weather-card-channel { gap: 0.4rem; }
+
+/* 경쟁사 분석 줄 (추천 집행 액션 카드 아래): 이름 · 현재가 · 90일 평균 대비 · 평점·리뷰·판매 순위 */
+.weather-rival {
+  display: grid;
+  grid-template-columns: 76px 64px auto 1fr;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 12px;
+  color: var(--color-text);
+}
+
+.weather-rival small {
+  text-align: right;
+  color: var(--color-sub);
+  font-size: 11px;
+}
+
+/* 재고 카드 맨 아래: 품절 시 ASIN 타겟 한 줄 */
+.weather-asin-line {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border);
+  font-size: 11.5px;
+  color: var(--color-sub);
+}
+
+
+/* 경쟁사 분석·재고 카드 줄 간격 조금 더 (카드 안 넘침 6px 해소) */
+.weather-rival { padding: 0; }
+.st-key-weather-card-stock .weather-row { padding: 6px 0; }
+.weather-asin-line { margin-top: 4px; padding-top: 4px; }
+
+/* 카드 마지막 줄 아래 여백: Streamlit 글 블록의 아래 -1rem 여백 때문에 마지막 줄이 카드 끝에 잘리던 것 */
+.weather-asin-line { margin-bottom: 1rem; }
+.weather-rival:last-child { margin-bottom: 1rem; }
+
+/* 제목 줄: ① 문제 분석 탭과 같은 구조 (제목 칸이 남는 폭을 쓰고, 물음표·토글은 오른쪽) */
+.st-key-weather-head .st-key-weather-head-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.st-key-weather-head .st-key-weather-toggle-sample {
+  min-height: 40px;   /* ① 탭 '불러오기'·'다음으로' 버튼 높이와 같게 → 같은 줄 높이 */
+  align-items: center;
+}
+
+
+/* 토글 칸을 ① '불러오기'+'다음으로' 두 버튼 폭(약 220px)과 같게 → 물음표 위치도 ①과 같아짐 */
+.st-key-weather-head .st-key-weather-toggle-sample {
+  min-width: 220px;
+  justify-content: flex-end;
+}
+
+/* 제목 줄 물음표: 제목 바로 오른쪽, 제목 글자 아래쪽에 맞춤 (버튼·토글은 오른쪽 끝 그대로) - ①·②·④ 같은 규칙 */
+.st-key-weather-head .st-key-weather-head-title {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-weather-head .st-key-weather-help {
+  flex: 1 1 auto !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+
+/* 6) ① 탭 색으로 맞춤: PDF 버튼·토글을 ①의 밝은 보라(#7B6CF2)로 */
+.st-key-weather-btn-pdf button {
+  background: #7B6CF2 !important;
+  border-color: #7B6CF2 !important;
+  box-shadow: 0 4px 12px color-mix(in srgb, #7B6CF2 28%, transparent) !important;
+}
+.st-key-weather-btn-pdf button p,
+.st-key-weather-btn-pdf button span { color: #fff !important; }
+.st-key-weather-toggle-sample label[data-baseweb="checkbox"] > div:first-child,
+.st-key-weather-toggle-sample [role="checkbox"][aria-checked="true"] {
+  background-color: #7B6CF2 !important;
+}
+
+/* (위 규칙 보완) 폭은 키 달린 칸을 감싼 stLayoutWrapper가 정하므로 감싸개에도 같은 규칙 */
+.st-key-weather-head > [data-testid="stLayoutWrapper"]:has(> .st-key-weather-head-title) {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-weather-head > [data-testid="stLayoutWrapper"]:has(> .st-key-weather-help) {
+  flex: 1 1 auto !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+.st-key-weather-head .st-key-weather-head-title .ui-title { width: auto; }
+
+/* 물음표 칸은 남는 폭만 (기본 폭 0에서 늘어남) → 버튼과 같은 줄에 머묾 */
+.st-key-weather-head > [data-testid="stLayoutWrapper"]:has(> .st-key-weather-help) {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+}
+.st-key-weather-head { flex-wrap: nowrap !important; }
+
+/* 폭염 시나리오 토글: 켜졌을 때 바탕을 ①의 밝은 보라로 (토글 바탕 = stCheckbox > label > 첫 div) */
+.st-key-weather-toggle-sample [data-testid="stCheckbox"] label:has(input:checked) > div:first-of-type {
+  background-color: #7B6CF2 !important;
 }

@@ -1,0 +1,72 @@
+{
+  "budget": 600,
+  "note": "프로젝트 완료까지 쓸 수 있는 Keepa 토큰 한도. 조회할 때마다 앱이 실제 사용량(tokensConsumed)을 여기에 더합니다. 로컬에서 조회한 뒤 이 파일과 스냅샷을 함께 커밋하면 배포 앱은 토큰 없이 마지막 값을 보여 줍니다.",
+  "used": 286,
+  "log": [
+    {
+      "date": "2026-10-24",
+      "tokens": 50,
+      "what": "ASIN 검색 5회 (개발 중, Keepa 응답의 실제 사용량)"
+    },
+    {
+      "date": "2026-10-24",
+      "tokens": 30,
+      "what": "개발 테스트 상품 조회 3회 (추정 최대치, 정확한 값은 미확인)"
+    },
+    {
+      "date": "2026-10-24",
+      "tokens": 68,
+      "what": "경쟁사 상위 2개사 조사: 카테고리 검색 1, 상품 검색(Product Finder) 2회 22, 상품 상세 45 (Keepa 응답의 실제 사용량)"
+    },
+    {
+      "date": "2026-10-24",
+      "tokens": 61,
+      "what": "경쟁사 분석 2차: 패드 카테고리 판매 순위 상위 50개 조회 11 + 상세 50 (Keepa 응답의 실제 사용량)"
+    },
+    {
+      "date": "2026-10-24",
+      "tokens": 2,
+      "what": "Traumnacht(B0DK5548KL) 재조회: 서리 가정 데이터용 (Keepa 응답의 실제 사용량)"
+    },
+    {
+      "date": "2026-10-24",
+      "tokens": 20,
+      "what": "냉감패드 경쟁 10개사 조사: 'kühlende matratzenauflage' 검색 2페이지 (Keepa 응답의 실제 사용량)"
+    },
+    {
+      "date": "2026-10-24",
+      "tokens": 6,
+      "what": "순위 재정리: Traumnacht 패드·Mara Vital·Herlag 상품 조회 (Keepa 응답의 실제 사용량)"
+    },
+    {
+      "date": "2026-10-24",
+      "tokens": 8,
+      "what": "냉감패드 실적 재확인: Traumnacht 패드·Mara Vital·Herlag·RIBECO 상품 상세(히스토리 포함) 조회 (Keepa 응답의 실제 사용량)"
+    },
+    {
+      "date": "2026-10-25",
+      "tokens": 8,
+      "what": "4위 후보 확인: Novilla·Ehrenkind·SleepCOOL·Paradies 상품 상세(히스토리 포함) (Keepa 응답의 실제 사용량)"
+    },
+    {
+      "date": "2026-10-25",
+      "tokens": 15,
+      "what": "Novilla 상품군 변형 15개 확인 (냉감 여부·순위 공유 확인, Keepa 응답의 실제 사용량)"
+    },
+    {
+      "date": "2026-10-26 17:37",
+      "tokens": 6,
+      "what": "아침 자동 갱신: 상품 3개"
+    },
+    {
+      "date": "2026-10-26 17:37",
+      "tokens": 6,
+      "what": "아침 자동 갱신: 상품 3개"
+    },
+    {
+      "date": "2026-10-26 17:47",
+      "tokens": 6,
+      "what": "아침 자동 갱신: 상품 3개"
+    }
+  ]
+}

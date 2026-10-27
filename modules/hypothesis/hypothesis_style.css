@@ -8,3 +8,957 @@
 .hypothesis-desc {
   color: var(--color-sub);
 }
+
+/* ────────────────────────────────────────────────────────────
+   아래는 hypothesis_page.py가 key로 지정한 카드 안쪽에만 적용됩니다.
+   가설 후보 카드는 "가설 1/2/3" 탭마다 key="hypothesis-card-0"/"-1"/"-2"처럼 번호가
+   붙으므로, 정확히 일치하는 클래스 선택자(.st-key-hypothesis-card-0 등) 대신
+   [class*="st-key-hypothesis-card-"]로 번호에 상관없이 전부 골라냅니다.
+   다른 탭에는 영향 없습니다.
+   ──────────────────────────────────────────────────────────── */
+
+/* 버튼 글씨가 배경과 같은 보라색으로 깔려 안 보이던 문제 수정.
+   (ui_theme.py의 공통 CSS가 p/label 전체를 보라색으로 칠하는데, 버튼 라벨도
+   내부적으로 <p>로 렌더링돼서 같이 보라색이 되어 버림 → 흰색으로 강제 지정) */
+[class*="st-key-hypothesis-card-"] .stButton button,
+[class*="st-key-hypothesis-card-"] .stButton button *,
+.st-key-hypothesis-empty .stButton button,
+.st-key-hypothesis-empty .stButton button * {
+  color: var(--color-card) !important;
+}
+
+/* 이미 선택된 후보의 "✓ 선택됨" 버튼은 흰 배경(secondary)이라 위의 흰 글씨 규칙에 묻혀
+   안 보였음 → 이 버튼만 보조 글씨색으로 */
+/* (위 흰 글씨 규칙보다 우선순위가 높아야 해서 .stButton button까지 붙임) */
+[class*="st-key-hypothesis-card-"] .stButton button[data-testid="stBaseButton-secondary"],
+[class*="st-key-hypothesis-card-"] .stButton button[data-testid="stBaseButton-secondary"] * {
+  color: var(--color-sub) !important;
+}
+
+/* 현지 특성 / 경쟁사 부정 리뷰 줄도 같이 조금 키워서 가독성을 맞춤 */
+[class*="st-key-hypothesis-card-"] [data-testid="stMarkdownContainer"] p {
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+/* 문제가 아직 없을 때(빈 상태) 카드: 가운데 정렬 + 여백을 넉넉히 줘서
+   썰렁해 보이지 않고 다음에 뭘 해야 하는지 눈에 띄게 */
+.st-key-hypothesis-empty {
+  text-align: center;
+  padding: 12px 8px 20px;
+}
+
+.st-key-hypothesis-empty .hypothesis-empty-icon {
+  font-size: 36px;
+  line-height: 1;
+  margin: 4px 0 10px;
+}
+
+.st-key-hypothesis-empty .hypothesis-empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 6px;
+}
+
+.st-key-hypothesis-empty [data-testid="stCaptionContainer"] {
+  margin-bottom: 16px;
+}
+
+.st-key-hypothesis-empty .stButton {
+  display: flex;
+  justify-content: center;
+}
+
+.st-key-hypothesis-empty .stButton button {
+  max-width: 320px;
+}
+
+/* ────────────────────────────────────────────────────────────
+   "지금 선택된 가설" 칸 (왼쪽 컬럼 — 오른쪽 "가설 후보"와 나란히 둬서 스크롤을
+   줄였습니다. "분석 리포트 문제 요약" 칸은 가설 후보 탭마다 내부/외부 요인을
+   이미 보여주고 있어서 중복이라 뺐습니다)
+   ──────────────────────────────────────────────────────────── */
+
+.hypothesis-callout-box {
+  width: 100%;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+  border-left: 4px solid var(--color-primary);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 6px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+/* "아직 선택한 가설이 없어요" 안내는 실제 선택된 내용과 구분되게 톤을 낮춤 */
+.hypothesis-callout-empty {
+  background: color-mix(in srgb, var(--color-sub) 10%, transparent);
+  border-left-color: var(--color-sub);
+  color: var(--color-sub);
+}
+
+/* ────────────────────────────────────────────────────────────
+   가설 후보 탭 ("가설 1/2/3") 제어 바 — 기본 알약형 탭보다 더 또렷하게.
+   Streamlit 버전에 따라 탭의 실제 DOM 속성이 data-baseweb 대신 role=tab 등으로
+   달라질 수 있어서, 두 가지 선택자를 모두 걸고 !important로 ui_theme.py의 공용
+   .stTabs 규칙과 겹쳐도 반드시 이 스타일이 이기도록 고정합니다.
+   ──────────────────────────────────────────────────────────── */
+
+.st-key-hypothesis-candidate-tabs [data-baseweb="tab-list"],
+.st-key-hypothesis-candidate-tabs [role="tablist"] {
+  gap: 10px !important;
+  margin-bottom: 6px !important;
+}
+
+.st-key-hypothesis-candidate-tabs [data-baseweb="tab"],
+.st-key-hypothesis-candidate-tabs [role="tab"] {
+  background: var(--color-card) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 999px !important;
+  padding: 10px 26px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 10%, transparent) !important;
+}
+
+.st-key-hypothesis-candidate-tabs [data-baseweb="tab"][aria-selected="true"],
+.st-key-hypothesis-candidate-tabs [role="tab"][aria-selected="true"] {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
+}
+
+.st-key-hypothesis-candidate-tabs [aria-selected="true"] p,
+.st-key-hypothesis-candidate-tabs [aria-selected="true"] * {
+  color: #fff !important;
+}
+
+.st-key-hypothesis-candidate-tabs [data-baseweb="tab-highlight"],
+.st-key-hypothesis-candidate-tabs [data-baseweb="tab-border"] {
+  display: none !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+   가설 후보 카드 안의 "내부/외부 요인" 한 줄 배지 (배지+제목을 한 줄로 압축)
+   ──────────────────────────────────────────────────────────── */
+
+.hypothesis-factor-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.hypothesis-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.hypothesis-badge-internal { background: var(--color-primary); }
+.hypothesis-badge-external { background: #F1642E; }
+
+/* ────────────────────────────────────────────────────────────
+   If · Because · Then 카드 (사용자가 참고로 준 이미지와 같은 형태).
+   가설을 표 대신 색 배지 3줄로 보여줘서 스크롤 없이 한눈에 들어오게 합니다.
+   ──────────────────────────────────────────────────────────── */
+
+.hypothesis-ibt-box {
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hypothesis-ibt-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hypothesis-ibt-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 999px;
+  color: #fff;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.hypothesis-ibt-if { background: var(--color-primary); }
+.hypothesis-ibt-because { background: #F1642E; }
+.hypothesis-ibt-then { background: #A3B565; }
+
+.hypothesis-ibt-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+/* ────────────────────────────────────────────────────────────
+   가설 후보 탭 안의 근거 표/펼치기 가독성 (고정 요소·테스트 방법·KPI 표 등
+   "실행 세부사항"/"KPI 표" 펼치기 안에서만 씀).
+   표가 기본은 테두리 없이 다닥다닥 붙어 보여서, 칸마다 여백과 옅은 테두리를 줌.
+   ──────────────────────────────────────────────────────────── */
+
+[class*="st-key-hypothesis-card-"] table {
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.6;
+  border-collapse: collapse;
+  margin: 6px 0 4px;
+}
+
+[class*="st-key-hypothesis-card-"] table th,
+[class*="st-key-hypothesis-card-"] table td {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+[class*="st-key-hypothesis-card-"] table td:first-child,
+[class*="st-key-hypothesis-card-"] table th:first-child {
+  width: 110px;
+}
+
+[class*="st-key-hypothesis-card-"] table th {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* "자세히 보기" 펼치기 제목을 카드 안에서도 눈에 띄게 살짝 키움 */
+[class*="st-key-hypothesis-card-"] [data-testid="stExpander"] summary p {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 가설 후보 탭 안에서 펼치기들 사이 여백을 살짝 줘서 서로 안 붙어 보이게 */
+[class*="st-key-hypothesis-card-"] [data-testid="stExpander"] {
+  margin-top: 4px;
+}
+
+/* ────────────────────────────────────────────────────────────
+   오른쪽 끝 아이콘 (① 탭 .st-key-report-side와 같은 모양). 가설 1/2/3 하부 탭마다
+   key="hypothesis-side-0/1/2"로 따로 그려지는데, 안 열린 탭은 숨겨지므로 열린 탭 것만 보임.
+   ──────────────────────────────────────────────────────────── */
+[class*="st-key-hypothesis-side-"] {
+  position: fixed;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 999;
+  width: 52px;
+  padding: 10px 4px;
+  gap: 10px;
+  align-items: center;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+[class*="st-key-hypothesis-side-"] .stButton > button {
+  min-height: 0;
+  padding: 4px;
+  background: transparent;
+  color: var(--color-primary);
+}
+
+[class*="st-key-hypothesis-side-"] .stButton > button:hover {
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
+[class*="st-key-hypothesis-side-"] button span[data-testid="stIconMaterial"] {
+  font-size: 24px;
+}
+
+/* 마우스를 올리면 왼쪽에 이름 말풍선 */
+[class*="st-key-hypothesis-btn-side-"] {
+  position: relative;
+}
+
+[class*="st-key-hypothesis-btn-side-"]:hover::after {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: var(--color-card);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+[class*="st-key-hypothesis-btn-side-judge-"]:hover::after { content: "KPI 표 · 판단 기준"; }
+[class*="st-key-hypothesis-btn-side-evidence-"]:hover::after { content: "근거 · 출처"; }
+[class*="st-key-hypothesis-btn-side-pdf-"]:hover::after { content: "가설 보고서 다운로드 (PDF)"; }
+
+/* 오른쪽 "지금 선택된 가설" 카드를 왼쪽 "가설 1/2/3" 탭 줄 높이만큼 내려서,
+   왼쪽 후보 카드와 윗선을 맞춤 */
+.hypothesis-tab-spacer {
+  height: 0;   /* 가설 1·2·3을 카드 안으로 옮겨 이제 빈칸 필요 없음 */
+}
+
+/* 카드 맨 위 '가설 1·2·3' (예전 카드 위 탭 줄과 같은 알약 모양: 고른 것 진한 보라, 나머지 흰색) */
+.st-key-hypothesis-pick .stButton > button {
+  min-height: 0;
+  padding: 6px 20px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.st-key-hypothesis-pick .stButton > button[kind="secondary"] {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.st-key-hypothesis-pick .stButton > button[kind="primary"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.st-key-hypothesis-pick .stButton > button[kind="primary"] p {
+  color: #fff !important;
+}
+
+/* "가설 후보" / "지금 선택된 가설" 제목: 페이지 제목("2. 가설 수립")과 크기가 거의 같아서
+   한 단계 작게 */
+.st-key-hypothesis-heading-candidates h4,
+.st-key-hypothesis-heading-selected h4 {
+  font-size: 18px !important;
+  padding: 0 !important;
+}
+
+/* ② 가설 탭이 열려 있을 때만 페이지 아래 기본 여백(160px)을 줄여서, 내용이 화면 안에
+   들어가는데도 여백 때문에 생기던 세로 스크롤을 없앰. Streamlit은 열린 탭만 화면에
+   그리므로 :has()가 다른 탭에는 걸리지 않음. (내용 자체가 화면보다 길면 스크롤은 남음) */
+[data-testid="stMainBlockContainer"]:has(.st-key-hypothesis-pick) {
+  padding-bottom: 24px !important;
+}
+/* ② 탭을 연 동안만 페이지 폭·여백: 가로 폭은 ④ 광고 타이밍 탭(최대 1720px, 양옆 3.5rem), 위 여백은 ③ 탭(1rem) 기준.
+   아래 여백은 세로 스크롤이 생기지 않도록 1rem (3rem이면 화면 높이가 조금만 낮아도 스크롤이 생겼음).
+   최상위 탭 3번째 기준 (탭 순서가 바뀌면 숫자 수정) */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(3)[aria-selected="true"]) {
+    max-width: 1720px !important;
+    padding: 1rem 3.5rem 1rem !important;
+  }
+}
+
+/* 페이지 제목("2. 가설 수립") 바로 밑에 두 칸이 붙어 보여서 조금 내림 */
+.hypothesis-top-gap {
+  height: 20px;
+}
+
+/* 두 칸 제목 줄 아래 간격 (제목은 그대로, 그 아래 탭·박스만 내림) — 양쪽에 같이 둬서 윗선 정렬 유지 */
+.hypothesis-heading-gap {
+  height: 12px;
+}
+
+/* 오른쪽 "지금 선택된 가설" 박스를 왼쪽 후보 박스와 같은 높이로 (위·아래 끝선 맞춤).
+   오른쪽 칸은 이미 왼쪽 칸과 같은 높이로 늘어나 있으므로 박스가 남은 높이를 채우게 하고,
+   왼쪽 칸 맨 아래의 고정 여백(후보 박스 아래 16px, 브라우저 실측)만큼 뺌 */
+[data-testid="stLayoutWrapper"]:has(> .st-key-hypothesis-selected-card) {
+  flex: 1 1 auto;
+  margin-bottom: 16px;
+}
+
+.st-key-hypothesis-selected-card {
+  flex: 1 1 auto;
+}
+
+/* 높이를 맞춘 "지금 선택된 가설" 박스 안에서, 안쪽 회색 If·Because·Then 박스(또는 선택 전
+   안내 박스)가 바깥 박스 높이를 끝까지 채우고 세 줄을 그 안에 고르게 배치 — 안쪽 박스가
+   내용 높이만큼만 있어서 아래가 비어 보이던 문제. 바깥 박스 → 안쪽 박스 사이의 감싸는 요소들도
+   높이를 이어받게 함 */
+.st-key-hypothesis-selected-card > [data-testid="stElementContainer"]:has(.hypothesis-ibt-box, .hypothesis-callout-box) {
+  flex: 1 1 auto;
+}
+
+.st-key-hypothesis-selected-card div:has(.hypothesis-ibt-box, .hypothesis-callout-box) {
+  height: 100%;
+}
+
+.st-key-hypothesis-selected-card .hypothesis-ibt-box,
+.st-key-hypothesis-selected-card .hypothesis-callout-box {
+  /* 위 여백(24px)과 아래 여백이 같도록 16px 덜 채움 (브라우저 실측) */
+  height: calc(100% - 16px);
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.st-key-hypothesis-selected-card .hypothesis-ibt-box {
+  justify-content: space-evenly;
+}
+
+/* 오른쪽 아이콘 줄 아이콘 색: ① 탭 아이콘 줄과 같은 밝은 보라 (홈 HOME_COLORS purple) */
+[class*="st-key-hypothesis-side-"] button span[data-testid="stIconMaterial"] {
+  color: #7B6CF2;
+}
+
+/* 지금 쓸 수 없는 아이콘은 자리는 그대로 두고 흐리게 (아이콘 줄이 가설마다 바뀌지 않게) */
+[class*="st-key-hypothesis-side-"] button:disabled span[data-testid="stIconMaterial"] {
+  color: #7B6CF2;
+  opacity: 0.3;
+}
+
+[class*="st-key-hypothesis-side-"] .stButton > button:disabled {
+  background: transparent;
+  cursor: not-allowed;
+}
+
+/* ── 제목 줄 오른쪽 위 '불러오기'·'저장하기' (① 탭 report_style.css와 같은 모양·색) ── */
+.st-key-hypothesis-head .st-key-hypothesis-head-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.st-key-hypothesis-head .stButton button {
+  white-space: nowrap;
+}
+.st-key-hypothesis-btn-load button {
+  background: var(--color-card);
+  border: 1px solid #7B6CF2;   /* ① 탭·홈과 같은 밝은 보라 */
+}
+.st-key-hypothesis-btn-load button p,
+.st-key-hypothesis-btn-load button span { color: #7B6CF2 !important; }
+.st-key-hypothesis-btn-store button:not(:disabled) {
+  background: #7B6CF2;
+  border-color: #7B6CF2;
+  box-shadow: 0 6px 16px color-mix(in srgb, #7B6CF2 30%, transparent);
+}
+.st-key-hypothesis-btn-store button:not(:disabled) p,
+.st-key-hypothesis-btn-store button:not(:disabled) span { color: var(--color-card) !important; }
+
+/* '불러오기' 전 기본 틀: 배지는 기본 보라 테두리, 내용 자리는 빈 줄 */
+.hypothesis-badge-skeleton {
+  background: var(--color-card) !important;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary) !important;
+}
+.hypothesis-skeleton-line {
+  height: 14px;
+  margin: 14px 0;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+.hypothesis-skeleton-line + .hypothesis-skeleton-line { width: 60%; }
+
+
+/* 가설 카드 제목 줄: ① 문제 분석에서 몇 순위 문제인지 (출처 배지) */
+.hypothesis-badge-source {
+  background: var(--color-card) !important;
+  border: 1px solid #7B6CF2;   /* ① 탭과 같은 밝은 보라 */
+  color: #7B6CF2 !important;
+}
+
+/* 후보에서 빠진 ① 핵심 문제: 카드 아래 작은 물음표 아이콘 (누르면 이유) */
+.st-key-hypothesis-skipped button {
+  min-height: 0;
+  padding: 2px 4px;
+  color: var(--color-sub);
+}
+
+.st-key-hypothesis-skipped button span[data-testid="stIconMaterial"] {
+  font-size: 18px;
+  color: #7B6CF2;
+}
+
+/* ① 리포트가 판정한 ③ 탭 연결 배지: 가능 = 초록, 안 됨 = 회색 (마우스를 올리면 이유) */
+.hypothesis-badge-s3 {
+  background: color-mix(in srgb, #3CC58A 16%, var(--color-card));
+  color: #1f8a5c;
+  border: 1px solid #3CC58A;
+}
+
+.hypothesis-badge-s3.off {
+  background: var(--color-card);
+  color: var(--color-sub);
+  border: 1px solid var(--color-border);
+}
+
+/* ①이 원인별로 나눈 메인 이미지 B안 이름 (B안 · 두께 등) */
+.hypothesis-badge-variant {
+  background: color-mix(in srgb, #46A6F5 12%, var(--color-card));
+  color: #1f6fae;
+  border: 1px solid #46A6F5;
+}
+
+/* 탭을 옮긴 직후 브라우저에서도 탭을 눌러 주는 보이지 않는 칸 (hypothesis_tab_click) - 자리를 차지하지 않게 */
+.st-key-hypothesis-tab-click-box {
+  display: none;
+}
+
+/* ── 가설 후보 3개 나란히 (2026-10-26): 카드 높이를 같게, 글자는 줄 수 제한 (마우스를 올리면 전체) ── */
+[class*="st-key-hypothesis-card-"]:not(.st-key-hypothesis-card-skeleton) {
+  height: 100%;
+}
+
+[class*="st-key-hypothesis-card-"] .hypothesis-factor-line {
+  margin: 4px 0 6px;
+  line-height: 1.9;
+}
+
+.hypothesis-card-no {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-sub);
+}
+
+.hypothesis-card-no.on {
+  color: var(--color-primary);
+}
+
+.hypothesis-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--color-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.hypothesis-card-row {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.hypothesis-card-row span {
+  color: var(--color-sub);
+  font-weight: 600;
+}
+
+.hypothesis-card-row div {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hypothesis-detail-head {
+  margin: 6px 0 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* 실행 방법 표: 한 화면에 들어오게 행 높이를 줄임 */
+.st-key-hypothesis-detail table td,
+.st-key-hypothesis-detail table th {
+  padding: 5px 10px !important;
+  font-size: 12.5px !important;
+  line-height: 1.45 !important;
+}
+
+.hypothesis-detail-head span {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-sub);
+}
+
+/* 가설 카드 3개 + 실행 방법 표가 한 화면에 들어오게: 위 간격·카드 안 여백을 줄임 */
+.hypothesis-top-gap {
+  height: 4px;
+}
+
+[class*="st-key-hypothesis-card-"]:not(.st-key-hypothesis-card-skeleton) {
+  padding: 12px 14px !important;
+  gap: 0.5rem;
+}
+
+/* 카드 글 블록 아래: Streamlit 글 블록의 -1rem 여백 때문에 '목표' 둘째 줄이 '선택하기' 버튼 밑으로 들어가던 것 */
+[class*="st-key-hypothesis-card-"] .hypothesis-card-row:last-child {
+  margin-bottom: 1rem;
+}
+
+
+/* 두 칸 제목 아래 간격도 조금 줄임 (한 화면) */
+.hypothesis-heading-gap {
+  height: 0;
+}
+
+/* 카드 안 실행 방법 표: 한 화면에 들어오게 행 높이를 줄임 */
+[class*="st-key-hypothesis-card-"] table td,
+[class*="st-key-hypothesis-card-"] table th {
+  padding: 5px 10px !important;
+  font-size: 12.5px !important;
+  line-height: 1.45 !important;
+}
+
+.st-key-hypothesis-pick .st-key-hypothesis-skipped button {
+  padding: 2px 4px;
+  box-shadow: none;
+  border: none;
+  background: transparent;
+}
+
+
+/* 왼쪽 가설 카드와 오른쪽 '지금 선택된 가설' 카드: 같은 높이(화면 높이에 맞춤) → 아래 끝선이 맞고 한 화면에 들어옴.
+   내용이 더 길면 카드 안에서만 스크롤 */
+[class*="st-key-hypothesis-card-"],
+.st-key-hypothesis-selected-card,
+[data-testid="stLayoutWrapper"]:has(> [class*="st-key-hypothesis-card-"]),
+[data-testid="stLayoutWrapper"]:has(> .st-key-hypothesis-selected-card) {
+  height: clamp(340px, calc(100vh - 250px), 620px) !important;
+  flex: 0 0 auto !important;   /* 바깥 칸(flex)이 카드를 내용 높이로 줄이지 않게 */
+}
+
+[class*="st-key-hypothesis-card-"],
+.st-key-hypothesis-selected-card {
+  overflow-y: auto;
+}
+
+/* '지금 선택된 가설' 빈 상태: 가운데 정렬 안내 + 고르면 채워질 If·Because·Then 자리 */
+.hypothesis-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  background: color-mix(in srgb, var(--color-primary) 4%, var(--color-card));
+  border: 1.5px dashed color-mix(in srgb, var(--color-primary) 30%, transparent);
+  border-left: 1.5px dashed color-mix(in srgb, var(--color-primary) 30%, transparent);
+  color: var(--color-sub);
+}
+
+.hypothesis-empty-state b {
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.hypothesis-empty-state span {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.hypothesis-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-card));
+  font-size: 22px;
+}
+
+.hypothesis-empty-steps {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.hypothesis-empty-steps i {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 700;
+  color: #fff;
+  opacity: 0.45;
+}
+
+.hypothesis-empty-steps i.if { background: var(--color-primary); }
+.hypothesis-empty-steps i.because { background: #F1642E; }
+.hypothesis-empty-steps i.then { background: #A3B565; }
+
+/* 제목 줄 물음표: 제목 바로 오른쪽, 제목 글자 아래쪽에 맞춤 (버튼·토글은 오른쪽 끝 그대로) - ①·②·④ 같은 규칙 */
+.st-key-hypothesis-head .st-key-hypothesis-head-title {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-hypothesis-head .st-key-hypothesis-help {
+  flex: 1 1 auto !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+
+/* 4) '가설 후보'·'지금 선택된 가설' 제목 옆 링크(🔗) 아이콘 숨김: Streamlit이 #### 제목에 자동으로 붙이는 '이 제목으로 바로 가는 주소 복사' 아이콘 */
+.st-key-hypothesis-heading-candidates [data-testid="stHeaderActionElements"],
+.st-key-hypothesis-heading-selected [data-testid="stHeaderActionElements"] {
+  display: none !important;
+}
+
+/* 6) ① 탭 색으로 맞춤: 고른 '가설 N'·'선택하기'는 ①의 밝은 보라(#7B6CF2), 카드는 흰 배경 */
+.st-key-hypothesis-pick .stButton > button[kind="primary"],
+[class*="st-key-hypothesis-btn-save-"] button:not(:disabled) {
+  background: #7B6CF2 !important;
+  border-color: #7B6CF2 !important;
+  box-shadow: 0 4px 12px color-mix(in srgb, #7B6CF2 28%, transparent) !important;
+}
+[class*="st-key-hypothesis-btn-save-"] button:not(:disabled) p,
+[class*="st-key-hypothesis-btn-save-"] button:not(:disabled) span { color: #fff !important; }
+[class*="st-key-hypothesis-card-"],
+.st-key-hypothesis-selected-card {
+  background: var(--color-card, #fff) !important;
+}
+
+/* (위 규칙 보완) 폭은 키 달린 칸을 감싼 stLayoutWrapper가 정하므로 감싸개에도 같은 규칙 */
+.st-key-hypothesis-head > [data-testid="stLayoutWrapper"]:has(> .st-key-hypothesis-head-title) {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-hypothesis-head > [data-testid="stLayoutWrapper"]:has(> .st-key-hypothesis-help) {
+  flex: 1 1 auto !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+.st-key-hypothesis-head .st-key-hypothesis-head-title .ui-title { width: auto; }
+
+/* 물음표 칸은 남는 폭만 (기본 폭 0에서 늘어남) → 버튼과 같은 줄에 머묾 */
+.st-key-hypothesis-head > [data-testid="stLayoutWrapper"]:has(> .st-key-hypothesis-help) {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+}
+.st-key-hypothesis-head { flex-wrap: nowrap !important; }
+
+/* ── 가설 카드·선택된 가설 카드: 빈 공간을 쓰고 글씨를 키움 (2026-10-26) ──
+   글씨·표 줄 높이를 화면 높이(vh)에 맞춰 키움 (작은 화면에서는 예전 크기), 카드 최대 높이 620 → 760px */
+[class*="st-key-hypothesis-card-"],
+.st-key-hypothesis-selected-card,
+[data-testid="stLayoutWrapper"]:has(> [class*="st-key-hypothesis-card-"]),
+[data-testid="stLayoutWrapper"]:has(> .st-key-hypothesis-selected-card) {
+  height: clamp(340px, calc(100vh - 250px), 760px) !important;
+}
+[class*="st-key-hypothesis-card-"] .hypothesis-badge {
+  font-size: clamp(12px, 1.6vh, 14px);
+  padding: clamp(3px, 0.5vh, 5px) clamp(10px, 1.4vh, 13px);
+}
+[class*="st-key-hypothesis-card-"] .hypothesis-factor-line b {
+  font-size: clamp(15px, 2.1vh, 19px);
+}
+[class*="st-key-hypothesis-card-"] .hypothesis-detail-head {
+  font-size: clamp(14px, 1.95vh, 17.5px);
+  margin: clamp(4px, 0.9vh, 10px) 0 clamp(2px, 0.6vh, 6px);
+}
+[class*="st-key-hypothesis-card-"] .hypothesis-detail-head span {
+  font-size: clamp(12px, 1.55vh, 14px);
+}
+[class*="st-key-hypothesis-card-"] table td,
+[class*="st-key-hypothesis-card-"] table th {
+  font-size: clamp(12.5px, 1.8vh, 15.5px) !important;
+  padding: clamp(5px, 1.2vh, 12px) clamp(10px, 1.4vh, 14px) !important;
+}
+.st-key-hypothesis-selected-card .hypothesis-ibt-text {
+  font-size: clamp(14px, 1.95vh, 17.5px);
+}
+
+/* (보완) 표 줄 높이·글씨 상한을 조금 더 → 높은 화면에서 카드 아래 빈칸을 표가 씀 */
+[class*="st-key-hypothesis-card-"] table td,
+[class*="st-key-hypothesis-card-"] table th {
+  font-size: clamp(12.5px, 1.85vh, 16.5px) !important;
+  padding: clamp(5px, 1.5vh, 15px) clamp(10px, 1.5vh, 16px) !important;
+}
+[class*="st-key-hypothesis-card-"] .hypothesis-factor-line b {
+  font-size: clamp(15px, 2.2vh, 20px);
+}
+
+/* 줄바꿈은 단어 단위로 (단어 중간에서 끊기지 않게, 너무 긴 단어만 예외) */
+[class*="st-key-hypothesis-card-"] .hypothesis-factor-line,
+[class*="st-key-hypothesis-card-"] table td,
+.st-key-hypothesis-selected-card .hypothesis-ibt-text {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* ── ① 문제 분석과 같은 색·모양 적용 (2026-10-26, ①에 적용한 ④ 색과 같은 공통 색만 씀) ──
+   카드 = 테두리 없는 흰 카드 + 그림자 / ① 순위 배지 = ① 위험 배지(연한 주황) / 내부·외부 요인 = ① 분류 태그(회색 칩) /
+   ③ 연결 = ④ '정상' 배지(연두) / B안 = ① ③ 상자(연보라) / 실행 방법 표 = ① '② 가설 재료' 상자(회보라, 선 없음) */
+[class*="st-key-hypothesis-card-"],
+.st-key-hypothesis-selected-card {
+  border: none !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 7%, transparent);
+}
+
+[class*="st-key-hypothesis-card-"] .hypothesis-badge {
+  border: none !important;
+}
+[class*="st-key-hypothesis-card-"] .hypothesis-badge-source {
+  background: #FDE3D8 !important;
+  color: #B9441A !important;
+}
+[class*="st-key-hypothesis-card-"] .hypothesis-badge-internal,
+[class*="st-key-hypothesis-card-"] .hypothesis-badge-external {
+  background: var(--color-bg) !important;
+  color: var(--color-sub) !important;
+  font-weight: 600;
+}
+[class*="st-key-hypothesis-card-"] .hypothesis-badge-s3 {
+  background: #EEF2DD !important;
+  color: #5E6B2E !important;
+}
+[class*="st-key-hypothesis-card-"] .hypothesis-badge-s3.off {
+  background: var(--color-bg) !important;
+  color: var(--color-sub) !important;
+}
+[class*="st-key-hypothesis-card-"] .hypothesis-badge-variant {
+  background: color-mix(in srgb, #C4C3E3 35%, #FFFFFF) !important;
+  color: var(--color-text) !important;
+}
+
+/* 실행 방법 표: ① '② 가설 재료' 상자처럼 회보라 바탕·둥근 모서리·선 없음, 뜻 없는 '칸 · 내용' 머리줄은 숨김 */
+[class*="st-key-hypothesis-card-"] table {
+  border-collapse: separate !important;
+  border-spacing: 0;
+  background: var(--color-bg);
+  border-radius: 14px;
+  overflow: hidden;
+}
+[class*="st-key-hypothesis-card-"] table thead {
+  display: none;
+}
+[class*="st-key-hypothesis-card-"] table td,
+[class*="st-key-hypothesis-card-"] table th {
+  border: none !important;
+  background: transparent !important;
+}
+[class*="st-key-hypothesis-card-"] table td:first-child,
+[class*="st-key-hypothesis-card-"] table td:first-child strong {
+  color: var(--color-sub);
+  font-weight: 600;
+}
+[class*="st-key-hypothesis-card-"] table tr:first-child td { padding-top: clamp(10px, 1.8vh, 18px) !important; }
+[class*="st-key-hypothesis-card-"] table tr:last-child td { padding-bottom: clamp(10px, 1.8vh, 18px) !important; }
+
+/* 오른쪽 '지금 선택된 가설' 안쪽 상자: ① ③ 상자와 같은 연보라 */
+.st-key-hypothesis-selected-card .hypothesis-ibt-box {
+  background: color-mix(in srgb, #C4C3E3 35%, #FFFFFF) !important;
+  border-radius: 12px;
+}
+
+/* 오른쪽 아이콘 줄: ① 아이콘 줄처럼 테두리 없이 그림자 */
+[class*="st-key-hypothesis-side-"] {
+  border: none !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+/* 실행 방법 표 상자가 카드 아래 끝까지 차게: 표를 감싼 요소들을 위아래로 늘리고, 늘어난 높이는 표 줄들이 나눠 씀
+   (머리줄을 숨겨 생긴 아래 빈칸 없앰 · 줄어들지는 않게 1 0 auto → 작은 화면에서는 예전 크기 그대로) */
+[class*="st-key-hypothesis-card-"] > [data-testid="stElementContainer"]:has(table),
+[class*="st-key-hypothesis-card-"] > [data-testid="stElementContainer"]:has(table) [data-testid="stMarkdown"],
+[class*="st-key-hypothesis-card-"] > [data-testid="stElementContainer"]:has(table) [data-testid="stMarkdown"] > div,
+[class*="st-key-hypothesis-card-"] > [data-testid="stElementContainer"]:has(table) [data-testid="stMarkdownContainer"] {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+[class*="st-key-hypothesis-card-"] > [data-testid="stElementContainer"]:has(table) [data-testid="stMarkdownContainer"] {
+  margin-bottom: 0 !important;   /* Streamlit 글 상자의 아래 -1rem 때문에 표가 카드 아래 여백으로 삐져나오지 않게 */
+}
+[class*="st-key-hypothesis-card-"] table {
+  flex: 1 0 auto;
+  margin-bottom: 0 !important;
+}
+
+/* 불러오기 전 기본 틀 배지: ① 틀 배지처럼 회색 칩 */
+[class*="st-key-hypothesis-card-"] .hypothesis-badge-skeleton {
+  background: var(--color-bg) !important;
+  color: var(--color-sub) !important;
+}
+
+/* If · Because · Then 배지: ① 배지처럼 연한 바탕 + 진한 글자
+   If = 흰 칩 + 밝은 보라 글자(연보라 상자 위) / Because = ① 1순위 배지(연한 주황) / Then = ③ 연결 배지(연두) */
+.hypothesis-ibt-if { background: #FFFFFF; color: #7B6CF2; }
+.hypothesis-ibt-because { background: #FDE3D8; color: #B9441A; }
+.hypothesis-ibt-then { background: #EEF2DD; color: #5E6B2E; }
+
+/* 빈 상태(아직 선택 전) If · Because · Then 자리도 같은 색 (흰 바탕 위라 If는 연보라 칩) */
+.hypothesis-empty-steps i { opacity: 0.8; }
+.hypothesis-empty-steps i.if { background: color-mix(in srgb, #C4C3E3 35%, #FFFFFF); color: #7B6CF2; }
+.hypothesis-empty-steps i.because { background: #FDE3D8; color: #B9441A; }
+.hypothesis-empty-steps i.then { background: #EEF2DD; color: #5E6B2E; }
+
+/* 예전 저장값(If·Because·Then 없이 문장만)·'불러오기 전' 상자: 왼쪽 굵은 선 없이 ① 상자 색 */
+.st-key-hypothesis-selected-card .hypothesis-callout-box:not(.hypothesis-empty-state, .hypothesis-callout-empty) {
+  background: color-mix(in srgb, #C4C3E3 35%, #FFFFFF);
+  border-left: none;
+  border-radius: 12px;
+}
+.st-key-hypothesis-selected-card .hypothesis-callout-empty {
+  background: var(--color-bg);
+  border-left: none;
+  border-radius: 12px;
+  color: var(--color-sub);
+}
+
+/* '지금 선택된 가설' 제목 바로 옆 물음표 (저장 상태·다음 단계 안내, 예전 카드 맨 아래 한 줄):
+   버튼을 작게 해서 제목 줄 높이가 왼쪽 '가설 후보' 제목 줄과 같게 → 두 카드 윗선 그대로 */
+.st-key-hypothesis-heading-selected .stPopover button {
+  min-height: 0;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+/* 제목 줄 높이: 왼쪽 '가설 후보' 제목 줄은 Streamlit 글 상자의 아래 -1rem 여백 때문에 6px만 차지함.
+   물음표 칸(18px)이 줄을 키우면 오른쪽 카드만 12px 내려가고 제목 글자도 6px 내려가서 →
+   줄은 위쪽 정렬, 물음표 칸은 높이 0(버튼은 그대로 보임)으로 두 제목·두 카드 윗선을 맞춤 */
+.st-key-hypothesis-heading-selected {
+  align-items: flex-start !important;
+}
+.st-key-hypothesis-heading-selected > [data-testid="stLayoutWrapper"]:has(.stPopover) {
+  height: 0;
+  overflow: visible;
+  margin-top: 2px;     /* 버튼(18px) 가운데를 제목 글자 줄(22px) 가운데에 */
+  margin-left: -6px;   /* 페이지 제목 옆 물음표처럼 제목에 가깝게 */
+}
+
+/* 오른쪽 아이콘 줄(판단 기준·근거 출처)은 화면에서 숨김 — 코드·기능은 그대로 (2026-10-27)
+   PDF 다운로드는 제목 줄 '불러오기' 왼쪽 버튼으로 옮김 */
+[class*="st-key-hypothesis-side-"] { display: none !important; }
+.st-key-hypothesis-btn-pdf button:not(:disabled) {
+  background: var(--color-card);
+  border: 1px solid #7B6CF2;
+}
+.st-key-hypothesis-btn-pdf button:not(:disabled) p,
+.st-key-hypothesis-btn-pdf button:not(:disabled) span { color: #7B6CF2 !important; }
+
+/* 불러오기·PDF 다운로드: 마우스를 올리면 공통 버튼 hover(진한 배경) 대신 연보라 + 살짝 떠오름 (① 탭과 같게, 2026-10-27) */
+.st-key-hypothesis-btn-load button,
+.st-key-hypothesis-btn-pdf button {
+  transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.st-key-hypothesis-btn-load button:hover,
+.st-key-hypothesis-btn-pdf button:not(:disabled):hover {
+  background: color-mix(in srgb, #7B6CF2 8%, var(--color-card)) !important;
+  border-color: #7B6CF2 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px color-mix(in srgb, #7B6CF2 18%, transparent);
+}

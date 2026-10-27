@@ -7,4 +7,761 @@
 
 .report-desc {
   color: var(--color-sub);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* 한 줄 KPI 카드: 기본 KPI 카드의 약 1/3 높이 */
+.report-kpi {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;   /* 라벨·값·배지를 한 줄로 */
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.report-kpi-label {
+  font-size: 12px;
+  color: var(--color-sub);
+  margin-right: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 배지가 길면 말줄임 (전체 문구는 마우스를 올리면 보임) */
+.report-kpi .ui-delta {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.report-kpi-value {
+  font-size: 18px;
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+/* 내부 / 외부 요인 한 줄 */
+.report-factor {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.report-factor:last-child {
+  border-bottom: none;
+}
+
+/* 심각도 배지: 색만으로 구분하지 않도록 ●●● 점 개수도 함께 표시 */
+.report-level {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--color-primary);
+}
+
+.report-level-high {
+  background: var(--color-primary);
+  color: var(--color-card);
+}
+
+.report-level-mid {
+  color: var(--color-primary);
+}
+
+.report-level-low {
+  color: var(--color-sub);
+  border-color: var(--color-border);
+}
+
+/* 데이터 출처 배지 (가상 / 실제 / 가정) */
+.report-src {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  color: var(--color-sub);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* 문제 문장 (발표용 한 줄) */
+.report-statement {
+  padding: 12px 16px;
+  margin: 6px 0;
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.report-tag {
+  margin-right: 6px;
+  font-size: 12px;
+  color: var(--color-sub);
+}
+
+/* 문제 분석 결과·내부/외부 요인 카드: 카드 안 스크롤은 되지만 스크롤바는 숨김 */
+[class*="st-key-report-card-"],
+[class*="st-key-report-card-"] * {
+  scrollbar-width: none;
+}
+
+[class*="st-key-report-card-"]::-webkit-scrollbar,
+[class*="st-key-report-card-"] *::-webkit-scrollbar {
+  display: none;
+}
+
+/* 카드 오른쪽 아래 얇은 '더보기 ▾' */
+[class*="st-key-report-more-"] {
+  align-items: flex-end;
+}
+
+[class*="st-key-report-more-"] button {
+  min-height: 0;
+  height: 20px;
+  padding: 0 2px;
+  color: var(--color-sub);
+}
+
+[class*="st-key-report-more-"] button p,
+[class*="st-key-report-more-"] button span {
+  font-size: 11px;
+}
+
+/* 읽기 쉬운 한 줄: 왼쪽 배지 칸 고정, 오른쪽 제목·근거 (결과 박스와 요인 카드 공통) */
+.report-row {
+  display: grid;
+  grid-template-columns: 104px 1fr;   /* 배지 칸 고정 (가장 긴 배지 '1순위 · 내부' 폭) */
+  column-gap: 12px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.report-row-badge {
+  padding-top: 2px;   /* 배지를 제목 첫 줄 높이에 맞춤 */
+}
+
+.report-row .report-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 2px;
+}
+
+/* 요인 카드(반쪽 폭)는 배지 칸·제목을 조금 작게 */
+.st-key-report-card-internal .report-row,
+.st-key-report-card-external .report-row {
+  grid-template-columns: 76px 1fr;
+}
+
+.st-key-report-card-internal .report-row-title,
+.st-key-report-card-external .report-row-title {
+  font-size: 14px;
+}
+
+.report-row:last-child {
+  border-bottom: none;
+}
+
+.report-row-badge .report-level {
+  margin-right: 0;
+}
+
+.report-row-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.report-row-q {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--color-text);
+}
+
+/* 근거는 2줄까지만 (마우스를 올리면 전체 문장) */
+.report-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 요인 카드: '더보기'를 카드 오른쪽 아래 모서리에 고정 */
+.st-key-report-card-internal,
+.st-key-report-card-external {
+  position: relative;
+}
+
+[class*="st-key-report-more-"] {
+  position: absolute;
+  right: 12px;
+  bottom: 6px;
+  width: auto;
+}
+
+/* 오른쪽 끝 아이콘 줄: ① 탭 안에서만, 화면에 고정 (스크롤과 무관) */
+.st-key-report-side {
+  position: fixed;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 999;
+  width: 52px;
+  padding: 10px 4px;
+  gap: 10px;
+  align-items: center;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* 공통 테마의 '.stButton > button' (보라색 버튼)보다 우선: 아이콘 버튼은 투명 배경 */
+.st-key-report-side .stButton > button {
+  min-height: 0;
+  padding: 4px;
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.st-key-report-side .stButton > button:hover {
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
+.st-key-report-side button span[data-testid="stIconMaterial"] {
+  font-size: 24px;
+}
+
+/* 창(dialog) 안 KPI 줄: 스크롤해도 맨 위에 고정
+   (Streamlit이 감싸는 stLayoutWrapper에 걸어야 함. 키가 붙은 칸 자체에 걸면 감싸는 칸 높이 안에서만 움직여 고정되지 않음) */
+[data-testid="stLayoutWrapper"]:has(> [class*="st-key-report-dialog-kpis-"]) {
+  position: sticky;
+  top: 76px;   /* 처음 위치와 같게: 제목(h2) 64px + 제목과 내용 사이 간격 16px - 위 안쪽 여백 4px */
+  z-index: 100;   /* 표(dataframe) 캔버스가 위로 올라오지 않게 */
+  padding: 4px 0 10px;
+  background: var(--color-bg);
+  box-shadow: 0 -16px 0 0 var(--color-bg),                /* 제목과 KPI 사이 빈틈 덮기 */
+              0 8px 8px -8px rgba(80, 78, 118, 0.25);    /* 아래로 지나가는 내용과 경계선 */
+}
+
+[class*="st-key-report-dialog-kpis-"] .report-kpi {
+  margin-bottom: 0;
+}
+
+
+/* KPI 줄이 있는 report 창만: 창 상자 안에서 스크롤 (바깥 배경이 스크롤되면 KPI 고정이 안 됨) */
+[role="dialog"]:has([class*="st-key-report-dialog-body-"]) {
+  max-height: 90vh;
+  overflow-y: auto;
+  scrollbar-width: none;   /* 스크롤은 되고 스크롤바는 숨김 */
+}
+
+[role="dialog"]:has([class*="st-key-report-dialog-body-"])::-webkit-scrollbar {
+  display: none;
+}
+
+/* report 창이 열려 있는 동안 바깥 배경 층은 스크롤하지 않음 (스크롤바가 하나만 남도록) */
+.stDialog:has([class*="st-key-report-dialog-body-"]) {
+  overflow: hidden;
+}
+
+/* ① 탭을 연 동안만 페이지 폭·여백: 가로 폭은 ④ 광고 타이밍 탭(weather_style.css: 최대 1720px, 양옆 3.5rem),
+   위·아래 여백은 ③ 광고 소재 탭(media_style.css: 위 1rem, 아래 3rem) 기준. 최상위 탭 2번째 기준 (탭 순서가 바뀌면 숫자 수정) */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2)[aria-selected="true"]) {
+    max-width: 1720px !important;
+    padding: 1rem 3.5rem 1rem !important;   /* 아래 여백 3rem → 1rem (작은 화면에서도 스크롤 없게) */
+  }
+}
+
+/* KPI 줄이 있는 report 창: 제목(h2)과 닫기 버튼도 위에 고정, KPI 줄은 제목 바로 아래(72px)에 고정 */
+[role="dialog"]:has([class*="st-key-report-dialog-body-"]) > h2 {
+  position: sticky;
+  top: 0;
+  z-index: 101;
+  padding-top: 16px;   /* 제목 위 여백 (기본 24px) */
+  background: var(--color-bg);
+}
+
+[role="dialog"]:has([class*="st-key-report-dialog-body-"]) > button:first-child {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  margin-left: auto;      /* 오른쪽 끝 */
+  height: 0;              /* 자리를 차지하지 않게 (차지하면 처음 열 때 제목 위가 16px 더 비고, 스크롤하면 제목이 튐) */
+  min-height: 0;
+  padding: 0 24px 0 0;
+  overflow: visible;
+  z-index: 102;
+}
+
+/* 오른쪽 아이콘 말풍선: 마우스를 올린 동안만 아이콘 왼쪽에 표시 (Streamlit help 말풍선은 클릭 후 남아 쓰지 않음) */
+[class*="st-key-report-btn-side-"] {
+  position: relative;
+}
+
+[class*="st-key-report-btn-side-"]:hover::after {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: var(--color-card);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.st-key-report-btn-side-internal:hover::after { content: "내부 요인 전체"; }
+.st-key-report-btn-side-external:hover::after { content: "외부 요인 전체"; }
+.st-key-report-btn-side-pdf:hover::after { content: "핵심 문제 전체 · PDF 다운로드"; }
+.st-key-report-btn-side-sqp:hover::after { content: "검색어 클릭 분석 (가상 SQP)"; }
+.st-key-report-btn-side-funnel:hover::after { content: "구매 퍼널 (GA4)"; }
+.st-key-report-btn-side-comp:hover::after { content: "경쟁 포지션 · 경쟁사 비교"; }
+.st-key-report-btn-side-ab:hover::after { content: "해결안 A/B 테스트"; }
+
+
+/* 제목 줄 오른쪽 위 '불러오기'·'저장하기' 버튼: 제목은 남는 폭을 다 쓰고 버튼은 글자 폭만, 줄바꿈 없이 */
+.st-key-report-head .st-key-report-head-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.st-key-report-head .stButton button {
+  white-space: nowrap;
+}
+/* '저장하기'(primary): 공통 글자색(p)이 버튼 글자를 진하게 덮어 배경과 같은 색이 됨 → 흰 글자 (비활성일 때는 기본 회색 유지) */
+.st-key-report-btn-save button:not(:disabled) p,
+.st-key-report-btn-save button:not(:disabled) span {
+  color: var(--color-card) !important;
+}
+/* '불러오기' 전 기본 틀: 분류 태그가 비어 있으면 숨김 (빈 알약 모양이 보이지 않게) */
+.report-tag:empty {
+  display: none;
+}
+
+
+/* ── 홈 화면처럼 여러 색 쓰기 (홈 탭 home_page.py HOME_COLORS와 같은 값, ① 탭 클래스에만 적용) ── */
+:root {
+  --report-red: #F2546B;
+  --report-orange: #F9A65A;
+  --report-purple: #7B6CF2;
+  --report-blue: #46A6F5;
+  --report-green: #3CC58A;
+}
+
+/* 위험도 배지: 높음 빨강 · 중간 주황 · 낮음 초록 (글자는 배경 위에서 읽히게 진하게 섞음)
+   본문 카드(문제 분석 결과·내부·외부 요인)에만 적용, 오른쪽 아이콘으로 여는 창은 예전 색 그대로 */
+[class*="st-key-report-card-"] .report-level-high {
+  background: var(--report-red);
+  border-color: var(--report-red);
+  color: var(--color-card);
+}
+[class*="st-key-report-card-"] .report-level-mid {
+  background: color-mix(in srgb, var(--report-orange) 16%, var(--color-card));
+  border-color: var(--report-orange);
+  color: color-mix(in srgb, var(--report-orange) 55%, #000);
+}
+[class*="st-key-report-card-"] .report-level-low {
+  background: color-mix(in srgb, var(--report-green) 14%, var(--color-card));
+  border-color: var(--report-green);
+  color: color-mix(in srgb, var(--report-green) 55%, #000);
+}
+
+/* 분류 태그: 알약 모양, 한 가지 색(보라)으로 통일 - 본문 카드에만 */
+[class*="st-key-report-card-"] .report-tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--report-purple) 12%, var(--color-card));
+  color: var(--report-purple);
+  font-weight: 600;
+}
+
+/* 카드 제목 아이콘 색: 결과 = 빨강 · 내부 = 보라 · 외부 = 파랑 */
+.st-key-report-card-result:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-red); }
+.st-key-report-card-internal:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-purple); }
+.st-key-report-card-external:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-blue); }
+.st-key-report-card-image:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-blue); }
+
+/* 이미지로 고칠 수 있는 문제: 배지(N순위 또는 '이미지')는 파랑 - 위험도(빨강·주황)와 구분 */
+[class*="st-key-report-card-"] .report-level-img {
+  background: color-mix(in srgb, var(--report-blue) 14%, var(--color-card));
+  border-color: var(--report-blue);
+  color: color-mix(in srgb, var(--report-blue) 60%, #000);
+}
+
+/* 불러오기·저장하기 버튼: 홈 버튼과 같은 밝은 보라 */
+.st-key-report-btn-load button,
+.st-key-report-btn-pdf button:not(:disabled) {   /* 'PDF 다운로드'(2026-10-27 PM)도 불러오기와 같은 모양 */
+  background: var(--color-card);
+  border: 1px solid var(--report-purple);
+}
+.st-key-report-btn-load button p,
+.st-key-report-btn-load button span,
+.st-key-report-btn-pdf button:not(:disabled) p,
+.st-key-report-btn-pdf button:not(:disabled) span { color: var(--report-purple) !important; }
+.st-key-report-btn-save button:not(:disabled) {
+  background: var(--report-purple);
+  border-color: var(--report-purple);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--report-purple) 30%, transparent);
+}
+
+/* 오른쪽 아이콘 줄 아이콘: 밝은 보라 */
+.st-key-report-side button span[data-testid="stIconMaterial"] { color: var(--report-purple); }
+
+/* '불러오기' 전 기본 틀: 결과를 모르니 배지는 예전 기본색(보라 테두리)으로만, 불러오면 실제 위험도 색 */
+[class*="st-key-report-card-"]:has(.report-skeleton) .report-level {
+  background: var(--color-card);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.st-key-report-card-result:has(.report-skeleton) .report-level {
+  background: var(--color-primary);
+  color: var(--color-card);
+}
+
+/* 내부·외부 요인 카드: 결과 박스 순위 대상이면 제목 앞 'N순위' 표시 (결과 박스 배지와 같은 빨강 계열) */
+.report-rank-chip {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid var(--report-red, #F2546B);
+  color: var(--report-red, #F2546B);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── 1순위 | 2순위 자세히 카드 (2026-10-26) ── */
+.report-detail-head { display: flex; align-items: center; gap: 6px; margin: 4px 0 6px; }
+.report-detail-head .report-level { margin-right: 0; }
+.report-detail-title { font-size: 17px; font-weight: 700; line-height: 1.4; color: var(--color-text); margin-bottom: 6px; }
+[class*="st-key-report-card-rank"] .report-desc { font-size: 12.5px; line-height: 1.6; margin-bottom: 4px; }
+.report-detail-box {
+  margin: 10px 0 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--report-purple, #7B6CF2) 6%, var(--color-card));
+  font-size: 13px;
+}
+.report-detail-img { background: color-mix(in srgb, var(--report-blue, #46A6F5) 9%, var(--color-card)); }
+.report-detail-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--color-sub); margin-bottom: 4px; }
+.report-use { font-weight: 600; color: var(--report-blue, #46A6F5); }
+.report-detail-row { display: grid; grid-template-columns: 72px 1fr; gap: 8px; padding: 3px 0; font-size: 12.5px; line-height: 1.5; }
+.report-detail-row span { color: var(--color-sub); font-weight: 600; }
+.st-key-report-card-rank1:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"],
+.st-key-report-card-rank2:not(:has(.report-skeleton)) [data-testid="stMarkdownContainer"] span[role="img"] { color: var(--report-red); }
+.st-key-report-card-rank1:has(.report-skeleton) .report-level,
+.st-key-report-card-rank2:has(.report-skeleton) .report-level { background: var(--color-primary); color: var(--color-card); }
+.st-key-report-btn-side-image:hover::after { content: "이미지로 고칠 수 있는 문제 전체"; }
+
+/* 탭을 옮긴 직후 브라우저에서도 탭을 눌러 주는 보이지 않는 칸 (report_tab_click) - 자리를 차지하지 않게 */
+.st-key-report-tab-click-box {
+  display: none;
+}
+
+/* 1순위 | 2순위 카드: 화면 높이에 맞춰 (제목 줄을 뺀 나머지 높이, 너무 작거나 크지 않게) → 한 화면에 들어오게 */
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 {
+  height: clamp(360px, calc(100vh - 215px), 640px) !important;   /* 'N순위 문제' 머리줄을 없앤 만큼 카드 위치가 올라감 */
+}
+
+/* ① 탭을 연 동안 페이지 아래 기본 여백(약 6rem)을 줄여 작은 화면에서도 스크롤이 생기지 않게 */
+[data-testid="stMainBlockContainer"]:has(.st-key-report-card-rank1) {
+  padding-bottom: 1rem !important;
+}
+
+
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 {
+  overflow-y: auto;   /* 화면이 아주 낮으면 카드 안에서만 스크롤 */
+  flex: 0 0 auto !important;
+}
+
+/* 1·2순위 카드 안 배경을 흰색으로 → 안쪽 하늘색(③ 이미지로 고치기)·보라(② 가설 재료) 상자가 잘 보이게 */
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 {
+  background: var(--color-card, #fff) !important;
+}
+
+.st-key-report-card-rank1 .report-detail-head,
+.st-key-report-card-rank2 .report-detail-head {
+  margin-top: 0;
+}
+
+/* 제목 줄 물음표: 제목 바로 오른쪽, 제목 글자 아래쪽에 맞춤 (버튼·토글은 오른쪽 끝 그대로) - ①·②·④ 같은 규칙 */
+.st-key-report-head .st-key-report-head-title {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-report-head .st-key-report-help {
+  flex: 1 1 auto !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+
+/* 1·2순위 카드 배지 줄 오른쪽 끝 물음표(근거) */
+[class*="st-key-report-rank-head"] > div:first-child { flex: 1 1 auto; }
+[class*="st-key-report-rank-head"] .stPopover button {
+  min-height: 0;
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+[class*="st-key-report-rank-head"] .stPopover button span[data-testid="stIconMaterial"] { color: var(--report-purple, #7B6CF2); }
+
+/* (위 규칙 보완) 폭은 키 달린 칸을 감싼 stLayoutWrapper가 정하므로 감싸개에도 같은 규칙 */
+.st-key-report-head > [data-testid="stLayoutWrapper"]:has(> .st-key-report-head-title) {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-report-head > [data-testid="stLayoutWrapper"]:has(> .st-key-report-help) {
+  flex: 1 1 auto !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+.st-key-report-head .st-key-report-head-title .ui-title { width: auto; }
+
+/* 물음표 칸은 남는 폭만 (기본 폭 0에서 늘어남) → 버튼과 같은 줄에 머묾 */
+.st-key-report-head > [data-testid="stLayoutWrapper"]:has(> .st-key-report-help) {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+}
+.st-key-report-head { flex-wrap: nowrap !important; }
+
+/* ── ④ 광고 타이밍 색 적용 (2026-10-26): ④와 같은 공통 색(ui_theme)만 씀 ──
+   카드 = 테두리 없는 흰 카드 + 그림자 / 안쪽 상자 = ④ '오늘의 추천'(연보라)·'예산 결과'(회보라) 상자 /
+   분류 태그 = ④ 회색 알약 칩 / 위험 배지 = ④ 품절·정상 배지처럼 연한 바탕 + 진한 글자 (오른쪽 아이콘 창 안은 예전 색 그대로) */
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 {
+  border: none !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 7%, transparent);
+}
+
+/* 위험 배지: 높음 = ④ 품절·가장 더운 권역(연한 주황 + 진한 주황 글자), 중간 = ④ 더운 권역(피치), 낮음 = ④ '정상'(연두) */
+.st-key-report-card-rank1 .report-level,
+.st-key-report-card-rank2 .report-level {
+  border: none !important;
+  font-weight: 700;
+}
+.st-key-report-card-rank1 .report-level-high,
+.st-key-report-card-rank2 .report-level-high {
+  background: #FDE3D8 !important;
+  color: #B9441A !important;
+}
+.st-key-report-card-rank1 .report-level-mid,
+.st-key-report-card-rank2 .report-level-mid {
+  background: #FCDD9D !important;
+  color: var(--color-text) !important;
+}
+.st-key-report-card-rank1 .report-level-low,
+.st-key-report-card-rank2 .report-level-low {
+  background: #EEF2DD !important;
+  color: #5E6B2E !important;
+}
+
+/* 분류 태그(소재 개선·규제): ④ '7일 합계' 같은 회색 알약 칩 */
+.st-key-report-card-rank1 .report-tag,
+.st-key-report-card-rank2 .report-tag {
+  background: var(--color-bg) !important;
+  color: var(--color-sub) !important;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+/* ③ 이미지로 고치기: ④ '오늘의 추천' 상자 (연보라 바탕) */
+.st-key-report-card-rank1 .report-detail-img,
+.st-key-report-card-rank2 .report-detail-img {
+  background: color-mix(in srgb, #C4C3E3 35%, #FFFFFF) !important;
+  border-radius: 12px;
+}
+
+/* ② 가설 재료: ④ '예산 결과' 상자 (회보라 바탕) */
+.st-key-report-card-rank1 .report-detail-box:not(.report-detail-img),
+.st-key-report-card-rank2 .report-detail-box:not(.report-detail-img) {
+  background: var(--color-bg) !important;
+  border-radius: 14px;
+}
+
+/* 상자 머리 글자: ④ 상자 머리(작은 회색 글자), 쓰는 곳(② 가설 · ③ 소재)은 ④ 강조 글자(진한 보라) */
+.st-key-report-card-rank1 .report-detail-label,
+.st-key-report-card-rank2 .report-detail-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-sub);
+}
+.st-key-report-card-rank1 .report-use,
+.st-key-report-card-rank2 .report-use {
+  color: var(--color-text) !important;
+  font-weight: 700;
+}
+
+/* 불러오기 전 기본 틀 배지도 ④ 칩처럼 회색 */
+.st-key-report-card-rank1:has(.report-skeleton) .report-level,
+.st-key-report-card-rank2:has(.report-skeleton) .report-level {
+  background: var(--color-bg) !important;
+  color: var(--color-sub) !important;
+}
+
+/* 오른쪽 아이콘 줄: ④ 카드처럼 테두리 없이 그림자 */
+.st-key-report-side {
+  border: none !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+/* ── 1·2순위 카드: 빈 공간을 쓰고 글씨를 키움 (2026-10-26) ──
+   글씨·여백을 화면 높이(vh)에 맞춰 키움 → 높은 화면에서는 크게, 작은 화면(약 700px)에서는 예전 크기 그대로라 스크롤이 생기지 않음.
+   카드 최대 높이도 640 → 760px (높은 화면에서 아래 빈칸을 카드가 씀) */
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 {
+  height: clamp(360px, calc(100vh - 215px), 760px) !important;
+  gap: clamp(0.45rem, 1.2vh, 1rem);
+  padding: clamp(14px, 2vh, 22px) clamp(16px, 2.1vh, 26px) !important;
+}
+.st-key-report-card-rank1 .report-level,
+.st-key-report-card-rank2 .report-level {
+  font-size: clamp(12px, 1.6vh, 14.5px);
+  padding: 2px 11px;
+}
+.st-key-report-card-rank1 .report-tag,
+.st-key-report-card-rank2 .report-tag {
+  font-size: clamp(11.5px, 1.5vh, 13.5px);
+  padding: 2px 10px;
+}
+.st-key-report-card-rank1 .report-detail-title,
+.st-key-report-card-rank2 .report-detail-title {
+  font-size: clamp(17px, 2.4vh, 22px);
+  line-height: 1.35;
+}
+.st-key-report-card-rank1 .report-detail-box,
+.st-key-report-card-rank2 .report-detail-box {
+  margin: clamp(6px, 1vh, 12px) 0;
+  padding: clamp(10px, 1.8vh, 18px) clamp(12px, 2vh, 22px);
+}
+.st-key-report-card-rank1 .report-detail-label,
+.st-key-report-card-rank2 .report-detail-label {
+  font-size: clamp(11.5px, 1.55vh, 14px);
+  margin-bottom: clamp(4px, 0.8vh, 8px);
+}
+.st-key-report-card-rank1 .report-detail-box b,
+.st-key-report-card-rank2 .report-detail-box b {
+  font-size: clamp(13px, 1.9vh, 17px);
+}
+.st-key-report-card-rank1 .report-desc,
+.st-key-report-card-rank2 .report-desc {
+  font-size: clamp(12.5px, 1.75vh, 15.5px);
+}
+.st-key-report-card-rank1 .report-detail-row,
+.st-key-report-card-rank2 .report-detail-row {
+  grid-template-columns: clamp(72px, 9.5vh, 96px) 1fr;
+  font-size: clamp(12.5px, 1.75vh, 15.5px);
+  padding: clamp(3px, 0.6vh, 7px) 0;
+}
+.st-key-report-card-rank1 .report-row-q,
+.st-key-report-card-rank2 .report-row-q {
+  font-size: clamp(12px, 1.7vh, 15px);
+}
+
+/* (보완) 높은 화면에서 글씨 상한에 걸려 카드가 덜 차던 것: 상한·줄 간격을 조금 더 */
+.st-key-report-card-rank1,
+.st-key-report-card-rank2 { gap: clamp(0.45rem, 1.4vh, 1.1rem); }
+.st-key-report-card-rank1 .report-detail-title,
+.st-key-report-card-rank2 .report-detail-title { font-size: clamp(17px, 2.55vh, 23.5px); }
+.st-key-report-card-rank1 .report-detail-box,
+.st-key-report-card-rank2 .report-detail-box { padding: clamp(10px, 2vh, 20px) clamp(12px, 2.2vh, 24px); }
+.st-key-report-card-rank1 .report-detail-box b,
+.st-key-report-card-rank2 .report-detail-box b { font-size: clamp(13px, 2vh, 18px); }
+.st-key-report-card-rank1 .report-desc,
+.st-key-report-card-rank2 .report-desc,
+.st-key-report-card-rank1 .report-detail-row,
+.st-key-report-card-rank2 .report-detail-row { font-size: clamp(12.5px, 1.85vh, 16.5px); }
+.st-key-report-card-rank1 .report-detail-row,
+.st-key-report-card-rank2 .report-detail-row { padding: clamp(3px, 0.75vh, 8px) 0; }
+.st-key-report-card-rank1 .report-row-q,
+.st-key-report-card-rank2 .report-row-q { font-size: clamp(12px, 1.8vh, 16px); }
+
+/* 줄바꿈은 단어 단위로 ('0.63 / 배)', '위 / 험'처럼 단어 중간에서 끊기지 않게, 너무 긴 단어만 예외) */
+.st-key-report-card-rank1 .report-detail-title,
+.st-key-report-card-rank2 .report-detail-title,
+.st-key-report-card-rank1 .report-detail-box,
+.st-key-report-card-rank2 .report-detail-box,
+.st-key-report-card-rank1 .report-row-q,
+.st-key-report-card-rank2 .report-row-q {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* ② 가설 재료 줄 사이 구분선: 왼쪽 탭 줄의 '매체 제작 | 날씨 광고 타이밍' 사이 선과 같은 굵기(1px)·색 (공통 변수 색) */
+.st-key-report-card-rank1 .report-detail-row + .report-detail-row,
+.st-key-report-card-rank2 .report-detail-row + .report-detail-row {
+  border-top: 1px solid color-mix(in srgb, var(--color-sub) 45%, transparent);
+}
+
+/* 불러오기 직후 로딩 표시: 화면 가운데 카드 (문구 = report_page.REPORT_LOADING_TEXT).
+   자리(.st-key-report-loading)는 크기 0으로 화면에 고정해 배치 칸을 차지하지 않고, 카드만 화면 정가운데에 고정.
+   이전 실행의 화면 요소가 이 칸에 잠깐 남더라도 보이지 않게 로딩 카드 말고는 숨김 */
+[data-testid="stLayoutWrapper"]:has(> .st-key-report-loading) {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: visible;
+  z-index: 1000;
+}
+.st-key-report-loading > :not(:has([data-testid="stSpinner"])) {
+  display: none !important;
+}
+.st-key-report-loading [data-testid="stSpinner"] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: 80vw;
+  background: var(--color-card);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  padding: 22px 30px;
+}
+.st-key-report-loading [data-testid="stSpinner"] p,
+.st-key-report-loading [data-testid="stSpinner"] div {
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+/* 불러오기·PDF 다운로드: 마우스를 올리면 공통 버튼 hover(진한 배경) 대신 연보라 + 살짝 떠오름 (2026-10-27) */
+.st-key-report-btn-load button,
+.st-key-report-btn-pdf button {
+  transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.st-key-report-btn-load button:hover,
+.st-key-report-btn-pdf button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--report-purple) 8%, var(--color-card)) !important;
+  border-color: var(--report-purple) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--report-purple) 18%, transparent);
 }

@@ -1,0 +1,12 @@
+{
+  "note": "실제로 진행한 해결안 A/B 테스트 결과만 넣습니다. variants는 [A안, B안] 순서이고 users는 대상 수, conversions는 전환 수입니다.",
+  "example": {
+    "name": "테스트 이름", "problem": "해결하려는 문제", "hypothesis": "해결안 가설",
+    "metric": "측정 지표", "period": "YYYY-MM-DD ~ YYYY-MM-DD",
+    "variants": [
+      {"name": "A안 (기존)", "desc": "기존 방식", "users": 0, "conversions": 0},
+      {"name": "B안 (해결안)", "desc": "해결안", "users": 0, "conversions": 0}
+    ]
+  },
+  "tests": []
+}

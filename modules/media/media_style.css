@@ -8,3 +8,479 @@
 .media-desc {
   color: var(--color-sub);
 }
+
+/* 3번 탭(최상위 탭 줄의 4번째)을 연 동안만 페이지 폭·여백: ①·②·④ 탭과 같게 (최대 1720px, 위 1rem·양옆 3.5rem·아래 1rem)
+   → 제목 줄과 '불러오기'·'다음으로' 버튼이 다른 탭과 같은 자리에 옴 (2026-10-26, 예전 1400px·양옆 2.5rem·아래 3rem)
+   (다른 탭에는 적용되지 않음. 탭 순서가 바뀌면 nth-of-type 숫자를 맞춰야 함)
+   weather_style.css의 "5번째 탭 선택" 규칙이 다른 탭 안의 하위 탭에도 걸릴 수 있어, 같은 속성을 !important로 다시 정함 */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(4)[aria-selected="true"]) {
+    max-width: 1720px !important;
+    padding: 1rem 3.5rem 1rem !important;
+  }
+}
+/* 2·3단계 CSS를 넣는 칸 (media_page.py의 media_load_stage_css) - 칸은 숨기고 style만 적용 */
+.st-key-media-stage-css,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-stage-css) {
+  display: none;
+}
+
+.st-key-media-root .ui-caption {
+  margin-bottom: 6px;
+}
+
+.st-key-media-root [data-baseweb="tab-panel"] {
+  padding-top: 0.75rem;
+}
+
+/* 하위 탭 맨 아래 이전/다음 단계 버튼 줄 */
+[class*="st-key-media-step-nav-"] {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* 공통 p 글자색(진한 보라)이 버튼 배경과 같아 글자가 안 보이는 문제 → 이 탭 버튼만 흰 글자 */
+.st-key-media-root .stButton button p,
+.st-key-media-root .stDownloadButton button p {
+  color: var(--color-card) !important;
+}
+
+/* 꺼진 버튼(배경이 옅은 회색)은 흰 글자가 안 보이므로 흐린 글자색 (예: 진행 불가일 때 '이 변수로 확정') */
+.st-key-media-root .stButton button:disabled p {
+  color: var(--color-sub) !important;
+}
+
+/* 하위 탭 (media_page.py의 st.tabs key="media-step") - 단계마다 따로 떨어진 둥근 알약 버튼
+   (2026-10-26 PM 요청: 하나로 묶인 바 대신 4개를 각각 테두리 둥근 버튼으로 분리) */
+.st-key-media-step [role="tablist"] {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  gap: 8px;
+  padding: 2px;   /* 알약 그림자가 잘리지 않을 만큼만 */
+  overflow-x: auto;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.st-key-media-step [role="tab"] {
+  height: auto;
+  padding: 7px 16px !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--color-border) !important;
+  background: var(--color-card) !important;
+  color: var(--color-sub) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 6%, transparent);
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.st-key-media-step [role="tab"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;   /* 알약 안 글자를 가로·세로 정중앙에 */
+}
+
+.st-key-media-step [role="tab"] > div,
+.st-key-media-step [role="tab"] [data-testid="stMarkdownContainer"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.st-key-media-step [role="tab"] p {
+  font-size: 14px;
+  white-space: nowrap;
+  color: inherit !important;
+  margin: 0 !important;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.st-key-media-step [role="tab"]:hover {
+  background: color-mix(in srgb, #7B6CF2 8%, var(--color-card)) !important;
+  border-color: color-mix(in srgb, #7B6CF2 40%, transparent) !important;
+  color: #7B6CF2 !important;
+}
+
+/* 고른 단계: ① '다음으로'·② 고른 '가설 N'과 같은 밝은 보라 (예전 진한 보라) */
+.st-key-media-step [role="tab"][aria-selected="true"] {
+  background: #7B6CF2 !important;
+  border-color: #7B6CF2 !important;
+  color: var(--color-card) !important;
+  box-shadow: 0 4px 12px color-mix(in srgb, #7B6CF2 28%, transparent);
+}
+
+.st-key-media-step [role="tab"][aria-selected="true"] p {
+  font-weight: 600;
+  color: var(--color-card) !important;
+}
+
+/* 기본 탭 줄 아래 밑줄(탭 바 ::after) 숨김: 알약을 따로 띄워서 밑줄이 필요 없음 */
+.st-key-media-step [role="tablist"]::after,
+.st-key-media-step > div:has(> [role="tablist"])::after {
+  display: none !important;
+}
+
+/* 기본 탭의 각진 선택 표시 숨김 (선택 표시는 위 알약 배경이 대신함) */
+.st-key-media-step [role="tab"] .react-aria-SelectionIndicator {
+  display: none;
+}
+
+/* 넓은 화면: 하위 탭 바 폭
+   (--media-tabbar-w = 하위 탭 바가 차지할 최대 폭. 탭 이름이 길어져도 탭 바는 이 폭 안에서 가로 스크롤되어
+    오른쪽 카드와 겹치지 않음) */
+@media (min-width: 768px) {
+  .st-key-media-root {
+    --media-tabbar-w: 580px;   /* 하위 탭 4개를 따로 띄운 알약(간격 8px) 실측 + 글꼴 차이 여유. 탭 이름이 길어지면 화면에서 다시 잼 */
+  }
+
+  .st-key-media-step [role="tablist"] {
+    max-width: var(--media-tabbar-w);
+  }
+
+  /* 3번 탭의 하위 탭 바만(단계 화면 안의 탭 제외) 이 폭에 딱 맞춰, 아래 요약 카드와 오른쪽 끝을 맞춤 (탭이 남는 폭을 나눠 가짐) */
+  .st-key-media-step > div > [role="tablist"] {
+    width: var(--media-tabbar-w);
+  }
+
+  .st-key-media-step > div > [role="tablist"] > [role="tab"] {
+    flex: 1 1 auto;
+  }
+}
+
+/* 요약 칩 바로 아래 구분선 (media_variable.py key="media-hypo-divider") - 기본 hr 여백 2em 제거 */
+.st-key-media-hypo-divider hr {
+  margin: 0 0 4px;
+}
+
+/* 후보 변수 블럭 (media_variable.py media_variable_cards) - 흰 카드, 블럭 사이 8px
+   블럭 key: media-variable-card-<번호> / 고른 블럭은 media-variable-card-on-<번호> */
+.st-key-media-variable-candidates {
+  gap: 8px !important;
+}
+
+[class*="st-key-media-variable-card-"] {
+  position: relative;
+  gap: 2px !important;
+  padding: 8px 14px;
+  background: var(--color-card);
+  border: 1px solid transparent;   /* ①·② 카드처럼 테두리 없이 그림자 (자리는 남겨 고른 카드 2px 테두리와 크기 같게) */
+  border-radius: 12px;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 8%, transparent);
+  transition: border-color 0.15s;
+}
+
+[class*="st-key-media-variable-card-"]:hover {
+  border-color: color-mix(in srgb, #7B6CF2 45%, transparent);
+}
+
+/* 고른 블럭: 테두리를 진하게 (2px로 늘어난 만큼 안쪽 여백을 줄여 블럭 크기는 그대로) */
+[class*="st-key-media-variable-card-on-"],
+[class*="st-key-media-variable-card-on-"]:hover {
+  padding: 7px 13px;
+  border: 2px solid #7B6CF2;
+}
+
+/* 키보드로 고를 때도 어느 블럭인지 보이게 */
+[class*="st-key-media-variable-card-"]:has(button:focus-visible) {
+  outline: 2px solid #7B6CF2;
+  outline-offset: 2px;
+}
+
+[class*="st-key-media-variable-card-"] p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+[class*="st-key-media-variable-card-"] [data-testid="stCaptionContainer"] p {
+  font-size: 12.5px;
+  color: var(--color-sub);
+}
+
+/* 블럭 전체를 덮는 투명 '고르기' 버튼 (key media-variable-choose-<번호>) - 블럭 어디를 눌러도 고름 */
+/* Streamlit이 버튼 칸 폭을 글자만큼(fit-content)으로 두므로 폭·높이를 블럭에 맞춤 */
+[class*="st-key-media-variable-choose-"] {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100%;
+  z-index: 1;
+}
+
+[class*="st-key-media-variable-choose-"] .stButton,
+[class*="st-key-media-variable-choose-"] button {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* 진행 불가 블럭 아랫줄 '매체 제작 대신 솔루션으로 해결 + 솔루션 보러가기' (key media-variable-solution-row-<번호>)
+   줄은 투명 '고르기' 버튼 위에 올리되 클릭은 통과시키고(줄 아무 데나 눌러도 블럭을 고름), 버튼만 누를 수 있게 함 */
+[class*="st-key-media-variable-solution-row-"] {
+  position: relative;
+  z-index: 2;
+  gap: 10px !important;
+  pointer-events: none;
+}
+
+[class*="st-key-media-variable-solution-row-"] p {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+[class*="st-key-media-variable-solution-row-"] button {
+  pointer-events: auto;
+  min-height: 0;
+  padding: 2px 12px;
+}
+
+[class*="st-key-media-variable-solution-row-"] button p {
+  color: inherit;
+}
+
+/* 솔루션 팝업 (key media-variable-solution) - 한 화면에 들어오되 칸 사이가 답답하지 않게 */
+.st-key-media-variable-solution {
+  gap: 16px !important;
+}
+
+.st-key-media-variable-solution h4 {
+  padding: 6px 0 6px;
+}
+
+.st-key-media-variable-solution p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* 실행 단계 상자 · 기대 효과 · 확인할 것 상자: 안쪽 여백, 줄 사이 간격 */
+.st-key-media-variable-solution-steps,
+[class*="st-key-media-variable-solution-box-"] {
+  padding: 14px 18px !important;
+}
+
+.st-key-media-variable-solution-steps p,
+[class*="st-key-media-variable-solution-box-"] p {
+  margin-bottom: 8px;
+}
+
+/* 팝업은 media-root 밖에 그려져 위의 '이 탭 버튼만 흰 글자' 규칙이 안 걸림 → 팝업 버튼 줄에도 흰 글자 */
+.st-key-media-variable-solution-actions {
+  margin-top: 8px;
+}
+
+.st-key-media-variable-solution-actions .stButton button p,
+.st-key-media-variable-solution-actions .stDownloadButton button p {
+  color: var(--color-card) !important;
+}
+
+/* 오른쪽 '선정한 단일 변수' (media_variable.py media_variable_ab_step) - A 카드 + B안 옵션 카드, 카드 사이 8px.
+   B안 카드는 key가 media-variable-card-(on-)b-<번호>라 위 변수 블럭 CSS(흰 카드·고른 카드 진한 테두리·투명 버튼)를 그대로 씀.
+   A 카드(media-variable-a-card)는 누를 수 없어 같은 모양만 (마우스를 올려도 테두리가 바뀌지 않음) */
+.st-key-media-variable-ab-cards {
+  gap: 8px !important;
+}
+
+.st-key-media-variable-a-card {
+  gap: 2px !important;
+  padding: 8px 14px;
+  background: var(--color-card);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.st-key-media-variable-a-card p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.st-key-media-variable-a-card [data-testid="stCaptionContainer"] p {
+  font-size: 12.5px;
+  color: var(--color-sub);
+}
+
+/* 오른쪽 칸 맨 아래 확정 상태 줄 (media_variable.py media_variable_confirm_step) - 카드 바로 아래에 붙임 */
+.st-key-media-variable-confirm-row p {
+  font-size: 13px;
+}
+
+/* 목표 KPI 칩 (media_variable.py의 media_variable_kpi_chip, 하위 탭 ②~④) - 작은 알약형
+   하위 탭 ①의 요약 칩(media_variable_summary_chip, key media-hypo-summary)도 같은 모양·자리 */
+.st-key-media-kpi-chip,
+.st-key-media-hypo-summary {
+  width: fit-content !important;
+  margin-left: auto;
+  padding: 6px 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+
+.st-key-media-kpi-chip p,
+.st-key-media-hypo-summary p {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* 탭 바 오른쪽에 칩이 다 들어가는 화면(탭 바 560px + 칩 약 450px)에서만: 칩을 하위 탭 바와 같은 줄
+   오른쪽 끝으로 올리고, 흐름에서 빼서 아래 내용은 그대로 둠. 그보다 좁으면 탭 바 아래 줄 오른쪽에 그대로 둠
+   (top 값과 1280px은 실제 화면에서 잰 값. 탭 바 높이나 탭 패널 위 여백, 칩 문구가 바뀌면 맞춰야 함) */
+@media (min-width: 1280px) {
+  .st-key-media-root [data-testid="stTabPanel"] {
+    position: relative;
+  }
+
+  [data-testid="stLayoutWrapper"]:has(> .st-key-media-kpi-chip) {
+    position: absolute;
+    top: -41px;
+    right: 0;
+    z-index: 1;
+    width: auto !important;   /* Streamlit 기본 width 100%면 칸이 탭 바까지 덮어 하위 탭 클릭이 막힘 */
+    pointer-events: none;     /* 혹시 칸이 넓어져도 클릭은 칩(ⓘ)만 받음 */
+  }
+
+  .st-key-media-kpi-chip {
+    pointer-events: auto;
+  }
+}
+
+/* ①의 요약 칩(독립 변수 · 목표 KPI)은 ②~④ 칩보다 길어서(약 520px) 더 넓은 화면에서만 같은 자리로 올림.
+   그보다 좁으면 탭 바 아래 줄 오른쪽 그대로 (1440px은 실제 화면에서 잰 값. 1280px에서는 ⓘ가 아랫줄로 꺾임).
+   독립 변수 이름(AI가 만듦, B안을 고르면 B안 이름도 붙음)이 길면 탭 바를 덮지 않고 남는 폭에서 두 줄로 꺾음 */
+@media (min-width: 1440px) {
+  [data-testid="stLayoutWrapper"]:has(> .st-key-media-hypo-summary) {
+    position: absolute;
+    top: -41px;
+    right: 0;
+    z-index: 1;
+    width: auto !important;
+    max-width: calc(100% - var(--media-tabbar-w) - 16px);
+    pointer-events: none;
+  }
+
+  .st-key-media-hypo-summary {
+    pointer-events: auto;
+  }
+
+  /* 칩이 탭 바 줄로 올라가 비는 자리만큼 구분선을 탭 바 쪽으로 올림 (실제 화면에서 잰 값) */
+  .st-key-media-hypo-divider {
+    margin-top: -16px;
+  }
+}
+
+/* ①의 요약 칩: 독립 변수 이름이 길면 (어느 화면 폭이든) 칩 밖으로 넘치지 않고 두 줄로 꺾음.
+   모서리 20px: 한 줄이면 알약 그대로(높이의 절반 이상), 두 줄이면 둥근 상자 */
+.st-key-media-hypo-summary {
+  border-radius: 20px;
+}
+
+.st-key-media-hypo-summary p {
+  white-space: normal;
+}
+
+/* ── 제목 줄: ① 문제 분석·② 가설 세우기와 같은 구조 (2026-10-26) ──
+   제목 · 바로 옆 물음표(설명) (media_page.py media_header). 단계 이동은 단계마다 맨 아래 이전/다음 버튼 */
+.st-key-media-head { flex-wrap: nowrap !important; }
+.st-key-media-head .st-key-media-head-title,
+.st-key-media-head > [data-testid="stLayoutWrapper"]:has(> .st-key-media-head-title) {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-media-head .st-key-media-head-title .ui-title { width: auto; }
+.st-key-media-head .st-key-media-help,
+.st-key-media-head > [data-testid="stLayoutWrapper"]:has(> .st-key-media-help) {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+
+/* ── 버튼 색: ①·② 탭과 같게 (2026-10-26) ──
+   주 버튼(primary) = 밝은 보라 채움 + 흰 글자 (① '다음으로'·② '선택하기'),
+   보조 버튼(secondary) = 흰 바탕 + 밝은 보라 테두리·글자 (① '불러오기').
+   일부러 다르게 만든 버튼은 빼고 그 단계 CSS 그대로: 'AI로 다듬기'(보라 그라데이션), 'AI 다듬기 목록'(회색),
+   리포트 규칙 칩, 사진 위 ←·→(반투명 동그라미). 아이콘만 있는 버튼(tertiary)은 바꾸지 않음.
+   팝업(경고창·솔루션 창)은 ③ 칸 밖에 그려져 key로 따로 지정 */
+.st-key-media-root .stButton button[kind="primary"]:not(:disabled),
+.st-key-media-root .stDownloadButton button[kind="primary"]:not(:disabled),
+.st-key-media-btn-variable-need-confirm-ok button:not(:disabled),
+.st-key-media-s2-btn-need-refine-ok button:not(:disabled),
+.st-key-media-variable-solution-actions .stButton button[kind="primary"]:not(:disabled),
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="primary"]:not(:disabled) {
+  background: #7B6CF2 !important;
+  border: 1px solid #7B6CF2 !important;
+}
+.st-key-media-root .stButton button[kind="primary"]:not(:disabled):hover,
+.st-key-media-root .stDownloadButton button[kind="primary"]:not(:disabled):hover,
+.st-key-media-btn-variable-need-confirm-ok button:not(:disabled):hover,
+.st-key-media-s2-btn-need-refine-ok button:not(:disabled):hover,
+.st-key-media-variable-solution-actions .stButton button[kind="primary"]:not(:disabled):hover,
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="primary"]:not(:disabled):hover {
+  background: color-mix(in srgb, #7B6CF2 86%, #000) !important;
+}
+.st-key-media-btn-variable-need-confirm-ok button:not(:disabled) p,
+.st-key-media-s2-btn-need-refine-ok button:not(:disabled) p { color: var(--color-card) !important; }
+
+.st-key-media-root .stElementContainer:not(.st-key-media-s2-btn-refine):not(.st-key-media-s2-btn-ai-list):not(.st-key-media-s2-btn-rules):not(.st-key-media-s3-prev):not(.st-key-media-s3-next) .stButton button[kind="secondary"]:not(:disabled),
+.st-key-media-root .stDownloadButton button[kind="secondary"]:not(:disabled),
+.st-key-media-variable-solution-actions .stButton button[kind="secondary"]:not(:disabled),
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="secondary"]:not(:disabled) {
+  background: var(--color-card) !important;
+  border: 1px solid #7B6CF2 !important;
+}
+.st-key-media-root .stElementContainer:not(.st-key-media-s2-btn-refine):not(.st-key-media-s2-btn-ai-list):not(.st-key-media-s2-btn-rules):not(.st-key-media-s3-prev):not(.st-key-media-s3-next) .stButton button[kind="secondary"]:not(:disabled):hover,
+.st-key-media-root .stDownloadButton button[kind="secondary"]:not(:disabled):hover,
+.st-key-media-variable-solution-actions .stButton button[kind="secondary"]:not(:disabled):hover,
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="secondary"]:not(:disabled):hover {
+  background: color-mix(in srgb, #7B6CF2 8%, var(--color-card)) !important;
+}
+.st-key-media-root .stElementContainer:not(.st-key-media-s2-btn-refine):not(.st-key-media-s2-btn-ai-list):not(.st-key-media-s2-btn-rules):not(.st-key-media-s3-prev):not(.st-key-media-s3-next) .stButton button[kind="secondary"]:not(:disabled) p,
+.st-key-media-root .stElementContainer:not(.st-key-media-s2-btn-refine):not(.st-key-media-s2-btn-ai-list):not(.st-key-media-s2-btn-rules):not(.st-key-media-s3-prev):not(.st-key-media-s3-next) .stButton button[kind="secondary"]:not(:disabled) span,
+.st-key-media-root .stDownloadButton button[kind="secondary"]:not(:disabled) p,
+.st-key-media-root .stDownloadButton button[kind="secondary"]:not(:disabled) span,
+.st-key-media-variable-solution-actions .stButton button[kind="secondary"]:not(:disabled) p,
+.st-key-media-variable-solution-actions .stButton button[kind="secondary"]:not(:disabled) span,
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="secondary"]:not(:disabled) p,
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="secondary"]:not(:disabled) span {
+  color: #7B6CF2 !important;
+}
+/* 글자가 있는 팝오버 버튼('이 탭 사용법' 등)도 보조 버튼과 같은 흰 바탕 + 보라 테두리·글자 (물음표만 있는 tertiary는 그대로) */
+.st-key-media-root [data-testid="stPopover"] button[kind="secondary"]:not(:disabled) {
+  background: var(--color-card) !important;
+  border: 1px solid #7B6CF2 !important;
+}
+.st-key-media-root [data-testid="stPopover"] button[kind="secondary"]:not(:disabled) p,
+.st-key-media-root [data-testid="stPopover"] button[kind="secondary"]:not(:disabled) span {
+  color: #7B6CF2 !important;
+}
+
+/* ── 카드: ①·② 탭과 같은 모양 (2026-10-27) ──
+   바깥 카드 = 테두리 없는 흰 카드 + 그림자 (모서리 var(--radius)),
+   카드 안 상자(Higgsfield 로그인 · 솔루션 팝업 칸) = ① 안쪽 상자처럼 연한 회보라 바탕, 테두리 없음.
+   ① 확정 전 빈 상태 카드(media-s2-ab-empty)는 ② 빈 상태처럼 점선 그대로 */
+.st-key-media-root .st-key-media-s2-prompt-box-A,
+.st-key-media-root .st-key-media-s2-prompt-box-B,
+.st-key-media-root .st-key-media-s2-result,
+.st-key-media-root [class*="st-key-media-s3-photo-card-"],
+.st-key-media-root .st-key-media-s3-sb-card,
+.st-key-media-root .st-key-media-s3-video-card,
+.st-key-media-root .st-key-media-s3-export-left,
+.st-key-media-root .st-key-media-s3-export-right,
+.st-key-media-root .st-key-media-variable-locked {
+  border: none !important;
+  border-radius: var(--radius) !important;
+  background: var(--color-card) !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 7%, transparent) !important;
+}
+.st-key-media-root .st-key-media-s3-hf-login,
+.st-key-media-variable-solution-steps,
+[class*="st-key-media-variable-solution-box-"] {
+  border: none !important;
+  border-radius: 14px !important;
+  background: var(--color-bg) !important;
+}

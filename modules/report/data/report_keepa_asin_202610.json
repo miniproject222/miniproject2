@@ -1,0 +1,70 @@
+{
+  "note": "Keepa로 조회할 경쟁사 상품. 2026-10-24 재조사: Traumnacht는 토퍼 대신 패드(B0DJBVKMY9), Mara Vital·Herlag 추가. db_brand는 data/common_competitor_seori_202610.csv '기업/브랜드' 값과 같아야 합니다. · 2026-10-25: 서리 가정 데이터를 Herlag → SleepCOOL(B078HLXBS4)로 변경",
+  "products": [
+    {
+      "db_brand": "Novilla",
+      "asin": "B0DQ8BDT9Z",
+      "width_cm": 160,
+      "length_cm": 200,
+      "title": "Novilla Cooling Matratzenauflage 160x200cm",
+      "compare": {
+        "asin": "B0DQ84R8QG",
+        "width_cm": 90,
+        "length_cm": 200,
+        "price": 35.99,
+        "avg90": null,
+        "change": null,
+        "note": "90x200 변형 가격 (대표 상품 160x200 €25.66은 그 사이즈만 할인 중), 작년 같은 날·여름 모두 €35.99"
+      }
+    },
+    {
+      "db_brand": "RIBECO Germany",
+      "asin": "B07121YZM5",
+      "width_cm": 90,
+      "length_cm": 200,
+      "title": "RIBECO GERMANY Ganzjahr-Matratzenauflage 90x200cm, 2-in-1"
+    },
+    {
+      "db_brand": "Paradies",
+      "asin": "B0D7HQFXCY",
+      "width_cm": 90,
+      "length_cm": 200,
+      "title": "PARADIES kühlende Matratzenauflage 90x200 cm Cool Dream Pad"
+    },
+    {
+      "db_brand": "potow",
+      "asin": "B0C6KTY7BX",
+      "width_cm": null,
+      "length_cm": null,
+      "title": "potow Matratzenauflage mit Wasserkühlung (전동 수냉)"
+    },
+    {
+      "db_brand": "Traumnacht",
+      "asin": "B0DJBVKMY9",
+      "width_cm": 90,
+      "length_cm": 200,
+      "title": "Traumnacht Cool Comfort Matratzenauflage 90x200 cm (패드)"
+    },
+    {
+      "db_brand": "Mara Vital",
+      "asin": "B0B5RZH8C3",
+      "width_cm": 90,
+      "length_cm": 200,
+      "title": "Mara Vital Kühlende Matratzenschoner 90x200"
+    },
+    {
+      "db_brand": "Herlag",
+      "asin": "B0F2FN34BS",
+      "width_cm": 90,
+      "length_cm": 200,
+      "title": "Herlag 2-in-1 Wendeauflage 90x200 (양면 제품, 냉감 전용 순위 제외)"
+    },
+    {
+      "db_brand": "SleepCOOL",
+      "asin": "B078HLXBS4",
+      "width_cm": 90,
+      "length_cm": 200,
+      "title": "SleepCOOL COOL.XPERIENCE Kühlende Matratzenauflage 90x200 (서리 가정 데이터)"
+    }
+  ]
+}

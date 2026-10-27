@@ -1,0 +1,4059 @@
+{
+ "note": "가상 데이터. SP-API 검색어 성과 리포트(GET_BRAND_ANALYTICS_SEARCH_QUERY_PERFORMANCE_REPORT) 필드 이름 그대로, 주 단위. 점유율(Share)과 clickRate는 % 단위입니다 (실제 리포트를 연결할 때 단위를 다시 확인).",
+ "source": "가상",
+ "generated_by": "python -m modules.report.report_sqp_make",
+ "shape_source": {
+  "kühlende matratzenauflage": "DWD 기온 기반 가정",
+  "kühlmatte bett": "DWD 기온 기반 가정",
+  "matratzenauflage kühlend": "DWD 기온 기반 가정",
+  "kühltopper": "DWD 기온 기반 가정",
+  "kühlauflage matratze": "DWD 기온 기반 가정",
+  "kühlmatte sommer": "DWD 기온 기반 가정",
+  "cooling matratzenauflage": "DWD 기온 기반 가정",
+  "matratzenauflage 90x200 kühl": "DWD 기온 기반 가정"
+ },
+ "event_source": "가정",
+ "assumptions": {
+  "event_factor": {
+   "할인": 0.85,
+   "품절": 1.15
+  },
+  "cart_rate": {
+   "market": 0.171,
+   "ours": 0.162
+  },
+  "buy_rate": {
+   "market": 0.09,
+   "ours": 0.086
+  },
+  "keywords": [
+   {
+    "query": "kühlende matratzenauflage",
+    "clicks": 3300,
+    "ctr": 0.03,
+    "imp_share": 0.09,
+    "ratio": 0.645,
+    "median_price": 59.99,
+    "cpc": 0.95,
+    "events": true
+   },
+   {
+    "query": "kühlmatte bett",
+    "clicks": 2000,
+    "ctr": 0.025,
+    "imp_share": 0.068,
+    "ratio": 1.26,
+    "median_price": 54.99,
+    "cpc": 0.8
+   },
+   {
+    "query": "matratzenauflage kühlend",
+    "clicks": 1500,
+    "ctr": 0.032,
+    "imp_share": 0.075,
+    "ratio": 0.95,
+    "median_price": 62.99,
+    "cpc": 0.9
+   },
+   {
+    "query": "kühltopper",
+    "clicks": 1200,
+    "ctr": 0.028,
+    "imp_share": 0.0295,
+    "ratio": 0.695,
+    "median_price": 79.99,
+    "cpc": 1.1
+   },
+   {
+    "query": "kühlauflage matratze",
+    "clicks": 1000,
+    "ctr": 0.029,
+    "imp_share": 0.08,
+    "ratio": 1.02,
+    "median_price": 59.99,
+    "cpc": 0.85
+   },
+   {
+    "query": "kühlmatte sommer",
+    "clicks": 900,
+    "ctr": 0.024,
+    "imp_share": 0.04,
+    "ratio": 1.05,
+    "median_price": 39.99,
+    "cpc": 0.6
+   },
+   {
+    "query": "cooling matratzenauflage",
+    "clicks": 700,
+    "ctr": 0.031,
+    "imp_share": 0.06,
+    "ratio": 0.92,
+    "median_price": 49.99,
+    "cpc": 0.75
+   },
+   {
+    "query": "matratzenauflage 90x200 kühl",
+    "clicks": 600,
+    "ctr": 0.033,
+    "imp_share": 0.1,
+    "ratio": 0.98,
+    "median_price": 64.99,
+    "cpc": 0.9
+   }
+  ]
+ },
+ "dataByAsin": [
+  {
+   "startDate": "2026-06-01",
+   "endDate": "2026-06-07",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 2365
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 56759,
+    "asinImpressionCount": 5228,
+    "asinImpressionShare": 9.21
+   },
+   "clickData": {
+    "totalClickCount": 1720,
+    "clickRate": 72.73,
+    "asinClickCount": 103,
+    "asinClickShare": 5.99,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 300,
+    "asinCartAddCount": 16,
+    "asinCartAddShare": 5.33
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 159,
+    "asinPurchaseCount": 9,
+    "asinPurchaseShare": 5.66
+   }
+  },
+  {
+   "startDate": "2026-06-08",
+   "endDate": "2026-06-14",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 1456
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 34941,
+    "asinImpressionCount": 3214,
+    "asinImpressionShare": 9.2
+   },
+   "clickData": {
+    "totalClickCount": 1036,
+    "clickRate": 71.15,
+    "asinClickCount": 61,
+    "asinClickShare": 5.89,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 176,
+    "asinCartAddCount": 10,
+    "asinCartAddShare": 5.68
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 91,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 5.49
+   }
+  },
+  {
+   "startDate": "2026-06-15",
+   "endDate": "2026-06-21",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 5541
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 132982,
+    "asinImpressionCount": 11995,
+    "asinImpressionShare": 9.02
+   },
+   "clickData": {
+    "totalClickCount": 3922,
+    "clickRate": 70.78,
+    "asinClickCount": 235,
+    "asinClickShare": 5.99,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 655,
+    "asinCartAddCount": 39,
+    "asinCartAddShare": 5.95
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 350,
+    "asinPurchaseCount": 20,
+    "asinPurchaseShare": 5.71
+   }
+  },
+  {
+   "startDate": "2026-06-22",
+   "endDate": "2026-06-28",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 9130
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 219125,
+    "asinImpressionCount": 19834,
+    "asinImpressionShare": 9.05
+   },
+   "clickData": {
+    "totalClickCount": 6387,
+    "clickRate": 69.96,
+    "asinClickCount": 309,
+    "asinClickShare": 4.84,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 1117,
+    "asinCartAddCount": 50,
+    "asinCartAddShare": 4.48
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 567,
+    "asinPurchaseCount": 27,
+    "asinPurchaseShare": 4.76
+   }
+  },
+  {
+   "startDate": "2026-06-29",
+   "endDate": "2026-07-05",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 3800
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 91201,
+    "asinImpressionCount": 8277,
+    "asinImpressionShare": 9.08
+   },
+   "clickData": {
+    "totalClickCount": 2756,
+    "clickRate": 72.53,
+    "asinClickCount": 160,
+    "asinClickShare": 5.81,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 471,
+    "asinCartAddCount": 27,
+    "asinCartAddShare": 5.73
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 247,
+    "asinPurchaseCount": 14,
+    "asinPurchaseShare": 5.67
+   }
+  },
+  {
+   "startDate": "2026-07-06",
+   "endDate": "2026-07-12",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 4860
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 116635,
+    "asinImpressionCount": 10499,
+    "asinImpressionShare": 9.0
+   },
+   "clickData": {
+    "totalClickCount": 3452,
+    "clickRate": 71.03,
+    "asinClickCount": 172,
+    "asinClickShare": 4.98,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 586,
+    "asinCartAddCount": 28,
+    "asinCartAddShare": 4.78
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 317,
+    "asinPurchaseCount": 14,
+    "asinPurchaseShare": 4.42
+   }
+  },
+  {
+   "startDate": "2026-07-13",
+   "endDate": "2026-07-19",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 4998
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 119960,
+    "asinImpressionCount": 10949,
+    "asinImpressionShare": 9.13
+   },
+   "clickData": {
+    "totalClickCount": 3692,
+    "clickRate": 73.87,
+    "asinClickCount": 186,
+    "asinClickShare": 5.04,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 639,
+    "asinCartAddCount": 31,
+    "asinCartAddShare": 4.85
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 329,
+    "asinPurchaseCount": 16,
+    "asinPurchaseShare": 4.86
+   }
+  },
+  {
+   "startDate": "2026-07-20",
+   "endDate": "2026-07-26",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 3115
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 74771,
+    "asinImpressionCount": 6629,
+    "asinImpressionShare": 8.87
+   },
+   "clickData": {
+    "totalClickCount": 2179,
+    "clickRate": 69.95,
+    "asinClickCount": 126,
+    "asinClickShare": 5.78,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 381,
+    "asinCartAddCount": 21,
+    "asinCartAddShare": 5.51
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 192,
+    "asinPurchaseCount": 11,
+    "asinPurchaseShare": 5.73
+   }
+  },
+  {
+   "startDate": "2026-07-27",
+   "endDate": "2026-08-02",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 6015
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 144362,
+    "asinImpressionCount": 13017,
+    "asinImpressionShare": 9.02
+   },
+   "clickData": {
+    "totalClickCount": 4362,
+    "clickRate": 72.52,
+    "asinClickCount": 254,
+    "asinClickShare": 5.82,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 740,
+    "asinCartAddCount": 40,
+    "asinCartAddShare": 5.41
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 400,
+    "asinPurchaseCount": 21,
+    "asinPurchaseShare": 5.25
+   }
+  },
+  {
+   "startDate": "2026-08-03",
+   "endDate": "2026-08-09",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 5858
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 140599,
+    "asinImpressionCount": 12402,
+    "asinImpressionShare": 8.82
+   },
+   "clickData": {
+    "totalClickCount": 4328,
+    "clickRate": 73.88,
+    "asinClickCount": 244,
+    "asinClickShare": 5.64,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 724,
+    "asinCartAddCount": 41,
+    "asinCartAddShare": 5.66
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 393,
+    "asinPurchaseCount": 21,
+    "asinPurchaseShare": 5.34
+   }
+  },
+  {
+   "startDate": "2026-08-10",
+   "endDate": "2026-08-16",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 6864
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 164730,
+    "asinImpressionCount": 15083,
+    "asinImpressionShare": 9.16
+   },
+   "clickData": {
+    "totalClickCount": 4832,
+    "clickRate": 70.4,
+    "asinClickCount": 325,
+    "asinClickShare": 6.73,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 842,
+    "asinCartAddCount": 55,
+    "asinCartAddShare": 6.53
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 424,
+    "asinPurchaseCount": 27,
+    "asinPurchaseShare": 6.37
+   }
+  },
+  {
+   "startDate": "2026-08-17",
+   "endDate": "2026-08-23",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 2143
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 51439,
+    "asinImpressionCount": 4647,
+    "asinImpressionShare": 9.03
+   },
+   "clickData": {
+    "totalClickCount": 1567,
+    "clickRate": 73.12,
+    "asinClickCount": 92,
+    "asinClickShare": 5.87,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 260,
+    "asinCartAddCount": 15,
+    "asinCartAddShare": 5.77
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 138,
+    "asinPurchaseCount": 8,
+    "asinPurchaseShare": 5.8
+   }
+  },
+  {
+   "startDate": "2026-08-24",
+   "endDate": "2026-08-30",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlende matratzenauflage",
+    "searchQueryVolume": 3800
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 91208,
+    "asinImpressionCount": 8295,
+    "asinImpressionShare": 9.09
+   },
+   "clickData": {
+    "totalClickCount": 2709,
+    "clickRate": 71.29,
+    "asinClickCount": 163,
+    "asinClickShare": 6.02,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 467,
+    "asinCartAddCount": 26,
+    "asinCartAddShare": 5.57
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 238,
+    "asinPurchaseCount": 15,
+    "asinPurchaseShare": 6.3
+   }
+  },
+  {
+   "startDate": "2026-06-01",
+   "endDate": "2026-06-07",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 1620
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 38888,
+    "asinImpressionCount": 2653,
+    "asinImpressionShare": 6.82
+   },
+   "clickData": {
+    "totalClickCount": 996,
+    "clickRate": 61.48,
+    "asinClickCount": 84,
+    "asinClickShare": 8.43,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 172,
+    "asinCartAddCount": 14,
+    "asinCartAddShare": 8.14
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 91,
+    "asinPurchaseCount": 7,
+    "asinPurchaseShare": 7.69
+   }
+  },
+  {
+   "startDate": "2026-06-08",
+   "endDate": "2026-06-14",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 1017
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 24401,
+    "asinImpressionCount": 1663,
+    "asinImpressionShare": 6.82
+   },
+   "clickData": {
+    "totalClickCount": 611,
+    "clickRate": 60.08,
+    "asinClickCount": 53,
+    "asinClickShare": 8.67,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 107,
+    "asinCartAddCount": 9,
+    "asinCartAddShare": 8.41
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 54,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 9.26
+   }
+  },
+  {
+   "startDate": "2026-06-15",
+   "endDate": "2026-06-21",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 3911
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 93853,
+    "asinImpressionCount": 6280,
+    "asinImpressionShare": 6.69
+   },
+   "clickData": {
+    "totalClickCount": 2318,
+    "clickRate": 59.27,
+    "asinClickCount": 191,
+    "asinClickShare": 8.24,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 408,
+    "asinCartAddCount": 32,
+    "asinCartAddShare": 7.84
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 214,
+    "asinPurchaseCount": 18,
+    "asinPurchaseShare": 8.41
+   }
+  },
+  {
+   "startDate": "2026-06-22",
+   "endDate": "2026-06-28",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 6526
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 156630,
+    "asinImpressionCount": 10868,
+    "asinImpressionShare": 6.94
+   },
+   "clickData": {
+    "totalClickCount": 3912,
+    "clickRate": 59.94,
+    "asinClickCount": 343,
+    "asinClickShare": 8.77,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 686,
+    "asinCartAddCount": 58,
+    "asinCartAddShare": 8.45
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 346,
+    "asinPurchaseCount": 32,
+    "asinPurchaseShare": 9.25
+   }
+  },
+  {
+   "startDate": "2026-06-29",
+   "endDate": "2026-07-05",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 2840
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 68165,
+    "asinImpressionCount": 4663,
+    "asinImpressionShare": 6.84
+   },
+   "clickData": {
+    "totalClickCount": 1728,
+    "clickRate": 60.85,
+    "asinClickCount": 153,
+    "asinClickShare": 8.85,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 288,
+    "asinCartAddCount": 26,
+    "asinCartAddShare": 9.03
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 152,
+    "asinPurchaseCount": 14,
+    "asinPurchaseShare": 9.21
+   }
+  },
+  {
+   "startDate": "2026-07-06",
+   "endDate": "2026-07-12",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 3445
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 82669,
+    "asinImpressionCount": 5679,
+    "asinImpressionShare": 6.87
+   },
+   "clickData": {
+    "totalClickCount": 2068,
+    "clickRate": 60.03,
+    "asinClickCount": 182,
+    "asinClickShare": 8.8,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 362,
+    "asinCartAddCount": 31,
+    "asinCartAddShare": 8.56
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 190,
+    "asinPurchaseCount": 16,
+    "asinPurchaseShare": 8.42
+   }
+  },
+  {
+   "startDate": "2026-07-13",
+   "endDate": "2026-07-19",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 3542
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 84996,
+    "asinImpressionCount": 5851,
+    "asinImpressionShare": 6.88
+   },
+   "clickData": {
+    "totalClickCount": 2123,
+    "clickRate": 59.94,
+    "asinClickCount": 186,
+    "asinClickShare": 8.76,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 366,
+    "asinCartAddCount": 31,
+    "asinCartAddShare": 8.47
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 194,
+    "asinPurchaseCount": 16,
+    "asinPurchaseShare": 8.25
+   }
+  },
+  {
+   "startDate": "2026-07-20",
+   "endDate": "2026-07-26",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 2214
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 53144,
+    "asinImpressionCount": 3525,
+    "asinImpressionShare": 6.63
+   },
+   "clickData": {
+    "totalClickCount": 1291,
+    "clickRate": 58.31,
+    "asinClickCount": 108,
+    "asinClickShare": 8.37,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 222,
+    "asinCartAddCount": 19,
+    "asinCartAddShare": 8.56
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 114,
+    "asinPurchaseCount": 10,
+    "asinPurchaseShare": 8.77
+   }
+  },
+  {
+   "startDate": "2026-07-27",
+   "endDate": "2026-08-02",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 4453
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 106863,
+    "asinImpressionCount": 7383,
+    "asinImpressionShare": 6.91
+   },
+   "clickData": {
+    "totalClickCount": 2728,
+    "clickRate": 61.26,
+    "asinClickCount": 238,
+    "asinClickShare": 8.72,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 468,
+    "asinCartAddCount": 41,
+    "asinCartAddShare": 8.76
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 239,
+    "asinPurchaseCount": 21,
+    "asinPurchaseShare": 8.79
+   }
+  },
+  {
+   "startDate": "2026-08-03",
+   "endDate": "2026-08-09",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 4461
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 107065,
+    "asinImpressionCount": 7425,
+    "asinImpressionShare": 6.94
+   },
+   "clickData": {
+    "totalClickCount": 2755,
+    "clickRate": 61.76,
+    "asinClickCount": 245,
+    "asinClickShare": 8.89,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 473,
+    "asinCartAddCount": 42,
+    "asinCartAddShare": 8.88
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 244,
+    "asinPurchaseCount": 23,
+    "asinPurchaseShare": 9.43
+   }
+  },
+  {
+   "startDate": "2026-08-10",
+   "endDate": "2026-08-16",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 5024
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 120580,
+    "asinImpressionCount": 8261,
+    "asinImpressionShare": 6.85
+   },
+   "clickData": {
+    "totalClickCount": 2974,
+    "clickRate": 59.2,
+    "asinClickCount": 258,
+    "asinClickShare": 8.68,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 509,
+    "asinCartAddCount": 43,
+    "asinCartAddShare": 8.45
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 272,
+    "asinPurchaseCount": 22,
+    "asinPurchaseShare": 8.09
+   }
+  },
+  {
+   "startDate": "2026-08-17",
+   "endDate": "2026-08-23",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 1589
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 38144,
+    "asinImpressionCount": 2589,
+    "asinImpressionShare": 6.79
+   },
+   "clickData": {
+    "totalClickCount": 979,
+    "clickRate": 61.61,
+    "asinClickCount": 85,
+    "asinClickShare": 8.68,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 164,
+    "asinCartAddCount": 14,
+    "asinCartAddShare": 8.54
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 87,
+    "asinPurchaseCount": 7,
+    "asinPurchaseShare": 8.05
+   }
+  },
+  {
+   "startDate": "2026-08-24",
+   "endDate": "2026-08-30",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte bett",
+    "searchQueryVolume": 2732
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 65560,
+    "asinImpressionCount": 4562,
+    "asinImpressionShare": 6.96
+   },
+   "clickData": {
+    "totalClickCount": 1595,
+    "clickRate": 58.38,
+    "asinClickCount": 137,
+    "asinClickShare": 8.59,
+    "totalMedianClickPrice": {
+     "amount": 54.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 278,
+    "asinCartAddCount": 23,
+    "asinCartAddShare": 8.27
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 143,
+    "asinPurchaseCount": 13,
+    "asinPurchaseShare": 9.09
+   }
+  },
+  {
+   "startDate": "2026-06-01",
+   "endDate": "2026-06-07",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 932
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 22363,
+    "asinImpressionCount": 1639,
+    "asinImpressionShare": 7.33
+   },
+   "clickData": {
+    "totalClickCount": 731,
+    "clickRate": 78.43,
+    "asinClickCount": 52,
+    "asinClickShare": 7.11,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 125,
+    "asinCartAddCount": 9,
+    "asinCartAddShare": 7.2
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 66,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 7.58
+   }
+  },
+  {
+   "startDate": "2026-06-08",
+   "endDate": "2026-06-14",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 626
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 15032,
+    "asinImpressionCount": 1128,
+    "asinImpressionShare": 7.5
+   },
+   "clickData": {
+    "totalClickCount": 482,
+    "clickRate": 77.0,
+    "asinClickCount": 35,
+    "asinClickShare": 7.26,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 84,
+    "asinCartAddCount": 6,
+    "asinCartAddShare": 7.14
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 42,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 7.14
+   }
+  },
+  {
+   "startDate": "2026-06-15",
+   "endDate": "2026-06-21",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 2295
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 55082,
+    "asinImpressionCount": 4207,
+    "asinImpressionShare": 7.64
+   },
+   "clickData": {
+    "totalClickCount": 1811,
+    "clickRate": 78.91,
+    "asinClickCount": 128,
+    "asinClickShare": 7.07,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 314,
+    "asinCartAddCount": 23,
+    "asinCartAddShare": 7.32
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 165,
+    "asinPurchaseCount": 12,
+    "asinPurchaseShare": 7.27
+   }
+  },
+  {
+   "startDate": "2026-06-22",
+   "endDate": "2026-06-28",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 3831
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 91941,
+    "asinImpressionCount": 6729,
+    "asinImpressionShare": 7.32
+   },
+   "clickData": {
+    "totalClickCount": 2960,
+    "clickRate": 77.26,
+    "asinClickCount": 201,
+    "asinClickShare": 6.79,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 507,
+    "asinCartAddCount": 35,
+    "asinCartAddShare": 6.9
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 270,
+    "asinPurchaseCount": 17,
+    "asinPurchaseShare": 6.3
+   }
+  },
+  {
+   "startDate": "2026-06-29",
+   "endDate": "2026-07-05",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 1758
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 42181,
+    "asinImpressionCount": 3111,
+    "asinImpressionShare": 7.38
+   },
+   "clickData": {
+    "totalClickCount": 1335,
+    "clickRate": 75.94,
+    "asinClickCount": 91,
+    "asinClickShare": 6.82,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 231,
+    "asinCartAddCount": 16,
+    "asinCartAddShare": 6.93
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 123,
+    "asinPurchaseCount": 8,
+    "asinPurchaseShare": 6.5
+   }
+  },
+  {
+   "startDate": "2026-07-06",
+   "endDate": "2026-07-12",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 1990
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 47766,
+    "asinImpressionCount": 3499,
+    "asinImpressionShare": 7.33
+   },
+   "clickData": {
+    "totalClickCount": 1547,
+    "clickRate": 77.74,
+    "asinClickCount": 108,
+    "asinClickShare": 6.98,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 262,
+    "asinCartAddCount": 18,
+    "asinCartAddShare": 6.87
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 143,
+    "asinPurchaseCount": 9,
+    "asinPurchaseShare": 6.29
+   }
+  },
+  {
+   "startDate": "2026-07-13",
+   "endDate": "2026-07-19",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 2100
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 50397,
+    "asinImpressionCount": 3866,
+    "asinImpressionShare": 7.67
+   },
+   "clickData": {
+    "totalClickCount": 1572,
+    "clickRate": 74.86,
+    "asinClickCount": 115,
+    "asinClickShare": 7.32,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 270,
+    "asinCartAddCount": 20,
+    "asinCartAddShare": 7.41
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 140,
+    "asinPurchaseCount": 10,
+    "asinPurchaseShare": 7.14
+   }
+  },
+  {
+   "startDate": "2026-07-20",
+   "endDate": "2026-07-26",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 1299
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 31174,
+    "asinImpressionCount": 2372,
+    "asinImpressionShare": 7.61
+   },
+   "clickData": {
+    "totalClickCount": 968,
+    "clickRate": 74.52,
+    "asinClickCount": 71,
+    "asinClickShare": 7.33,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 165,
+    "asinCartAddCount": 12,
+    "asinCartAddShare": 7.27
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 88,
+    "asinPurchaseCount": 6,
+    "asinPurchaseShare": 6.82
+   }
+  },
+  {
+   "startDate": "2026-07-27",
+   "endDate": "2026-08-02",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 2611
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 62671,
+    "asinImpressionCount": 4781,
+    "asinImpressionShare": 7.63
+   },
+   "clickData": {
+    "totalClickCount": 1958,
+    "clickRate": 74.99,
+    "asinClickCount": 145,
+    "asinClickShare": 7.41,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 326,
+    "asinCartAddCount": 25,
+    "asinCartAddShare": 7.67
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 171,
+    "asinPurchaseCount": 13,
+    "asinPurchaseShare": 7.6
+   }
+  },
+  {
+   "startDate": "2026-08-03",
+   "endDate": "2026-08-09",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 2623
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 62951,
+    "asinImpressionCount": 4670,
+    "asinImpressionShare": 7.42
+   },
+   "clickData": {
+    "totalClickCount": 2031,
+    "clickRate": 77.43,
+    "asinClickCount": 143,
+    "asinClickShare": 7.04,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 348,
+    "asinCartAddCount": 25,
+    "asinCartAddShare": 7.18
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 186,
+    "asinPurchaseCount": 13,
+    "asinPurchaseShare": 6.99
+   }
+  },
+  {
+   "startDate": "2026-08-10",
+   "endDate": "2026-08-16",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 2738
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 65700,
+    "asinImpressionCount": 4813,
+    "asinImpressionShare": 7.33
+   },
+   "clickData": {
+    "totalClickCount": 2122,
+    "clickRate": 77.5,
+    "asinClickCount": 146,
+    "asinClickShare": 6.88,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 362,
+    "asinCartAddCount": 25,
+    "asinCartAddShare": 6.91
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 190,
+    "asinPurchaseCount": 14,
+    "asinPurchaseShare": 7.37
+   }
+  },
+  {
+   "startDate": "2026-08-17",
+   "endDate": "2026-08-23",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 1007
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 24170,
+    "asinImpressionCount": 1784,
+    "asinImpressionShare": 7.38
+   },
+   "clickData": {
+    "totalClickCount": 752,
+    "clickRate": 74.68,
+    "asinClickCount": 53,
+    "asinClickShare": 7.05,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 131,
+    "asinCartAddCount": 9,
+    "asinCartAddShare": 6.87
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 68,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 7.35
+   }
+  },
+  {
+   "startDate": "2026-08-24",
+   "endDate": "2026-08-30",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage kühlend",
+    "searchQueryVolume": 1657
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 39767,
+    "asinImpressionCount": 2938,
+    "asinImpressionShare": 7.39
+   },
+   "clickData": {
+    "totalClickCount": 1264,
+    "clickRate": 76.28,
+    "asinClickCount": 87,
+    "asinClickShare": 6.88,
+    "totalMedianClickPrice": {
+     "amount": 62.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 222,
+    "asinCartAddCount": 15,
+    "asinCartAddShare": 6.76
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 116,
+    "asinPurchaseCount": 8,
+    "asinPurchaseShare": 6.9
+   }
+  },
+  {
+   "startDate": "2026-06-01",
+   "endDate": "2026-06-07",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 894
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 21466,
+    "asinImpressionCount": 622,
+    "asinImpressionShare": 2.9
+   },
+   "clickData": {
+    "totalClickCount": 609,
+    "clickRate": 68.12,
+    "asinClickCount": 13,
+    "asinClickShare": 2.13,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 106,
+    "asinCartAddCount": 2,
+    "asinCartAddShare": 1.89
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 55,
+    "asinPurchaseCount": 1,
+    "asinPurchaseShare": 1.82
+   }
+  },
+  {
+   "startDate": "2026-06-08",
+   "endDate": "2026-06-14",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 567
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 13619,
+    "asinImpressionCount": 395,
+    "asinImpressionShare": 2.9
+   },
+   "clickData": {
+    "totalClickCount": 388,
+    "clickRate": 68.43,
+    "asinClickCount": 8,
+    "asinClickShare": 2.06,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 67,
+    "asinCartAddCount": 1,
+    "asinCartAddShare": 1.49
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 35,
+    "asinPurchaseCount": 1,
+    "asinPurchaseShare": 2.86
+   }
+  },
+  {
+   "startDate": "2026-06-15",
+   "endDate": "2026-06-21",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 2141
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 51379,
+    "asinImpressionCount": 1494,
+    "asinImpressionShare": 2.91
+   },
+   "clickData": {
+    "totalClickCount": 1401,
+    "clickRate": 65.44,
+    "asinClickCount": 28,
+    "asinClickShare": 2.0,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 246,
+    "asinCartAddCount": 5,
+    "asinCartAddShare": 2.03
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 127,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 2.36
+   }
+  },
+  {
+   "startDate": "2026-06-22",
+   "endDate": "2026-06-28",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 3345
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 80279,
+    "asinImpressionCount": 2407,
+    "asinImpressionShare": 3.0
+   },
+   "clickData": {
+    "totalClickCount": 2275,
+    "clickRate": 68.01,
+    "asinClickCount": 48,
+    "asinClickShare": 2.11,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 395,
+    "asinCartAddCount": 8,
+    "asinCartAddShare": 2.03
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 207,
+    "asinPurchaseCount": 4,
+    "asinPurchaseShare": 1.93
+   }
+  },
+  {
+   "startDate": "2026-06-29",
+   "endDate": "2026-07-05",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 1573
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 37763,
+    "asinImpressionCount": 1137,
+    "asinImpressionShare": 3.01
+   },
+   "clickData": {
+    "totalClickCount": 1053,
+    "clickRate": 66.94,
+    "asinClickCount": 22,
+    "asinClickShare": 2.09,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 181,
+    "asinCartAddCount": 4,
+    "asinCartAddShare": 2.21
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 92,
+    "asinPurchaseCount": 2,
+    "asinPurchaseShare": 2.17
+   }
+  },
+  {
+   "startDate": "2026-07-06",
+   "endDate": "2026-07-12",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 1789
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 42940,
+    "asinImpressionCount": 1267,
+    "asinImpressionShare": 2.95
+   },
+   "clickData": {
+    "totalClickCount": 1179,
+    "clickRate": 65.9,
+    "asinClickCount": 24,
+    "asinClickShare": 2.04,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 207,
+    "asinCartAddCount": 4,
+    "asinCartAddShare": 1.93
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 104,
+    "asinPurchaseCount": 2,
+    "asinPurchaseShare": 1.92
+   }
+  },
+  {
+   "startDate": "2026-07-13",
+   "endDate": "2026-07-19",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 1943
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 46624,
+    "asinImpressionCount": 1380,
+    "asinImpressionShare": 2.96
+   },
+   "clickData": {
+    "totalClickCount": 1317,
+    "clickRate": 67.78,
+    "asinClickCount": 26,
+    "asinClickShare": 1.97,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 223,
+    "asinCartAddCount": 4,
+    "asinCartAddShare": 1.79
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 116,
+    "asinPurchaseCount": 2,
+    "asinPurchaseShare": 1.72
+   }
+  },
+  {
+   "startDate": "2026-07-20",
+   "endDate": "2026-07-26",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 1150
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 27592,
+    "asinImpressionCount": 811,
+    "asinImpressionShare": 2.94
+   },
+   "clickData": {
+    "totalClickCount": 785,
+    "clickRate": 68.26,
+    "asinClickCount": 16,
+    "asinClickShare": 2.04,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 134,
+    "asinCartAddCount": 3,
+    "asinCartAddShare": 2.24
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 71,
+    "asinPurchaseCount": 1,
+    "asinPurchaseShare": 1.41
+   }
+  },
+  {
+   "startDate": "2026-07-27",
+   "endDate": "2026-08-02",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 2446
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 58706,
+    "asinImpressionCount": 1728,
+    "asinImpressionShare": 2.94
+   },
+   "clickData": {
+    "totalClickCount": 1640,
+    "clickRate": 67.05,
+    "asinClickCount": 33,
+    "asinClickShare": 2.01,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 286,
+    "asinCartAddCount": 5,
+    "asinCartAddShare": 1.75
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 151,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 1.99
+   }
+  },
+  {
+   "startDate": "2026-08-03",
+   "endDate": "2026-08-09",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 2380
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 57119,
+    "asinImpressionCount": 1670,
+    "asinImpressionShare": 2.92
+   },
+   "clickData": {
+    "totalClickCount": 1626,
+    "clickRate": 68.32,
+    "asinClickCount": 33,
+    "asinClickShare": 2.03,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 284,
+    "asinCartAddCount": 6,
+    "asinCartAddShare": 2.11
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 150,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 2.0
+   }
+  },
+  {
+   "startDate": "2026-08-10",
+   "endDate": "2026-08-16",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 2503
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 60070,
+    "asinImpressionCount": 1777,
+    "asinImpressionShare": 2.96
+   },
+   "clickData": {
+    "totalClickCount": 1675,
+    "clickRate": 66.92,
+    "asinClickCount": 34,
+    "asinClickShare": 2.03,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 284,
+    "asinCartAddCount": 6,
+    "asinCartAddShare": 2.11
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 151,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 1.99
+   }
+  },
+  {
+   "startDate": "2026-08-17",
+   "endDate": "2026-08-23",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 852
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 20446,
+    "asinImpressionCount": 592,
+    "asinImpressionShare": 2.9
+   },
+   "clickData": {
+    "totalClickCount": 562,
+    "clickRate": 65.96,
+    "asinClickCount": 12,
+    "asinClickShare": 2.14,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 98,
+    "asinCartAddCount": 2,
+    "asinCartAddShare": 2.04
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 51,
+    "asinPurchaseCount": 1,
+    "asinPurchaseShare": 1.96
+   }
+  },
+  {
+   "startDate": "2026-08-24",
+   "endDate": "2026-08-30",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühltopper",
+    "searchQueryVolume": 1432
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 34374,
+    "asinImpressionCount": 992,
+    "asinImpressionShare": 2.89
+   },
+   "clickData": {
+    "totalClickCount": 944,
+    "clickRate": 65.92,
+    "asinClickCount": 19,
+    "asinClickShare": 2.01,
+    "totalMedianClickPrice": {
+     "amount": 79.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 160,
+    "asinCartAddCount": 3,
+    "asinCartAddShare": 1.88
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 86,
+    "asinPurchaseCount": 2,
+    "asinPurchaseShare": 2.33
+   }
+  },
+  {
+   "startDate": "2026-06-01",
+   "endDate": "2026-06-07",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 699
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 16776,
+    "asinImpressionCount": 1352,
+    "asinImpressionShare": 8.06
+   },
+   "clickData": {
+    "totalClickCount": 501,
+    "clickRate": 71.67,
+    "asinClickCount": 41,
+    "asinClickShare": 8.18,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 87,
+    "asinCartAddCount": 7,
+    "asinCartAddShare": 8.05
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 44,
+    "asinPurchaseCount": 4,
+    "asinPurchaseShare": 9.09
+   }
+  },
+  {
+   "startDate": "2026-06-08",
+   "endDate": "2026-06-14",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 434
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 10418,
+    "asinImpressionCount": 841,
+    "asinImpressionShare": 8.07
+   },
+   "clickData": {
+    "totalClickCount": 305,
+    "clickRate": 70.28,
+    "asinClickCount": 26,
+    "asinClickShare": 8.52,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 51,
+    "asinCartAddCount": 4,
+    "asinCartAddShare": 7.84
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 28,
+    "asinPurchaseCount": 2,
+    "asinPurchaseShare": 7.14
+   }
+  },
+  {
+   "startDate": "2026-06-15",
+   "endDate": "2026-06-21",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 1639
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 39328,
+    "asinImpressionCount": 3215,
+    "asinImpressionShare": 8.17
+   },
+   "clickData": {
+    "totalClickCount": 1128,
+    "clickRate": 68.82,
+    "asinClickCount": 95,
+    "asinClickShare": 8.42,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 197,
+    "asinCartAddCount": 16,
+    "asinCartAddShare": 8.12
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 102,
+    "asinPurchaseCount": 8,
+    "asinPurchaseShare": 7.84
+   }
+  },
+  {
+   "startDate": "2026-06-22",
+   "endDate": "2026-06-28",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 2811
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 67456,
+    "asinImpressionCount": 5465,
+    "asinImpressionShare": 8.1
+   },
+   "clickData": {
+    "totalClickCount": 1940,
+    "clickRate": 69.01,
+    "asinClickCount": 163,
+    "asinClickShare": 8.4,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 338,
+    "asinCartAddCount": 28,
+    "asinCartAddShare": 8.28
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 176,
+    "asinPurchaseCount": 15,
+    "asinPurchaseShare": 8.52
+   }
+  },
+  {
+   "startDate": "2026-06-29",
+   "endDate": "2026-07-05",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 1247
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 29933,
+    "asinImpressionCount": 2454,
+    "asinImpressionShare": 8.2
+   },
+   "clickData": {
+    "totalClickCount": 888,
+    "clickRate": 71.21,
+    "asinClickCount": 76,
+    "asinClickShare": 8.56,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 153,
+    "asinCartAddCount": 13,
+    "asinCartAddShare": 8.5
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 79,
+    "asinPurchaseCount": 7,
+    "asinPurchaseShare": 8.86
+   }
+  },
+  {
+   "startDate": "2026-07-06",
+   "endDate": "2026-07-12",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 1455
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 34915,
+    "asinImpressionCount": 2847,
+    "asinImpressionShare": 8.15
+   },
+   "clickData": {
+    "totalClickCount": 994,
+    "clickRate": 68.32,
+    "asinClickCount": 81,
+    "asinClickShare": 8.15,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 174,
+    "asinCartAddCount": 14,
+    "asinCartAddShare": 8.05
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 91,
+    "asinPurchaseCount": 7,
+    "asinPurchaseShare": 7.69
+   }
+  },
+  {
+   "startDate": "2026-07-13",
+   "endDate": "2026-07-19",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 1573
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 37743,
+    "asinImpressionCount": 3043,
+    "asinImpressionShare": 8.06
+   },
+   "clickData": {
+    "totalClickCount": 1119,
+    "clickRate": 71.14,
+    "asinClickCount": 94,
+    "asinClickShare": 8.4,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 192,
+    "asinCartAddCount": 17,
+    "asinCartAddShare": 8.85
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 101,
+    "asinPurchaseCount": 8,
+    "asinPurchaseShare": 7.92
+   }
+  },
+  {
+   "startDate": "2026-07-20",
+   "endDate": "2026-07-26",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 917
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 22003,
+    "asinImpressionCount": 1796,
+    "asinImpressionShare": 8.16
+   },
+   "clickData": {
+    "totalClickCount": 652,
+    "clickRate": 71.1,
+    "asinClickCount": 55,
+    "asinClickShare": 8.44,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 111,
+    "asinCartAddCount": 9,
+    "asinCartAddShare": 8.11
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 57,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 8.77
+   }
+  },
+  {
+   "startDate": "2026-07-27",
+   "endDate": "2026-08-02",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 1914
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 45928,
+    "asinImpressionCount": 3609,
+    "asinImpressionShare": 7.86
+   },
+   "clickData": {
+    "totalClickCount": 1300,
+    "clickRate": 67.92,
+    "asinClickCount": 104,
+    "asinClickShare": 8.0,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 220,
+    "asinCartAddCount": 17,
+    "asinCartAddShare": 7.73
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 115,
+    "asinPurchaseCount": 9,
+    "asinPurchaseShare": 7.83
+   }
+  },
+  {
+   "startDate": "2026-08-03",
+   "endDate": "2026-08-09",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 2025
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 48605,
+    "asinImpressionCount": 3958,
+    "asinImpressionShare": 8.14
+   },
+   "clickData": {
+    "totalClickCount": 1394,
+    "clickRate": 68.84,
+    "asinClickCount": 115,
+    "asinClickShare": 8.25,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 244,
+    "asinCartAddCount": 20,
+    "asinCartAddShare": 8.2
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 127,
+    "asinPurchaseCount": 10,
+    "asinPurchaseShare": 7.87
+   }
+  },
+  {
+   "startDate": "2026-08-10",
+   "endDate": "2026-08-16",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 2098
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 50360,
+    "asinImpressionCount": 4045,
+    "asinImpressionShare": 8.03
+   },
+   "clickData": {
+    "totalClickCount": 1447,
+    "clickRate": 68.97,
+    "asinClickCount": 118,
+    "asinClickShare": 8.15,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 244,
+    "asinCartAddCount": 20,
+    "asinCartAddShare": 8.2
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 127,
+    "asinPurchaseCount": 11,
+    "asinPurchaseShare": 8.66
+   }
+  },
+  {
+   "startDate": "2026-08-17",
+   "endDate": "2026-08-23",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 663
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 15901,
+    "asinImpressionCount": 1249,
+    "asinImpressionShare": 7.85
+   },
+   "clickData": {
+    "totalClickCount": 469,
+    "clickRate": 70.74,
+    "asinClickCount": 37,
+    "asinClickShare": 7.89,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 79,
+    "asinCartAddCount": 7,
+    "asinCartAddShare": 8.86
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 42,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 7.14
+   }
+  },
+  {
+   "startDate": "2026-08-24",
+   "endDate": "2026-08-30",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlauflage matratze",
+    "searchQueryVolume": 1172
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 28122,
+    "asinImpressionCount": 2200,
+    "asinImpressionShare": 7.82
+   },
+   "clickData": {
+    "totalClickCount": 822,
+    "clickRate": 70.14,
+    "asinClickCount": 66,
+    "asinClickShare": 8.03,
+    "totalMedianClickPrice": {
+     "amount": 59.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 141,
+    "asinCartAddCount": 11,
+    "asinCartAddShare": 7.8
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 72,
+    "asinPurchaseCount": 6,
+    "asinPurchaseShare": 8.33
+   }
+  },
+  {
+   "startDate": "2026-06-01",
+   "endDate": "2026-06-07",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 768
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 18442,
+    "asinImpressionCount": 741,
+    "asinImpressionShare": 4.02
+   },
+   "clickData": {
+    "totalClickCount": 437,
+    "clickRate": 56.9,
+    "asinClickCount": 18,
+    "asinClickShare": 4.12,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 75,
+    "asinCartAddCount": 3,
+    "asinCartAddShare": 4.0
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 40,
+    "asinPurchaseCount": 2,
+    "asinPurchaseShare": 5.0
+   }
+  },
+  {
+   "startDate": "2026-06-08",
+   "endDate": "2026-06-14",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 490
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 11767,
+    "asinImpressionCount": 468,
+    "asinImpressionShare": 3.98
+   },
+   "clickData": {
+    "totalClickCount": 280,
+    "clickRate": 57.14,
+    "asinClickCount": 12,
+    "asinClickShare": 4.29,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 48,
+    "asinCartAddCount": 2,
+    "asinCartAddShare": 4.17
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 25,
+    "asinPurchaseCount": 1,
+    "asinPurchaseShare": 4.0
+   }
+  },
+  {
+   "startDate": "2026-06-15",
+   "endDate": "2026-06-21",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 1882
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 45170,
+    "asinImpressionCount": 1816,
+    "asinImpressionShare": 4.02
+   },
+   "clickData": {
+    "totalClickCount": 1087,
+    "clickRate": 57.76,
+    "asinClickCount": 47,
+    "asinClickShare": 4.32,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 188,
+    "asinCartAddCount": 8,
+    "asinCartAddShare": 4.26
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 100,
+    "asinPurchaseCount": 4,
+    "asinPurchaseShare": 4.0
+   }
+  },
+  {
+   "startDate": "2026-06-22",
+   "endDate": "2026-06-28",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 2996
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 71905,
+    "asinImpressionCount": 2808,
+    "asinImpressionShare": 3.91
+   },
+   "clickData": {
+    "totalClickCount": 1708,
+    "clickRate": 57.01,
+    "asinClickCount": 71,
+    "asinClickShare": 4.16,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 294,
+    "asinCartAddCount": 12,
+    "asinCartAddShare": 4.08
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 157,
+    "asinPurchaseCount": 6,
+    "asinPurchaseShare": 3.82
+   }
+  },
+  {
+   "startDate": "2026-06-29",
+   "endDate": "2026-07-05",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 1338
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 32101,
+    "asinImpressionCount": 1282,
+    "asinImpressionShare": 3.99
+   },
+   "clickData": {
+    "totalClickCount": 756,
+    "clickRate": 56.5,
+    "asinClickCount": 31,
+    "asinClickShare": 4.1,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 127,
+    "asinCartAddCount": 5,
+    "asinCartAddShare": 3.94
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 69,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 4.35
+   }
+  },
+  {
+   "startDate": "2026-07-06",
+   "endDate": "2026-07-12",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 1658
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 39791,
+    "asinImpressionCount": 1581,
+    "asinImpressionShare": 3.97
+   },
+   "clickData": {
+    "totalClickCount": 934,
+    "clickRate": 56.33,
+    "asinClickCount": 38,
+    "asinClickShare": 4.07,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 158,
+    "asinCartAddCount": 6,
+    "asinCartAddShare": 3.8
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 86,
+    "asinPurchaseCount": 4,
+    "asinPurchaseShare": 4.65
+   }
+  },
+  {
+   "startDate": "2026-07-13",
+   "endDate": "2026-07-19",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 1736
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 41653,
+    "asinImpressionCount": 1676,
+    "asinImpressionShare": 4.02
+   },
+   "clickData": {
+    "totalClickCount": 1007,
+    "clickRate": 58.01,
+    "asinClickCount": 42,
+    "asinClickShare": 4.17,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 169,
+    "asinCartAddCount": 7,
+    "asinCartAddShare": 4.14
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 91,
+    "asinPurchaseCount": 4,
+    "asinPurchaseShare": 4.4
+   }
+  },
+  {
+   "startDate": "2026-07-20",
+   "endDate": "2026-07-26",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 1081
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 25938,
+    "asinImpressionCount": 1034,
+    "asinImpressionShare": 3.99
+   },
+   "clickData": {
+    "totalClickCount": 608,
+    "clickRate": 56.24,
+    "asinClickCount": 26,
+    "asinClickShare": 4.28,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 101,
+    "asinCartAddCount": 5,
+    "asinCartAddShare": 4.95
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 55,
+    "asinPurchaseCount": 2,
+    "asinPurchaseShare": 3.64
+   }
+  },
+  {
+   "startDate": "2026-07-27",
+   "endDate": "2026-08-02",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 2112
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 50678,
+    "asinImpressionCount": 2012,
+    "asinImpressionShare": 3.97
+   },
+   "clickData": {
+    "totalClickCount": 1222,
+    "clickRate": 57.86,
+    "asinClickCount": 52,
+    "asinClickShare": 4.26,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 215,
+    "asinCartAddCount": 9,
+    "asinCartAddShare": 4.19
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 111,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 4.5
+   }
+  },
+  {
+   "startDate": "2026-08-03",
+   "endDate": "2026-08-09",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 2137
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 51291,
+    "asinImpressionCount": 2008,
+    "asinImpressionShare": 3.91
+   },
+   "clickData": {
+    "totalClickCount": 1242,
+    "clickRate": 58.12,
+    "asinClickCount": 50,
+    "asinClickShare": 4.03,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 216,
+    "asinCartAddCount": 9,
+    "asinCartAddShare": 4.17
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 115,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 4.35
+   }
+  },
+  {
+   "startDate": "2026-08-10",
+   "endDate": "2026-08-16",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 2287
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 54892,
+    "asinImpressionCount": 2162,
+    "asinImpressionShare": 3.94
+   },
+   "clickData": {
+    "totalClickCount": 1292,
+    "clickRate": 56.49,
+    "asinClickCount": 52,
+    "asinClickShare": 4.02,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 225,
+    "asinCartAddCount": 9,
+    "asinCartAddShare": 4.0
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 114,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 4.39
+   }
+  },
+  {
+   "startDate": "2026-08-17",
+   "endDate": "2026-08-23",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 716
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 17180,
+    "asinImpressionCount": 673,
+    "asinImpressionShare": 3.92
+   },
+   "clickData": {
+    "totalClickCount": 420,
+    "clickRate": 58.66,
+    "asinClickCount": 17,
+    "asinClickShare": 4.05,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 73,
+    "asinCartAddCount": 3,
+    "asinCartAddShare": 4.11
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 38,
+    "asinPurchaseCount": 1,
+    "asinPurchaseShare": 2.63
+   }
+  },
+  {
+   "startDate": "2026-08-24",
+   "endDate": "2026-08-30",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "kühlmatte sommer",
+    "searchQueryVolume": 1279
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 30695,
+    "asinImpressionCount": 1218,
+    "asinImpressionShare": 3.97
+   },
+   "clickData": {
+    "totalClickCount": 743,
+    "clickRate": 58.09,
+    "asinClickCount": 30,
+    "asinClickShare": 4.04,
+    "totalMedianClickPrice": {
+     "amount": 39.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 127,
+    "asinCartAddCount": 5,
+    "asinCartAddShare": 3.94
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 67,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 4.48
+   }
+  },
+  {
+   "startDate": "2026-06-01",
+   "endDate": "2026-06-07",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 476
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 11429,
+    "asinImpressionCount": 683,
+    "asinImpressionShare": 5.98
+   },
+   "clickData": {
+    "totalClickCount": 355,
+    "clickRate": 74.58,
+    "asinClickCount": 20,
+    "asinClickShare": 5.63,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 59,
+    "asinCartAddCount": 3,
+    "asinCartAddShare": 5.08
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 32,
+    "asinPurchaseCount": 2,
+    "asinPurchaseShare": 6.25
+   }
+  },
+  {
+   "startDate": "2026-06-08",
+   "endDate": "2026-06-14",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 279
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 6701,
+    "asinImpressionCount": 395,
+    "asinImpressionShare": 5.89
+   },
+   "clickData": {
+    "totalClickCount": 213,
+    "clickRate": 76.34,
+    "asinClickCount": 12,
+    "asinClickShare": 5.63,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 37,
+    "asinCartAddCount": 2,
+    "asinCartAddShare": 5.41
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 19,
+    "asinPurchaseCount": 1,
+    "asinPurchaseShare": 5.26
+   }
+  },
+  {
+   "startDate": "2026-06-15",
+   "endDate": "2026-06-21",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 1090
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 26169,
+    "asinImpressionCount": 1593,
+    "asinImpressionShare": 6.09
+   },
+   "clickData": {
+    "totalClickCount": 830,
+    "clickRate": 76.15,
+    "asinClickCount": 45,
+    "asinClickShare": 5.42,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 143,
+    "asinCartAddCount": 8,
+    "asinCartAddShare": 5.59
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 76,
+    "asinPurchaseCount": 4,
+    "asinPurchaseShare": 5.26
+   }
+  },
+  {
+   "startDate": "2026-06-22",
+   "endDate": "2026-06-28",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 1830
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 43910,
+    "asinImpressionCount": 2641,
+    "asinImpressionShare": 6.01
+   },
+   "clickData": {
+    "totalClickCount": 1338,
+    "clickRate": 73.11,
+    "asinClickCount": 76,
+    "asinClickShare": 5.68,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 226,
+    "asinCartAddCount": 13,
+    "asinCartAddShare": 5.75
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 120,
+    "asinPurchaseCount": 7,
+    "asinPurchaseShare": 5.83
+   }
+  },
+  {
+   "startDate": "2026-06-29",
+   "endDate": "2026-07-05",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 850
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 20392,
+    "asinImpressionCount": 1204,
+    "asinImpressionShare": 5.9
+   },
+   "clickData": {
+    "totalClickCount": 619,
+    "clickRate": 72.82,
+    "asinClickCount": 34,
+    "asinClickShare": 5.49,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 108,
+    "asinCartAddCount": 6,
+    "asinCartAddShare": 5.56
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 55,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 5.45
+   }
+  },
+  {
+   "startDate": "2026-07-06",
+   "endDate": "2026-07-12",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 1007
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 24166,
+    "asinImpressionCount": 1433,
+    "asinImpressionShare": 5.93
+   },
+   "clickData": {
+    "totalClickCount": 729,
+    "clickRate": 72.39,
+    "asinClickCount": 39,
+    "asinClickShare": 5.35,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 123,
+    "asinCartAddCount": 7,
+    "asinCartAddShare": 5.69
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 66,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 4.55
+   }
+  },
+  {
+   "startDate": "2026-07-13",
+   "endDate": "2026-07-19",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 1030
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 24718,
+    "asinImpressionCount": 1449,
+    "asinImpressionShare": 5.86
+   },
+   "clickData": {
+    "totalClickCount": 749,
+    "clickRate": 72.72,
+    "asinClickCount": 39,
+    "asinClickShare": 5.21,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 131,
+    "asinCartAddCount": 7,
+    "asinCartAddShare": 5.34
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 69,
+    "asinPurchaseCount": 4,
+    "asinPurchaseShare": 5.8
+   }
+  },
+  {
+   "startDate": "2026-07-20",
+   "endDate": "2026-07-26",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 604
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 14507,
+    "asinImpressionCount": 853,
+    "asinImpressionShare": 5.88
+   },
+   "clickData": {
+    "totalClickCount": 443,
+    "clickRate": 73.34,
+    "asinClickCount": 24,
+    "asinClickShare": 5.42,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 76,
+    "asinCartAddCount": 4,
+    "asinCartAddShare": 5.26
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 41,
+    "asinPurchaseCount": 2,
+    "asinPurchaseShare": 4.88
+   }
+  },
+  {
+   "startDate": "2026-07-27",
+   "endDate": "2026-08-02",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 1218
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 29239,
+    "asinImpressionCount": 1736,
+    "asinImpressionShare": 5.94
+   },
+   "clickData": {
+    "totalClickCount": 922,
+    "clickRate": 75.7,
+    "asinClickCount": 50,
+    "asinClickShare": 5.42,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 162,
+    "asinCartAddCount": 9,
+    "asinCartAddShare": 5.56
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 82,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 6.1
+   }
+  },
+  {
+   "startDate": "2026-08-03",
+   "endDate": "2026-08-09",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 1338
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 32122,
+    "asinImpressionCount": 1959,
+    "asinImpressionShare": 6.1
+   },
+   "clickData": {
+    "totalClickCount": 992,
+    "clickRate": 74.14,
+    "asinClickCount": 56,
+    "asinClickShare": 5.65,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 165,
+    "asinCartAddCount": 10,
+    "asinCartAddShare": 6.06
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 88,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 5.68
+   }
+  },
+  {
+   "startDate": "2026-08-10",
+   "endDate": "2026-08-16",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 1456
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 34948,
+    "asinImpressionCount": 2134,
+    "asinImpressionShare": 6.11
+   },
+   "clickData": {
+    "totalClickCount": 1057,
+    "clickRate": 72.6,
+    "asinClickCount": 60,
+    "asinClickShare": 5.68,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 175,
+    "asinCartAddCount": 10,
+    "asinCartAddShare": 5.71
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 96,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 5.21
+   }
+  },
+  {
+   "startDate": "2026-08-17",
+   "endDate": "2026-08-23",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 430
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 10320,
+    "asinImpressionCount": 627,
+    "asinImpressionShare": 6.08
+   },
+   "clickData": {
+    "totalClickCount": 326,
+    "clickRate": 75.81,
+    "asinClickCount": 19,
+    "asinClickShare": 5.83,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 55,
+    "asinCartAddCount": 3,
+    "asinCartAddShare": 5.45
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 29,
+    "asinPurchaseCount": 2,
+    "asinPurchaseShare": 6.9
+   }
+  },
+  {
+   "startDate": "2026-08-24",
+   "endDate": "2026-08-30",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "cooling matratzenauflage",
+    "searchQueryVolume": 778
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 18667,
+    "asinImpressionCount": 1141,
+    "asinImpressionShare": 6.11
+   },
+   "clickData": {
+    "totalClickCount": 579,
+    "clickRate": 74.42,
+    "asinClickCount": 32,
+    "asinClickShare": 5.53,
+    "totalMedianClickPrice": {
+     "amount": 49.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 102,
+    "asinCartAddCount": 6,
+    "asinCartAddShare": 5.88
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 52,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 5.77
+   }
+  },
+  {
+   "startDate": "2026-06-01",
+   "endDate": "2026-06-07",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 384
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 9219,
+    "asinImpressionCount": 944,
+    "asinImpressionShare": 10.24
+   },
+   "clickData": {
+    "totalClickCount": 307,
+    "clickRate": 79.95,
+    "asinClickCount": 30,
+    "asinClickShare": 9.77,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 52,
+    "asinCartAddCount": 5,
+    "asinCartAddShare": 9.62
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 28,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 10.71
+   }
+  },
+  {
+   "startDate": "2026-06-08",
+   "endDate": "2026-06-14",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 248
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 5947,
+    "asinImpressionCount": 593,
+    "asinImpressionShare": 9.97
+   },
+   "clickData": {
+    "totalClickCount": 194,
+    "clickRate": 78.23,
+    "asinClickCount": 20,
+    "asinClickShare": 10.31,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 34,
+    "asinCartAddCount": 3,
+    "asinCartAddShare": 8.82
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 18,
+    "asinPurchaseCount": 2,
+    "asinPurchaseShare": 11.11
+   }
+  },
+  {
+   "startDate": "2026-06-15",
+   "endDate": "2026-06-21",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 886
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 21259,
+    "asinImpressionCount": 2160,
+    "asinImpressionShare": 10.16
+   },
+   "clickData": {
+    "totalClickCount": 713,
+    "clickRate": 80.47,
+    "asinClickCount": 73,
+    "asinClickShare": 10.24,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 121,
+    "asinCartAddCount": 12,
+    "asinCartAddShare": 9.92
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 63,
+    "asinPurchaseCount": 7,
+    "asinPurchaseShare": 11.11
+   }
+  },
+  {
+   "startDate": "2026-06-22",
+   "endDate": "2026-06-28",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 1492
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 35814,
+    "asinImpressionCount": 3659,
+    "asinImpressionShare": 10.22
+   },
+   "clickData": {
+    "totalClickCount": 1202,
+    "clickRate": 80.56,
+    "asinClickCount": 121,
+    "asinClickShare": 10.07,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 210,
+    "asinCartAddCount": 21,
+    "asinCartAddShare": 10.0
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 105,
+    "asinPurchaseCount": 11,
+    "asinPurchaseShare": 10.48
+   }
+  },
+  {
+   "startDate": "2026-06-29",
+   "endDate": "2026-07-05",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 655
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 15709,
+    "asinImpressionCount": 1609,
+    "asinImpressionShare": 10.24
+   },
+   "clickData": {
+    "totalClickCount": 508,
+    "clickRate": 77.56,
+    "asinClickCount": 51,
+    "asinClickShare": 10.04,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 89,
+    "asinCartAddCount": 8,
+    "asinCartAddShare": 8.99
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 45,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 11.11
+   }
+  },
+  {
+   "startDate": "2026-07-06",
+   "endDate": "2026-07-12",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 757
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 18165,
+    "asinImpressionCount": 1777,
+    "asinImpressionShare": 9.78
+   },
+   "clickData": {
+    "totalClickCount": 589,
+    "clickRate": 77.81,
+    "asinClickCount": 56,
+    "asinClickShare": 9.51,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 100,
+    "asinCartAddCount": 10,
+    "asinCartAddShare": 10.0
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 54,
+    "asinPurchaseCount": 5,
+    "asinPurchaseShare": 9.26
+   }
+  },
+  {
+   "startDate": "2026-07-13",
+   "endDate": "2026-07-19",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 800
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 19206,
+    "asinImpressionCount": 1892,
+    "asinImpressionShare": 9.85
+   },
+   "clickData": {
+    "totalClickCount": 637,
+    "clickRate": 79.62,
+    "asinClickCount": 62,
+    "asinClickShare": 9.73,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 108,
+    "asinCartAddCount": 10,
+    "asinCartAddShare": 9.26
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 59,
+    "asinPurchaseCount": 6,
+    "asinPurchaseShare": 10.17
+   }
+  },
+  {
+   "startDate": "2026-07-20",
+   "endDate": "2026-07-26",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 474
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 11376,
+    "asinImpressionCount": 1151,
+    "asinImpressionShare": 10.12
+   },
+   "clickData": {
+    "totalClickCount": 383,
+    "clickRate": 80.8,
+    "asinClickCount": 37,
+    "asinClickShare": 9.66,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 67,
+    "asinCartAddCount": 6,
+    "asinCartAddShare": 8.96
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 34,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 8.82
+   }
+  },
+  {
+   "startDate": "2026-07-27",
+   "endDate": "2026-08-02",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 989
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 23738,
+    "asinImpressionCount": 2335,
+    "asinImpressionShare": 9.84
+   },
+   "clickData": {
+    "totalClickCount": 793,
+    "clickRate": 80.18,
+    "asinClickCount": 75,
+    "asinClickShare": 9.46,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 135,
+    "asinCartAddCount": 12,
+    "asinCartAddShare": 8.89
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 71,
+    "asinPurchaseCount": 7,
+    "asinPurchaseShare": 9.86
+   }
+  },
+  {
+   "startDate": "2026-08-03",
+   "endDate": "2026-08-09",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 992
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 23805,
+    "asinImpressionCount": 2357,
+    "asinImpressionShare": 9.9
+   },
+   "clickData": {
+    "totalClickCount": 796,
+    "clickRate": 80.24,
+    "asinClickCount": 79,
+    "asinClickShare": 9.92,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 134,
+    "asinCartAddCount": 14,
+    "asinCartAddShare": 10.45
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 74,
+    "asinPurchaseCount": 7,
+    "asinPurchaseShare": 9.46
+   }
+  },
+  {
+   "startDate": "2026-08-10",
+   "endDate": "2026-08-16",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 1164
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 27944,
+    "asinImpressionCount": 2809,
+    "asinImpressionShare": 10.05
+   },
+   "clickData": {
+    "totalClickCount": 896,
+    "clickRate": 76.98,
+    "asinClickCount": 87,
+    "asinClickShare": 9.71,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 151,
+    "asinCartAddCount": 15,
+    "asinCartAddShare": 9.93
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 80,
+    "asinPurchaseCount": 8,
+    "asinPurchaseShare": 10.0
+   }
+  },
+  {
+   "startDate": "2026-08-17",
+   "endDate": "2026-08-23",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 361
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 8673,
+    "asinImpressionCount": 869,
+    "asinImpressionShare": 10.02
+   },
+   "clickData": {
+    "totalClickCount": 279,
+    "clickRate": 77.29,
+    "asinClickCount": 28,
+    "asinClickShare": 10.04,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 47,
+    "asinCartAddCount": 5,
+    "asinCartAddShare": 10.64
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 25,
+    "asinPurchaseCount": 3,
+    "asinPurchaseShare": 12.0
+   }
+  },
+  {
+   "startDate": "2026-08-24",
+   "endDate": "2026-08-30",
+   "asin": "B0SEORI001",
+   "searchQueryData": {
+    "searchQuery": "matratzenauflage 90x200 kühl",
+    "searchQueryVolume": 625
+   },
+   "impressionData": {
+    "totalQueryImpressionCount": 14989,
+    "asinImpressionCount": 1510,
+    "asinImpressionShare": 10.07
+   },
+   "clickData": {
+    "totalClickCount": 505,
+    "clickRate": 80.8,
+    "asinClickCount": 50,
+    "asinClickShare": 9.9,
+    "totalMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    },
+    "asinMedianClickPrice": {
+     "amount": 64.99,
+     "currencyCode": "EUR"
+    }
+   },
+   "cartAddData": {
+    "totalCartAddCount": 88,
+    "asinCartAddCount": 9,
+    "asinCartAddShare": 10.23
+   },
+   "purchaseData": {
+    "totalPurchaseCount": 45,
+    "asinPurchaseCount": 4,
+    "asinPurchaseShare": 8.89
+   }
+  }
+ ]
+}

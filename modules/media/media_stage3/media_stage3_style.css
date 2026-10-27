@@ -1,0 +1,1331 @@
+/* 3. 매체 제작 > 3단계: 솔루션 제안 - class는 media-s3- 로 시작, 색상은 공통 변수만 사용
+   이 파일은 media_page.py가 3번 탭을 열 때 읽어 화면에 넣습니다.
+   위젯에 key="media-s3-이름"을 붙이면 .st-key-media-s3-이름 class로 꾸밀 수 있습니다. */
+
+/* ④ 사진 초안 제작: 사진 넘겨 보기 (media_s3_photo_carousel)
+   사진이 카드 폭 전체를 3:2로 채우고(폭에 따라 높이가 정해짐), ← → 버튼은 사진 위 양옆에 띄움 */
+.media-s3-frame {
+  position: relative;
+  /* 높이는 화면 높이를 따라가고 폭은 3:2 (아래 고르기 줄 높이만큼 뺌) */
+  height: calc(var(--media-s3-h) - 70px);
+  width: calc((var(--media-s3-h) - 70px) * 1.5);
+  max-width: 48vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--color-bg);
+  border-radius: calc(var(--radius) - 6px);
+}
+.media-s3-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.media-s3-frame-empty {
+  text-align: center;
+  color: var(--color-sub);
+  font-size: 0.9rem;
+}
+.st-key-media-s3-carousel {
+  position: relative;
+}
+.st-key-media-s3-carousel .st-key-media-s3-prev,
+.st-key-media-s3-carousel .st-key-media-s3-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: auto;
+}
+.st-key-media-s3-carousel .st-key-media-s3-prev { left: 10px; }
+.st-key-media-s3-carousel .st-key-media-s3-next { right: 10px; }
+
+/* ← → 버튼: 사진 위에 뜨는 반투명 흰 동그라미 */
+.st-key-media-s3-prev button,
+.st-key-media-s3-next button {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--color-card) 85%, transparent);
+}
+.st-key-media-root .st-key-media-s3-prev button p,
+.st-key-media-root .st-key-media-s3-next button p {
+  color: var(--color-text) !important;
+  font-size: 1.2rem;
+}
+
+/* 넘겨 보기 카드: 흰 카드, 안쪽 여백을 줄여 사진을 크게 */
+.st-key-media-s3-carousel-card {
+  background: var(--color-card);
+  padding: 10px;
+  gap: 8px;
+}
+/* 아래 줄의 사진 A/B 고르기 (선택 안 된 글자는 진한 색) */
+.st-key-media-s3-carousel-info [data-testid="stButtonGroup"] button p {
+  color: inherit !important;
+}
+
+/* 왼쪽 사진 A·B 칸 */
+[class*="st-key-media-s3-photo-card-"] {
+  background: var(--color-card);
+}
+/* 프롬프트 전체를 보여 주는 칸: 화면이 높을수록 길게, 넘치면 칸 안에서만 스크롤 */
+.media-s3-prompt {
+  height: max(44px, calc(var(--media-s3-h) - 370px));
+  overflow-y: auto;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--color-sub);
+}
+
+/* 프롬프트 아래 'A만 다른 점' (단일 변수) */
+/* 두 칸 높이가 항상 같게: 글이 길어도 한 줄씩만 (넘치면 …, 마우스를 올리면 전체) */
+.media-s3-slot {
+  padding: 8px 12px;
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+  font-size: 0.85rem;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-s3-slot span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-sub);
+  font-size: 0.8rem;
+}
+
+/* 사진·영상 초안 제작 한 줄: 쓸 수 있는 높이 (화면 높이 - 위쪽 제목·탭 - 아래 이전/다음 줄) */
+.st-key-media-s3-photo-row,
+.st-key-media-s3-video-row {
+  --media-s3-h: max(270px, calc(100vh - 382px));
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+.st-key-media-s3-photo-left,
+.st-key-media-s3-video-left {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* 사진·영상 초안 제작 탭을 연 동안만 ③ 탭의 최대 폭(media_style.css의 1400px)을 풀어 화면 양옆까지 씀
+   (영상 초안 제작·만든 결과 보기 탭과 다른 단계는 그대로. 속성 선택자를 반복해 media_style.css 규칙보다 우선) */
+@media (min-width: 768px) {
+  [data-testid="stMainBlockContainer"][data-testid][data-testid][data-testid]:has(.st-key-media-s3-sub [role="tab"]:nth-of-type(1)[aria-selected="true"]),
+  [data-testid="stMainBlockContainer"][data-testid][data-testid][data-testid]:has(.st-key-media-s3-sub [role="tab"]:nth-of-type(2)[aria-selected="true"]),
+  [data-testid="stMainBlockContainer"][data-testid][data-testid][data-testid]:has(.st-key-media-s3-sub [role="tab"]:nth-of-type(3)[aria-selected="true"]),
+  [data-testid="stMainBlockContainer"][data-testid][data-testid][data-testid]:has(.st-key-media-s3-export-row.st-key-media-s3-export-row.st-key-media-s3-export-row.st-key-media-s3-export-row) {
+    max-width: none !important;
+  }
+}
+/* 낮은 화면(노트북 등)에서는 'A만 다른 점' 칸을 숨기고 프롬프트 칸을 그만큼 늘려 스크롤이 생기지 않게 */
+@media (max-height: 820px) {
+  [class*="st-key-media-s3-photo-card-"] [data-testid="stElementContainer"]:has(.media-s3-slot) {
+    display: none;
+  }
+  .media-s3-prompt {
+    height: max(44px, calc(var(--media-s3-h) - 270px));
+  }
+}
+
+/* 사진 A·B 칸: 두 칸 높이를 항상 같게 (짧은 칸도 긴 칸만큼 늘어남) */
+.st-key-media-s3-photo-left [data-testid="stHorizontalBlock"]:has([class*="st-key-media-s3-photo-card-"]) {
+  align-items: stretch;
+}
+.st-key-media-s3-photo-left [data-testid="stColumn"]:has([class*="st-key-media-s3-photo-card-"]) > [data-testid="stVerticalBlock"],
+[class*="st-key-media-s3-photo-card-"] {
+  height: 100%;
+}
+/* 사진 A·B 제목 줄은 줄바꿈하지 않게 (좁아지면 버튼 글자만 줄어듦) */
+[class*="st-key-media-s3-photo-card-"] > [data-testid="stLayoutWrapper"]:first-child > div {
+  flex-wrap: nowrap;
+}
+
+/* 넘겨 보기 아래 내려받기·지우기: 연한 동그라미 아이콘 버튼 */
+.st-key-media-s3-photo-tools button {
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  transition: background 0.15s, color 0.15s;
+}
+.st-key-media-s3-photo-tools button:hover {
+  background: #7B6CF2;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-color: #7B6CF2;
+  color: var(--color-card);
+}
+.st-key-media-s3-photo-tools button [data-testid="stIconMaterial"] {
+  font-size: 1.25rem;
+  color: inherit;
+}
+
+/* ④ 영상 초안 제작 (media_s3_video_tab): 사진 초안 제작과 같은 배치·크기 */
+/* 왼쪽 스토리보드 카드: 표 높이가 화면 높이를 따라감 (넘치면 표 안에서만 스크롤) */
+.st-key-media-s3-sb-card {
+  background: var(--color-card);
+}
+/* 스토리보드 카드가 왼쪽 칸의 남는 높이를 모두 채우게 (아래 올리기·넘기기 줄은 그대로) */
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-sb-card) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-sb-card) > .st-key-media-s3-sb-card {
+  height: 100%;
+}
+.st-key-media-s3-sb-card [data-testid="stDataFrameResizable"] {
+  height: calc(var(--media-s3-h) - 208px) !important;
+  max-height: calc(var(--media-s3-h) - 208px);
+}
+.st-key-media-s3-sb-head {
+  flex-wrap: nowrap;
+}
+/* 오른쪽 영상 만들기 카드: 사진 넘겨 보기와 같은 크기 */
+.st-key-media-s3-video-card {
+  background: var(--color-card);
+  height: calc(var(--media-s3-h) - 20px);   /* 사진 넘겨 보기 카드와 같은 높이 */
+  width: calc((var(--media-s3-h) - 70px) * 1.5 + 22px);
+  max-width: 48vw;
+  overflow-y: auto;
+}
+/* 영상 프롬프트: 남는 높이만큼, 넘치면 칸 안에서만 스크롤 */
+.media-s3-vprompt {
+  height: max(60px, calc(var(--media-s3-h) - 190px));
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  color: var(--color-text);
+}
+.media-s3-vprompt-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--color-sub);
+  white-space: normal;
+}
+.st-key-media-s3-video-note [data-testid="stCaptionContainer"] p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-key-media-s3-video-card {
+  box-sizing: border-box;
+}
+/* 아주 낮은 화면(예: 1366×657)에서는 영상 탭 아래 안내 줄을 숨겨 스크롤이 생기지 않게 (안내는 ⓘ 대신 넘기기 버튼 설명에도 있음) */
+@media (max-height: 700px) {
+  .st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-note),
+  .st-key-media-s3-video-note {
+    display: none;
+  }
+  .media-s3-vprompt {
+    height: max(28px, calc(var(--media-s3-h) - 240px));
+  }
+}
+
+/* 사진 A·B 칸이 왼쪽 칸의 남는 높이를 모두 채우고, 늘어난 만큼 프롬프트 칸이 커짐 (A·B 항상 같은 크기) */
+.st-key-media-s3-photo-left > *:has([class*="st-key-media-s3-photo-card-"]) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.st-key-media-s3-photo-left [data-testid="stHorizontalBlock"]:has([class*="st-key-media-s3-photo-card-"]),
+.st-key-media-s3-photo-left [data-testid="stColumn"]:has([class*="st-key-media-s3-photo-card-"]) {
+  height: 100%;
+}
+[class*="st-key-media-s3-photo-card-"] > [data-testid="stElementContainer"]:has(.media-s3-prompt) {
+  flex: 1 1 0;
+  min-height: 44px;
+}
+[class*="st-key-media-s3-photo-card-"] [data-testid="stElementContainer"]:has(.media-s3-prompt) [data-testid="stMarkdown"],
+[class*="st-key-media-s3-photo-card-"] [data-testid="stElementContainer"]:has(.media-s3-prompt) [data-testid="stMarkdownContainer"] {
+  height: 100%;
+}
+[class*="st-key-media-s3-photo-card-"] .media-s3-prompt,
+[class*="st-key-media-s3-photo-card-"] .media-s3-prompt[class] {
+  height: 100%;
+}
+
+/* 팝업 창 여는 버튼(프롬프트 보기 · 크게 보기): 흰 바탕 + 진한 글자 (media_style.css가 버튼 글자를 흰색으로 바꿔서 다시 정함) */
+.st-key-media-root [class*="st-key-media-s3-btn-view-"] button {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.st-key-media-root [class*="st-key-media-s3-btn-view-"] button p,
+.st-key-media-root [class*="st-key-media-s3-btn-view-"] button [data-testid="stIconMaterial"] {
+  color: var(--color-text) !important;
+}
+.st-key-media-root [class*="st-key-media-s3-btn-view-"] button:hover {
+  border-color: #7B6CF2;
+}
+.st-key-media-s3-video-head {
+  flex-wrap: nowrap;
+}
+.st-key-media-s3-photo-left [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-photo-card-"]) {
+  flex: 1 1 auto;
+}
+[class*="st-key-media-s3-photo-card-"] [data-testid="stElementContainer"]:has(.media-s3-prompt) [data-testid="stMarkdown"] > div {
+  height: 100%;
+}
+
+/* 만든 사진 팝업 창 (media_s3_photo_dialog): 사진은 3:2, 높이는 화면 높이의 60% 정도 */
+.st-key-media-s3-photo-dialog .media-s3-frame {
+  height: min(60vh, 600px);
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 3 / 2;
+  margin: 0 auto;
+}
+/* 사진 초안 제작: 오른쪽 사진 칸이 없어져서 A·B 칸 영역의 높이를 직접 정함 (남는 높이만큼 프롬프트 칸이 커짐) */
+.st-key-media-s3-photo-row .st-key-media-s3-photo-left {
+  flex: 0 0 auto;   /* 위 공통 규칙(flex: 1 1 0)이 높이를 무시하게 해서 여기서 다시 정함 */
+  height: calc(var(--media-s3-h) - 4px);
+}
+
+/* ④-3 만든 결과 보기 (media_s3_history_section): 사진·영상 탭처럼 100% 화면에서 스크롤 없이 한 화면
+   아래 ⑤로 넘기기 줄(약 56px)만큼 뺀 높이를 씀 */
+.st-key-media-s3-hist-row {
+  --media-s3-h: max(270px, calc(100vh - 382px));
+  --media-s3-hh: calc(var(--media-s3-h) - 56px);
+  height: var(--media-s3-hh);
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+.st-key-media-s3-hist-left {
+  background: var(--color-card);
+  overflow-y: auto;
+}
+.st-key-media-s3-hist-left [data-testid="stRadio"] label {
+  padding: 6px 0;
+  line-height: 1.35;
+}
+.st-key-media-s3-hist-right {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.st-key-media-s3-hist-info p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-key-media-s3-hist-right [data-testid="stHorizontalBlock"] {
+  flex: 1 1 auto;
+}
+[class*="st-key-media-s3-hist-slot-"] {
+  background: var(--color-card);
+  height: 100%;
+}
+[class*="st-key-media-s3-hist-head-"],
+[class*="st-key-media-s3-hist-foot-"] {
+  flex-wrap: nowrap;
+  min-height: 34px;
+}
+/* 사진·영상은 칸 높이에 맞춰 통째로 보이게 (잘리지 않게) */
+.media-s3-hist-media,
+[class*="st-key-media-s3-hist-video-"] video {
+  height: calc(var(--media-s3-hh) - 185px);
+  min-height: 80px;
+  width: 100%;
+  border-radius: calc(var(--radius) - 6px);
+  background: var(--color-bg);
+}
+.media-s3-hist-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.media-s3-hist-media img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+[class*="st-key-media-s3-hist-video-"] video {
+  object-fit: contain;
+}
+.media-s3-hist-empty {
+  color: var(--color-sub);
+  font-size: 0.9rem;
+}
+/* 칸 아이콘 버튼(넘기기·내려받기·프롬프트·지우기): 연한 동그라미, 진한 글자 */
+[class*="st-key-media-s3-hist-tools-"] button,
+[class*="st-key-media-s3-hist-head-"] button {
+  min-height: 32px;
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+.st-key-media-root [class*="st-key-media-s3-hist-tools-"] button p,
+.st-key-media-root [class*="st-key-media-s3-hist-tools-"] [data-testid="stIconMaterial"],
+.st-key-media-root [class*="st-key-media-s3-hist-head-"] [data-testid="stIconMaterial"] {
+  color: var(--color-text) !important;
+}
+[class*="st-key-media-s3-hist-tools-"] button:hover {
+  background: #7B6CF2;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-color: #7B6CF2;
+}
+.st-key-media-root [class*="st-key-media-s3-hist-tools-"] button:hover [data-testid="stIconMaterial"] {
+  color: var(--color-card) !important;
+}
+[class*="st-key-media-s3-hist-head-"] [data-testid="stCaptionContainer"] p,
+[class*="st-key-media-s3-hist-foot-"] label p {
+  white-space: nowrap;
+}
+[class*="st-key-media-s3-hist-head-"] [data-testid="stMarkdownContainer"] p {
+  white-space: nowrap;
+}
+/* 아주 낮은 화면(예: 1366×657): 위 '단일 변수' 줄을 숨기고(가설 목록 ⓘ·⑤에서 확인) 사진 칸을 조금 더 줄여 스크롤 없게 */
+@media (max-height: 700px) {
+  .st-key-media-s3-hist-right > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-info),
+  .st-key-media-s3-hist-info {
+    display: none;
+  }
+  .media-s3-hist-media,
+  [class*="st-key-media-s3-hist-video-"] video {
+    min-height: 50px;
+    height: calc(var(--media-s3-hh) - 150px);
+  }
+}
+
+/* 만든 결과 보기: 사진 A·B 위에 '그 사진만 다른 점' 띠 (두 줄까지, 넘치면 …, 마우스를 올리면 전체) */
+.media-s3-hist-media {
+  position: relative;
+}
+.media-s3-hist-tag {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  padding: 6px 10px;
+  border-radius: calc(var(--radius) - 8px);
+  background: color-mix(in srgb, var(--color-card) 92%, transparent);
+  border: 1px solid var(--color-border);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--color-text);
+  text-align: left;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* 왼쪽 목록 아래: 고른 가설 전체 문장 (남는 높이를 채우고 칸 안에서 스크롤) */
+.st-key-media-s3-hist-left > [data-testid="stElementContainer"]:has(.media-s3-hist-hypo) {
+  flex: 1 1 0;
+  min-height: 40px;
+}
+.st-key-media-s3-hist-left [data-testid="stElementContainer"]:has(.media-s3-hist-hypo) [data-testid="stMarkdown"],
+.st-key-media-s3-hist-left [data-testid="stElementContainer"]:has(.media-s3-hist-hypo) [data-testid="stMarkdown"] > div,
+.st-key-media-s3-hist-left [data-testid="stElementContainer"]:has(.media-s3-hist-hypo) [data-testid="stMarkdownContainer"] {
+  height: 100%;
+}
+.media-s3-hist-hypo {
+  height: 100%;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--color-text);
+}
+@media (max-height: 700px) {
+  .st-key-media-s3-hist-left > [data-testid="stElementContainer"]:has(.media-s3-hist-hypo) {
+    display: none;
+  }
+}
+
+/* ④ 이전/다음 줄 (media_s3_nav): 사진 → 영상 → 만든 결과 보기 → ⑤ 순서. ③ 공통 이전/다음 줄과 같은 모양 */
+[class*="st-key-media-s3-nav-"] {
+  margin-top: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  align-items: center;
+}
+[class*="st-key-media-s3-nav-"] [data-testid="stElementContainer"],
+[class*="st-key-media-s3-nav-"] .stButton {
+  margin: 0;
+  padding: 0;
+}
+/* ④에서는 ③ 공통 이전/다음 줄(media_page.py, 3번째 단계 = nav-2)을 숨김 (위 줄이 대신함) */
+.st-key-media-root:has(.st-key-media-s3-sub) .st-key-media-step-nav-2,
+.st-key-media-root:has(.st-key-media-s3-sub) [data-testid="stLayoutWrapper"]:has(> .st-key-media-step-nav-2) {
+  display: none;
+}
+
+/* 영상 초안 제작 탭에서는 ③ 공통 이전/다음 줄도 보여 줌 (2026-10-27): 위 ④ 줄 '다음: 만든 결과 보기'와 따로,
+   '← A/B 소재 준비'·'다음: 외주 정리 →'로 바로 가는 길. 둘 다 흰 버튼 (사진·만든 결과 보기 탭은 ④ 줄과 겹쳐서 숨김 그대로) */
+.st-key-media-root:has(.st-key-media-s3-sub [role="tab"]:nth-of-type(2)[aria-selected="true"]) .st-key-media-step-nav-2,
+.st-key-media-root:has(.st-key-media-s3-sub [role="tab"]:nth-of-type(2)[aria-selected="true"]) [data-testid="stLayoutWrapper"]:has(> .st-key-media-step-nav-2) {
+  display: flex;
+}
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled) {
+  background: var(--color-card) !important;
+  border: 1px solid #7B6CF2 !important;
+  box-shadow: none !important;
+}
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled):hover {
+  background: color-mix(in srgb, #7B6CF2 8%, var(--color-card)) !important;
+}
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled) p,
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled) span { color: #7B6CF2 !important; }
+
+/* ⑤ 외주 정리 (media_stage3_export_render): 사진·영상 탭처럼 100% 화면에서 스크롤 없이 한 화면
+   ④ 안쪽 탭 줄이 없어서 그만큼(약 60px) 더 씀. 넘치는 글은 카드 안에서만 스크롤 */
+.st-key-media-s3-export-row {
+  --media-s3-ex-h: max(270px, calc(100vh - 382px));
+  height: var(--media-s3-ex-h) !important;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+.st-key-media-s3-export-left {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--color-card);
+  overflow-y: auto;
+}
+.st-key-media-s3-export-right {
+  background: var(--color-card);
+  overflow-y: auto;
+}
+.media-s3-ex-body { font-size: 0.9rem; color: var(--color-text); line-height: 1.55; }
+.media-s3-ex-sec { margin-bottom: 14px; }
+.media-s3-ex-hypo {
+  margin: 6px 0 8px;
+  padding: 8px 12px;
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+}
+.media-s3-ex-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.media-s3-ex-table th, .media-s3-ex-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+.media-s3-ex-table th { width: 170px; color: var(--color-sub); font-weight: 600; }
+.media-s3-ex-note { margin-top: 6px; font-size: 0.8rem; color: var(--color-sub); }
+.media-s3-ex-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 6px; }
+.media-s3-ex-cols i { font-style: normal; font-weight: 600; color: var(--color-sub); font-size: 0.82rem; }
+.media-s3-ex-cols ul, .media-s3-ex-files ul { margin: 4px 0 0; padding-left: 18px; font-size: 0.85rem; }
+.media-s3-ex-files { font-size: 0.88rem; color: var(--color-text); }
+.media-s3-ex-file {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+}
+.media-s3-ex-merged li { color: var(--color-sub); font-size: 0.8rem; }
+.media-s3-ex-thumbs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.media-s3-ex-thumbs img {
+  width: 72px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+.media-s3-ex-thumbs span { color: var(--color-sub); font-size: 0.82rem; }
+.st-key-media-s3-export-foot { flex-wrap: nowrap; }
+.st-key-media-s3-export-foot [data-testid="stCaptionContainer"] p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 칸 안 내용이 길어도 줄 높이를 넘지 않게 (넘치는 것은 카드 안에서 스크롤) */
+.st-key-media-s3-export-row > *,
+.st-key-media-s3-export-left,
+.st-key-media-s3-export-right {
+  min-height: 0;
+  max-height: 100%;
+}
+.st-key-media-s3-export-row,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-export-row) {
+  min-height: 0 !important;   /* 내용이 길어도 줄이 늘어나지 않게 (flex 기본 최소 높이 = 내용 높이를 끔) */
+}
+.st-key-media-s3-export-row > [data-testid="stLayoutWrapper"] > [class*="st-key-media-s3-export-"] {
+  height: 100%;
+}
+/* 줄 높이는 감싸개(stLayoutWrapper)가 정하므로 감싸개에 화면 높이 기준 높이를 줌 */
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-export-row) {
+  flex: 0 0 auto !important;
+  height: max(270px, calc(100vh - 382px)) !important;
+}
+
+/* ④-3 만든 결과 보기 v2: 목록 → 열기(위 사진 A | 사진 B 반반, 아래 영상). 100% 화면에서 스크롤 없이 한 화면
+   --d-h = 이 영역 높이 (화면 높이 - 위 제목·탭 - 아래 ⑤로 넘기기 줄·이전/다음 줄). 칸마다 높이를 정하고 넘치면 칸 안에서만 스크롤 */
+.st-key-media-s3-hist-area {
+  --d-h: max(210px, calc(100vh - 438px));
+  --d-row: calc((var(--d-h) - 72px) / 2);   /* 위·아래 칸 높이 (반반) */
+}
+.st-key-media-s3-hist-list {
+  height: var(--d-h);
+  overflow-y: auto;
+  background: var(--color-card);
+}
+[class*="st-key-media-s3-hist-item-"] {
+  background: var(--color-bg);
+  flex-wrap: nowrap;
+}
+.media-s3-hist-item-text {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.media-s3-hist-item-text span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-sub);
+}
+.st-key-media-s3-hist-head { flex-wrap: nowrap; min-height: 40px; }
+.st-key-media-s3-hist-head [data-testid="stMarkdownContainer"] p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-key-media-s3-hist-ab { flex-wrap: nowrap; }
+.st-key-media-s3-hist-ab > [data-testid="stLayoutWrapper"] { flex: 1 1 0; min-width: 0; }
+[class*="st-key-media-s3-hist-card-"] {
+  height: var(--d-row);
+  overflow: auto;
+  background: var(--color-card);
+}
+[class*="st-key-media-s3-hist-card-"] > [data-testid="stElementContainer"]:first-child p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[class*="st-key-media-s3-hist-tiles-"] { flex-wrap: nowrap; }
+/* 버전 미리 보기: 칸 높이에 맞춰 (3:2), 영상도 같은 높이 */
+.media-s3-hist-thumb,
+[class*="st-key-media-s3-hist-vid-"] video {
+  height: max(60px, calc(var(--d-row) - 112px));
+  aspect-ratio: 3 / 2;
+  width: auto;
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+}
+.media-s3-hist-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.media-s3-hist-thumb img { width: 100%; height: 100%; object-fit: contain; }
+[class*="st-key-media-s3-hist-vid-"] video { object-fit: contain; }
+[class*="st-key-media-s3-hist-foot-"] { flex-wrap: nowrap; min-height: 32px; }
+[class*="st-key-media-s3-hist-foot-"] [data-testid="stCaptionContainer"] p { white-space: nowrap; }
+/* 높이는 감싸개(stLayoutWrapper)가 정하므로 감싸개에도 같은 높이를 줌 (내용이 많아도 늘어나지 않고 칸 안에서 스크롤) */
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-list) {
+  flex: 0 0 auto !important;
+  height: var(--d-h) !important;
+}
+[data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-card-"]) {
+  flex: 0 0 auto !important;
+  height: var(--d-row) !important;
+}
+.st-key-media-s3-hist-list,
+[class*="st-key-media-s3-hist-card-"] {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+.st-key-media-s3-hist-ab,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-ab) {
+  flex: 0 0 auto !important;
+  height: var(--d-row) !important;
+}
+.st-key-media-s3-hist-ab > [data-testid="stLayoutWrapper"] { height: 100% !important; }
+/* 목록 한 줄: 글은 남는 폭 전부, '열기'는 오른쪽 끝 */
+[class*="st-key-media-s3-hist-item-"] > [data-testid="stElementContainer"]:first-child { flex: 1 1 0; min-width: 0; }
+
+/* 만든 결과 보기 v3: 가설 기록 = 세로 카드 나란히 (날짜 → 가설 → 개수 → 버튼) */
+.st-key-media-s3-hist-listhead { flex-wrap: nowrap; }
+.st-key-media-s3-hist-listhead [data-testid="stMarkdownContainer"] p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-key-media-s3-hist-list,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-list) {
+  flex: 0 0 auto !important;
+  height: calc(var(--d-h) - 56px) !important;
+  overflow: visible;
+  background: transparent;
+  flex-wrap: nowrap;
+}
+.st-key-media-s3-hist-list > [data-testid="stLayoutWrapper"] { flex: 1 1 0; min-width: 0; height: 100%; max-width: 420px; }
+[class*="st-key-media-s3-hist-item-"] {
+  height: 100% !important;
+  background: var(--color-card);
+  overflow-y: auto;
+}
+[class*="st-key-media-s3-hist-item-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-date) { flex: 1 1 0; min-height: 0; overflow: hidden; }
+.media-s3-hist-date { font-weight: 700; font-size: 0.95rem; color: var(--color-text); margin-bottom: 6px; }
+.media-s3-hist-item-text {
+  -webkit-line-clamp: 7;
+  font-size: 0.86rem;
+}
+.media-s3-hist-meta { margin-top: 8px; font-size: 0.78rem; color: var(--color-sub); line-height: 1.5; }
+[class*="st-key-media-s3-hist-itembtn-"] { flex-wrap: nowrap; }
+/* 열었을 때 칸: 최신 한 장을 칸 높이에 맞춰 크게 */
+[class*="st-key-media-s3-hist-cardhead-"] { flex-wrap: nowrap; }
+[class*="st-key-media-s3-hist-cardhead-"] [data-testid="stMarkdownContainer"] p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[class*="st-key-media-s3-hist-card-"] .media-s3-hist-thumb,
+[class*="st-key-media-s3-hist-card-"] [class*="st-key-media-s3-hist-vid-"] video {
+  height: max(50px, calc(var(--d-row) - 125px));
+}
+/* '전부 보기' 팝업 안: 칸 높이 변수가 없어서 폭에 맞춘 3:2 */
+.st-key-media-s3-hist-dialog .media-s3-hist-thumb,
+.st-key-media-s3-hist-dialog [class*="st-key-media-s3-hist-vid-"] video {
+  height: auto;
+  width: 100%;
+}
+.st-key-media-s3-hist-dialog [class*="st-key-media-s3-hist-tile-"] { width: 100% !important; }
+
+/* v3b: A·B는 반반 나란히 크게, 영상은 아래 얇은 줄 */
+.st-key-media-s3-hist-area { --d-ab: calc(var(--d-h) - 56px - 122px); }   /* 위 제목 줄·아래 영상 줄을 뺀 A·B 높이 */
+.st-key-media-s3-hist-ab,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-ab) {
+  height: var(--d-ab) !important;
+}
+.st-key-media-s3-hist-ab > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-card-"]) {
+  flex: 1 1 0 !important;
+  min-width: 0;
+  height: 100% !important;
+}
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-card-V),
+.st-key-media-s3-hist-card-V {
+  height: auto !important;
+}
+.st-key-media-s3-hist-card-A .media-s3-hist-thumb,
+.st-key-media-s3-hist-card-B .media-s3-hist-thumb {
+  height: max(50px, calc(var(--d-ab) - 128px));
+}
+/* 팝업은 ③ 탭 밖에 그려져서 아이콘 색을 따로 맞춤 */
+.st-key-media-s3-hist-dialog [class*="st-key-media-s3-hist-tools-"] [data-testid="stIconMaterial"],
+.st-key-media-s3-hist-dialog [class*="st-key-media-s3-hist-tools-"] button p {
+  color: var(--color-text) !important;
+}
+
+/* v4: 열었을 때 사진 A | 사진 B | 영상 세 칸 세로로 나란히 (한 장씩 크게, 맨 위 한 줄에 넘기기·⑤·내려받기·지우기·전부 보기)
+   --d-col = 칸 높이 (영역 높이 - 위 '가설 목록' 줄) */
+.st-key-media-s3-hist-area { --d-col: calc(var(--d-h) - 56px); }
+.st-key-media-s3-hist-cols,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-cols) {
+  flex: 0 0 auto !important;
+  height: var(--d-col) !important;
+  flex-wrap: nowrap;
+}
+.st-key-media-s3-hist-cols > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-card-"]) {
+  flex: 1 1 0 !important;
+  min-width: 0;
+  height: 100% !important;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] {
+  height: 100% !important;
+  padding: 10px 12px;
+  gap: 8px;
+  overflow: hidden;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] { flex-wrap: nowrap; min-height: 32px; }
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] button {
+  min-height: 28px;
+  height: 28px;
+  width: 28px;
+  padding: 0;
+  border-radius: 50%;
+}
+.st-key-media-root [class*="st-key-media-s3-hist-cardhead-"] [data-testid="stIconMaterial"] { color: var(--color-text) !important; }
+[class*="st-key-media-s3-hist-cardhead-"] [data-testid="stCaptionContainer"] p,
+[class*="st-key-media-s3-hist-cardhead-"] [data-testid="stMarkdownContainer"] p { white-space: nowrap; }
+/* 큰 미리 보기: 칸의 남는 높이 전부 (사진은 잘리지 않게 contain) */
+.media-s3-hist-big,
+[class*="st-key-media-s3-hist-bigvid-"] video {
+  position: relative;
+  width: 100%;
+  height: max(70px, calc(var(--d-col) - 62px));
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+}
+.media-s3-hist-big { display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.media-s3-hist-big img { max-width: 100%; max-height: 100%; object-fit: contain; }
+[class*="st-key-media-s3-hist-bigvid-"] video { object-fit: contain; }
+
+/* v4b: 칸 머리 줄 버튼은 연한 동그라미 + 진한 아이콘, 제목은 잘리지 않게, 다른 점 띠는 한 줄 */
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] button {
+  background: var(--color-bg) !important;
+  border: 1px solid var(--color-border) !important;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] button:disabled { opacity: 0.4; }
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] > [data-testid="stElementContainer"]:first-child {
+  flex: 0 0 auto;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] [data-testid="stMarkdownContainer"] p { overflow: visible; }
+.st-key-media-s3-hist-cols .media-s3-hist-tag { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* v4c: 큰 미리 보기는 칸에 남은 높이에 딱 맞춤 (계산값 대신 flex로 채움 → 어느 화면에서도 잘리지 않음) */
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-big),
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-bigvid-"]) {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+}
+.st-key-media-s3-hist-cols [data-testid="stElementContainer"]:has(.media-s3-hist-big) [data-testid="stMarkdown"],
+.st-key-media-s3-hist-cols [data-testid="stElementContainer"]:has(.media-s3-hist-big) [data-testid="stMarkdown"] > div,
+.st-key-media-s3-hist-cols [data-testid="stElementContainer"]:has(.media-s3-hist-big) [data-testid="stMarkdownContainer"],
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-bigvid-"],
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-bigvid-"] > [data-testid="stElementContainer"],
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-bigvid-"] [data-testid="stVideo"] {
+  height: 100% !important;
+}
+.st-key-media-s3-hist-cols .media-s3-hist-big,
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-bigvid-"] video {
+  height: 100% !important;
+  min-height: 0;
+}
+/* 사진 아래 '다른 점' 한 줄 (넘치면 …, 마우스를 올리면 ⓘ에 전체) */
+[class*="st-key-media-s3-hist-diff-"] [data-testid="stCaptionContainer"] p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-diff-"]),
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-cardhead-"]) {
+  flex: 0 0 auto !important;   /* 머리 줄·다른 점 줄은 줄어들지 않고, 남는 높이만 사진이 씀 */
+}
+
+/* 만든 결과 보기: 사진 아래 '다른 점' 칩 (진한 글씨 한 줄, 줄어들지 않고 사진이 남는 높이를 씀) */
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-diff) {
+  flex: 0 0 auto !important;
+}
+.media-s3-hist-diff {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 사진 A·B 칸: 다른 점 칩 자리(약 38px)를 빼고 사진 높이를 정확히 정함 (칩이 잘리지 않게) */
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-A > [data-testid="stElementContainer"]:has(.media-s3-hist-big),
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-B > [data-testid="stElementContainer"]:has(.media-s3-hist-big) {
+  flex: 0 0 auto !important;
+  height: max(50px, calc(var(--d-col) - 96px)) !important;
+}
+
+/* ⑤ 보낼 파일: 사진·영상에 마우스를 올리면 🗑 (이번 외주 보내기에서 빼기) */
+.st-key-media-s3-ex-photos,
+.st-key-media-s3-ex-videos {
+  padding: 8px 10px;
+  border-radius: calc(var(--radius) - 8px);
+  background: var(--color-bg);
+  gap: 6px;
+}
+.st-key-media-s3-ex-thumbs { flex-wrap: wrap; }
+[class*="st-key-media-s3-ex-ph-"] { position: relative; }
+.media-s3-ex-thumb {
+  width: 84px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  display: block;
+}
+[class*="st-key-media-s3-ex-ph-"] > [data-testid="stElementContainer"]:has(button) {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: auto;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+[class*="st-key-media-s3-ex-ph-"]:hover > [data-testid="stElementContainer"]:has(button),
+[class*="st-key-media-s3-ex-vd-"]:hover button { opacity: 1; }
+[class*="st-key-media-s3-ex-vd-"] button { opacity: 0; transition: opacity 0.15s; }
+[class*="st-key-media-s3-ex-ph-"] button,
+[class*="st-key-media-s3-ex-vd-"] button {
+  min-height: 26px;
+  height: 26px;
+  width: 26px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--color-card) !important;
+  border: 1px solid var(--color-border);
+}
+.st-key-media-root [class*="st-key-media-s3-ex-ph-"] [data-testid="stIconMaterial"],
+.st-key-media-root [class*="st-key-media-s3-ex-vd-"] [data-testid="stIconMaterial"] { color: var(--color-text) !important; font-size: 1rem; }
+[class*="st-key-media-s3-ex-vd-"] { flex-wrap: nowrap; }
+[class*="st-key-media-s3-ex-vd-"] [data-testid="stCaptionContainer"] p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-key-media-s3-ex-head { flex-wrap: wrap; }
+
+/* 스토리보드 크게 보기 팝업 표: 칸 안에서 줄바꿈해 잘리지 않게 (가로 스크롤 없이 한 번에) */
+.media-s3-sb-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+.media-s3-sb-table th,
+.media-s3-sb-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.media-s3-sb-table th { color: var(--color-sub); font-weight: 600; background: var(--color-bg); }
+.media-s3-sb-table th:nth-child(1) { width: 9%; }
+.media-s3-sb-table th:nth-child(2) { width: 6%; }
+.media-s3-sb-table th:nth-child(3) { width: 27%; }
+.media-s3-sb-table th:nth-child(4) { width: 20%; }
+.media-s3-sb-table th:nth-child(5) { width: 20%; }
+.media-s3-sb-table th:nth-child(6) { width: 18%; }
+/* 스토리보드 크게 보기 팝업만 화면 폭 거의 끝까지 넓혀 줄바꿈을 줄임 (세로 스크롤 없이 한 번에) */
+div[role="dialog"]:has(.media-s3-sb-table) {
+  width: 96vw !important;
+  max-width: 96vw !important;
+}
+
+/* 만든 영상 팝업 창 (media_s3_video_dialog): 영상 높이는 화면 높이의 60% 정도 (스크롤 없이) */
+.st-key-media-s3-video-dialog video {
+  max-height: min(60vh, 600px);
+  width: 100%;
+  object-fit: contain;
+  background: #000;
+  border-radius: 10px;
+}
+
+/* ④ 안쪽 탭(사진 초안 제작 · 영상 초안 제작 · 만든 결과 보기)은 위 단계 탭(알약 버튼)과 구분되게
+   밑줄 탭으로: 테두리·배경 없이 글자만, 고른 탭은 굵은 글자 + 아래 진한 줄. 탭 줄 아래 얇은 선 */
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tablist"] {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  gap: 22px;
+  padding: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"] {
+  flex: 0 0 auto;
+  padding: 6px 2px 8px !important;
+  margin-bottom: -1px;
+  border: none !important;
+  border-bottom: 2.5px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--color-sub) !important;
+}
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"]:hover {
+  background: transparent !important;
+  color: #7B6CF2 !important;
+  border-bottom-color: color-mix(in srgb, #7B6CF2 35%, transparent) !important;
+}
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"][aria-selected="true"] {
+  background: transparent !important;
+  color: #7B6CF2 !important;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-bottom-color: #7B6CF2 !important;
+  box-shadow: none !important;
+}
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"] p {
+  font-size: 13.5px;
+}
+.st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"][aria-selected="true"] p {
+  color: #7B6CF2 !important;
+  font-weight: 700;
+}
+
+/* ④ 탭 바 오른쪽 칩 (media_s3_summary_chip): 독립 변수 + 목표 KPI 한 줄.
+   ④에서는 공통 목표 KPI 칩(media_style.css의 .st-key-media-kpi-chip)을 숨기고 이 칩을 같은 자리에 띄움 */
+.st-key-media-root:has(.st-key-media-s3-chip) [data-testid="stLayoutWrapper"]:has(> .st-key-media-kpi-chip),
+.st-key-media-root:has(.st-key-media-s3-chip) .st-key-media-kpi-chip {
+  display: none !important;
+}
+.st-key-media-s3-chip {
+  width: fit-content !important;
+  margin-left: auto;
+  padding: 6px 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+.st-key-media-s3-chip p {
+  font-size: 14px;
+  white-space: nowrap;   /* 공통 목표 KPI 칩과 같은 모양 (글자를 자르지 않음) */
+}
+@media (min-width: 1280px) {
+  [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-chip) {
+    position: absolute;
+    top: -41px;   /* 공통 KPI 칩과 같은 자리 (하위 탭 바와 같은 줄) */
+    right: 0;
+    z-index: 1;
+    width: auto !important;
+    pointer-events: none;
+  }
+  .st-key-media-s3-chip {
+    pointer-events: auto;
+  }
+}
+
+/* ⑤ 브리프 1·2번 작은 제목(① 왜 찍나 …)은 제목 줄과 따로 한 줄씩 */
+.media-s3-ex-sec > i {
+  display: block;
+  margin: 8px 0 2px;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--color-sub);
+}
+.media-s3-ex-sec > b {
+  display: block;
+}
+
+/* 초안 영상의 한국어 설명 자막(media_s3_video_subs): 영상을 덜 가리게 작게 */
+.st-key-media-root video::cue {
+  font-size: 13px;
+  line-height: 1.35;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* 만든 결과 보기 v5: 가설 카드 = 날짜 → 단일 변수 → B안 → (맨 아래) 개수 · 작은 '외주로 보내기'. 스크롤 없음.
+   카드 전체가 '열기' 버튼 (투명 버튼이 카드를 덮고, '외주로 보내기'만 그 위에 올라옴). 가설 전문은 열었을 때 맨 위에서 봄 */
+[class*="st-key-media-s3-hist-item-"] {
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+[class*="st-key-media-s3-hist-item-"]:hover {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+[class*="st-key-media-s3-hist-item-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-date) { overflow: hidden; }
+[class*="st-key-media-s3-hist-openbtn-"] {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1;
+  margin: 0 !important;
+}
+[class*="st-key-media-s3-hist-openbtn-"] > div,
+[class*="st-key-media-s3-hist-openbtn-"] button {
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0;
+  cursor: pointer;
+}
+.media-s3-hist-date { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.85rem; color: var(--color-sub); }
+.media-s3-hist-now {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #16a34a 14%, transparent);
+  color: #15803d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.media-s3-hist-var { margin-top: 6px; font-weight: 700; font-size: 1rem; color: var(--color-text); line-height: 1.4; }
+.media-s3-hist-b {
+  margin-top: 6px;
+  font-size: 0.84rem;
+  color: var(--color-sub);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.media-s3-hist-b b { color: var(--color-primary); margin-right: 4px; }
+/* 맨 아래 줄: 개수 + 작은 보내기 (카드 덮개 버튼보다 위) */
+[class*="st-key-media-s3-hist-itembtn-"] {
+  position: relative;
+  z-index: 2;
+  flex-wrap: nowrap;
+  min-height: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+  pointer-events: none;
+}
+[class*="st-key-media-s3-hist-itembtn-"] > * { pointer-events: auto; }
+.media-s3-hist-meta { margin-top: 0; font-size: 0.75rem; white-space: nowrap; }
+[class*="st-key-media-s3-hist-send-"] button {
+  min-height: 0 !important;
+  height: 30px;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  background: var(--color-card) !important;
+  border: 1px solid var(--color-primary) !important;
+  white-space: nowrap;
+}
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button p,
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] [data-testid="stIconMaterial"] {
+  color: var(--color-primary) !important;
+  font-size: 0.78rem !important;
+  font-weight: 600;
+}
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button:hover { background: var(--color-primary) !important; }
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button:hover p,
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button:hover [data-testid="stIconMaterial"] { color: #fff !important; }
+.media-s3-hist-sent {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #16a34a 14%, transparent);
+  color: #15803d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* 열었을 때: 제목 줄에 가설 전문을 줄바꿈해 다 보여 주고(스크롤 없음), 아래 세 칸이 남는 높이를 씀 */
+.st-key-media-s3-hist-area:has(.st-key-media-s3-hist-cols) { height: var(--d-h); }
+.st-key-media-s3-hist-head { flex-wrap: nowrap; align-items: center; }
+.st-key-media-s3-hist-head > [data-testid="stElementContainer"]:has(.media-s3-hist-headtext) { flex: 1 1 0; min-width: 0; }
+.media-s3-hist-headtext { font-size: 0.86rem; line-height: 1.5; color: var(--color-text); }
+.media-s3-hist-headtext b { color: var(--color-primary); }
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-cols),
+.st-key-media-s3-hist-cols {
+  flex: 1 1 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-A > [data-testid="stElementContainer"]:has(.media-s3-hist-big),
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-B > [data-testid="stElementContainer"]:has(.media-s3-hist-big) {
+  flex: 1 1 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+/* 카드 높이는 고정 (빈 공간 없이, 카드끼리 같은 높이). 글 칸이 남는 높이를 쓰고 B안은 넘치면 …로 */
+.st-key-media-s3-hist-list,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-list) { height: 200px !important; }
+[class*="st-key-media-s3-hist-item-"] { height: 100% !important; }
+[class*="st-key-media-s3-hist-item-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-date) { flex: 1 1 0 !important; min-height: 0 !important; }
+/* 열었을 때: 제목 줄(가설 전문, 최대 3줄 자리)을 뺀 높이를 아래 세 칸에 (계산값이라 칸이 접히지 않음) */
+.st-key-media-s3-hist-area:has(.st-key-media-s3-hist-cols) { height: auto; }
+.st-key-media-s3-hist-area { --d-col: calc(var(--d-h) - 88px); }
+.st-key-media-s3-hist-head { min-height: 72px; }
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-cols),
+.st-key-media-s3-hist-cols {
+  flex: 0 0 auto !important;
+  height: var(--d-col) !important;
+}
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-A > [data-testid="stElementContainer"]:has(.media-s3-hist-big),
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-B > [data-testid="stElementContainer"]:has(.media-s3-hist-big) {
+  flex: 0 0 auto !important;
+  height: max(50px, calc(var(--d-col) - 96px)) !important;
+}
+.media-s3-hist-b { -webkit-line-clamp: 3; }
+
+/* ── 영상 A·B 초안 제목 줄 (2026-10-27): '프롬프트 보기'를 작은 알약으로 줄이고 제목·물음표를 한 줄에 (높이를 줄여 스크롤 줄임) ── */
+.st-key-media-s3-video-head [data-testid="stMarkdown"] > div { flex-wrap: nowrap; }
+.st-key-media-s3-video-head [data-testid="stMarkdownContainer"] p { white-space: nowrap; }
+.st-key-media-root .st-key-media-s3-btn-view-video button {
+  min-height: 30px !important;
+  padding: 2px 12px !important;
+  border-radius: 999px !important;
+}
+.st-key-media-root .st-key-media-s3-btn-view-video button p { font-size: 13px; }
+
+/* ── 영상 초안 제작: 오른쪽 영상 카드 높이를 왼쪽 스토리보드 카드와 같게 (2026-10-27) ──
+   줄 전체 높이는 예전 그대로(--media-s3-h - 20px) 두고, 왼쪽 칸을 풀어(display: contents) 줄을 격자로 바꿈:
+   1행 = 스토리보드 카드 | 영상 카드 (같은 높이), 2행 = 왼쪽 아래 줄(만든 영상 보기·사용법·넘기기), 3행 = 안내 한 줄.
+   화면 높이·글자 크기가 달라도 격자가 아래 줄 높이를 빼고 나눠서 두 카드 아래 끝이 항상 같음 */
+.st-key-media-s3-video-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
+  grid-auto-rows: auto;
+  column-gap: 1rem;
+  row-gap: 1rem;
+  height: calc(var(--media-s3-h) - 20px);
+}
+.st-key-media-s3-video-row > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-left),
+.st-key-media-s3-video-row .st-key-media-s3-video-left {
+  display: contents !important;
+}
+.st-key-media-s3-video-row > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-right) {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 0;
+}
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-sb-card) {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+}
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-actions) {
+  grid-column: 1;
+  grid-row: 2;
+}
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-note) {
+  grid-column: 1;
+  grid-row: 3;
+}
+.st-key-media-s3-video-right,
+.st-key-media-s3-video-right > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-card),
+.st-key-media-s3-video-row .st-key-media-s3-video-card {
+  height: 100% !important;
+  min-height: 0;
+}
+
+
+/* 2026-10-27 정리: 영상 A·B 초안 제목 줄 = 제목(물음표) · 작은 목표 칩 · 오른쪽 작은 '프롬프트' 글자 버튼 */
+.st-key-media-s3-video-head { gap: 8px; min-height: 36px; }
+.media-s3-video-goal {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.st-key-media-root .st-key-media-s3-btn-view-video button {
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 999px !important;
+  background: var(--color-card) !important;
+}
+.st-key-media-root .st-key-media-s3-btn-view-video button p,
+.st-key-media-root .st-key-media-s3-btn-view-video [data-testid="stIconMaterial"] { font-size: 12px !important; color: var(--color-sub) !important; }
+.st-key-media-root .st-key-media-s3-btn-view-video button:hover { border-color: #7B6CF2 !important; }
+
+/* 2026-10-27 정리: 가설 카드 아래 줄 = 왼쪽 개수(남는 폭, 넘치면 …) · 오른쪽 작은 보내기 (서로 겹치지 않게) */
+[class*="st-key-media-s3-hist-itembtn-"] { gap: 8px; justify-content: space-between; }
+[class*="st-key-media-s3-hist-itembtn-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-meta) { flex: 1 1 0; min-width: 0; }
+.media-s3-hist-meta { overflow: hidden; text-overflow: ellipsis; font-size: 0.75rem; color: var(--color-sub); }
+[class*="st-key-media-s3-hist-itembtn-"] > [data-testid="stElementContainer"]:has([class*="st-key-media-s3-hist-send-"]),
+[class*="st-key-media-s3-hist-itembtn-"] > [class*="st-key-media-s3-hist-send-"],
+[class*="st-key-media-s3-hist-itembtn-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-sent) { flex: 0 0 auto; }
+[class*="st-key-media-s3-hist-send-list-"] button { height: 28px; padding: 0 10px !important; }
+.media-s3-hist-sent { padding: 3px 10px; font-size: 0.74rem; }
+
+/* 스토리보드 크게 보기 · 고치기 팝업 (media_s3_storyboard_edit_dialog): 화면 폭 거의 끝까지, 칸 제목은 표 머리처럼 */
+div[role="dialog"]:has(.st-key-media-s3-sb-edit) {
+  width: 96vw !important;
+  max-width: 96vw !important;
+}
+.media-s3-sb-edit-head { font-size: 0.8rem; font-weight: 600; color: var(--color-sub); padding: 2px 2px 0; }
+.st-key-media-s3-sb-edit textarea { font-size: 0.8rem; line-height: 1.45; }
+.st-key-media-s3-sb-edit [data-testid="stHorizontalBlock"] { gap: 8px; }
+/* 팝업은 ③ 탭(.st-key-media-root) 밖에 그려져 탭의 버튼 색 규칙이 안 걸림 → 여기서 직접 (글자가 안 보이던 문제) */
+.st-key-media-s3-sb-edit button[kind="primaryFormSubmit"] {
+  background: #7B6CF2 !important;
+  border: 1px solid #7B6CF2 !important;
+}
+.st-key-media-s3-sb-edit button[kind="primaryFormSubmit"]:hover { background: color-mix(in srgb, #7B6CF2 86%, #000) !important; }
+.st-key-media-s3-sb-edit button[kind="primaryFormSubmit"] p { color: #fff !important; }
+.st-key-media-s3-sb-edit button[kind="secondaryFormSubmit"] {
+  background: var(--color-card) !important;
+  border: 1px solid #7B6CF2 !important;
+}
+.st-key-media-s3-sb-edit button[kind="secondaryFormSubmit"] p { color: #7B6CF2 !important; }
+
+/* 2026-10-27 정리 2: 가설 카드 아래 줄 높이·세로 위치를 모든 카드에서 같게.
+   줄 높이 고정(38px) + 가운데 정렬, 안쪽 글·버튼의 기본 여백 제거, '외주로 보내기'와 '✔ 외주로 보냄'은 같은 크기 알약 */
+[class*="st-key-media-s3-hist-itembtn-"] {
+  height: 38px !important;
+  min-height: 38px !important;
+  padding-top: 8px !important;
+  align-items: center !important;
+  flex: 0 0 auto !important;
+}
+[class*="st-key-media-s3-hist-itembtn-"] > * { margin: 0 !important; align-self: center !important; }
+[class*="st-key-media-s3-hist-itembtn-"] [data-testid="stMarkdown"],
+[class*="st-key-media-s3-hist-itembtn-"] [data-testid="stMarkdownContainer"],
+[class*="st-key-media-s3-hist-itembtn-"] [data-testid="stMarkdownContainer"] > div { margin: 0 !important; padding: 0 !important; }
+.media-s3-hist-meta { margin: 0 !important; line-height: 30px; letter-spacing: 0; }
+[class*="st-key-media-s3-hist-send-list-"] button,
+.media-s3-hist-sent {
+  box-sizing: border-box;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.76rem;
+}
+.media-s3-hist-sent { border: 1px solid color-mix(in srgb, #16a34a 35%, transparent); line-height: 1; }
+.media-s3-hist-sent { width: max-content; gap: 4px; white-space: nowrap; }
+[class*="st-key-media-s3-hist-itembtn-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-sent) { width: auto !important; min-width: 120px; overflow: visible; }
+.media-s3-hist-sent { min-width: 120px; justify-content: center; }
+/* 크게 보기 · 고치기: 고칠 수 없는 칸(장면·길이)은 회색 글로, 팝업 안 여백을 줄여 스크롤 없이 한 화면 */
+.media-s3-sb-edit-fixed {
+  min-height: 76px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-sub);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.st-key-media-s3-sb-edit [data-testid="stVerticalBlock"] { gap: 6px !important; }
+.st-key-media-s3-sb-edit textarea { padding: 8px 10px !important; }
+div[role="dialog"]:has(.st-key-media-s3-sb-edit) { margin-top: 2vh !important; margin-bottom: 0 !important; }
+
+/* 2026-10-27: 열었을 때 네 칸(사진 A · 사진 B · 영상 A · 영상 B) — 칸이 좁아져 머리 줄 아이콘을 작게, 영상은 칸 높이 안에 */
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] { gap: 4px !important; }
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] button {
+  width: 26px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  padding: 0 !important;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] [data-testid="stIconMaterial"] { font-size: 16px !important; }
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] [data-testid="stCheckbox"] label p { font-size: 0.78rem; }
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-V"] > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-bigvid-"]) {
+  overflow: hidden;
+  min-height: 0 !important;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-V"] video { max-height: 100%; }
+
+/* 2026-10-27 크게 보기 · 고치기 v2: 위 표(읽기만) + 아래 '첫 3초 · B' 고치는 칸. 글자 작게, 스크롤 없이 한 화면 */
+.media-s3-sb-table-edit { font-size: 0.76rem; line-height: 1.38; margin-bottom: 4px; }
+.media-s3-sb-table-edit td { padding: 4px 8px; }
+.media-s3-sb-table-edit tr.media-s3-sb-b td { background: color-mix(in srgb, #7B6CF2 9%, transparent); color: var(--color-text); }
+.media-s3-sb-table-edit tr.media-s3-sb-b td:first-child { font-weight: 700; color: #7B6CF2; }
+.media-s3-sb-edit-title { font-size: 0.82rem; font-weight: 600; color: #7B6CF2; margin: 2px 0 2px; }
+.st-key-media-s3-sb-edit [data-testid="stWidgetLabel"] p { font-size: 0.76rem; color: var(--color-sub); }
+.st-key-media-s3-sb-edit [data-testid="stVerticalBlock"] { gap: 6px; }
+
+/* 2026-10-27: 카드 아무 데나 한 번 누르면 열리게 — 덮개 버튼과 그 안의 모든 감싸개를 카드 크기로 (예전: 실제 버튼이 위 40px뿐),
+   아래 개수 글자는 누름을 막지 않게 (보내기 버튼만 따로 눌림) */
+[class*="st-key-media-s3-hist-openbtn-"] div,
+[class*="st-key-media-s3-hist-openbtn-"] button {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+}
+[class*="st-key-media-s3-hist-itembtn-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-meta) { pointer-events: none; }
+
+/* 스토리보드 크게 보기 · 고치기 팝업이 열려 있는 동안 뒤 화면의 말풍선(도움말)은 숨김
+   (팝업을 열 때 마우스가 올라가 있던 버튼·물음표의 말풍선이 닫히지 않고 팝업 위에 남던 문제, 2026-10-27) */
+body:has(.st-key-media-s3-sb-edit) [data-testid="stTooltipContent"],
+body:has(.st-key-media-s3-sb-edit) [data-baseweb="tooltip"] {
+  display: none !important;
+}

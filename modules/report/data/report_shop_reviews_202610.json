@@ -1,0 +1,139 @@
+{
+  "note": "서리 자사몰 리뷰 (가정: 서리 실적 = SleepCOOL이라, SleepCOOL 공식몰 sleepcool.de의 Trusted Shops 실제 리뷰를 서리 자사몰 리뷰로 사용). 상점 전체(토퍼·이불·베개 등) 리뷰라 매트리스 패드 관련은 items에서 따로 표시. 리뷰 문구는 Trusted Shops 페이지에 보이는 원문 일부(최대 125자 발췌). 서리 리뷰 수 = Amazon + 자사몰로 합산 (2026-10-25 결정, 경쟁사는 Amazon 리뷰만이라 기준이 다름). SleepCOOL은 Outlast(온도 조절) 방식이라 서리(PE 접촉냉감)와 냉감 원리가 다름",
+  "source": "Trusted Shops - sleepcool.de 상점 리뷰",
+  "url": "https://www.trustedshops.de/bewertung/info_XC535AD6FF28ECFA76E6652C1AC4B06AE.html",
+  "fetched_at": "2026-10-25",
+  "shop": {
+    "rating": 4.56,
+    "scale": 5,
+    "reviews": 646,
+    "since": "2020-05-06",
+    "distribution_pct": {
+      "5": 72,
+      "4": 18,
+      "3": 6,
+      "2": 1,
+      "1": 2
+    }
+  },
+  "items": [
+    {
+      "date": "2026-08-21",
+      "product": "Matratzenauflage COOL.XPERIENCE",
+      "pad": true,
+      "tone": "긍정",
+      "theme": "냉감 체감",
+      "quote": "Der Kühleffekt ist deutlich spürbar und funktioniert gut mit einem Leinen-Spannbettlaken.",
+      "ko": "냉감이 확실히 느껴지고 린넨 매트리스 시트와 함께 쓰면 잘 작동함"
+    },
+    {
+      "date": "2026-08-27",
+      "product": "Matratzenauflage Cool.cloud",
+      "pad": true,
+      "tone": "긍정",
+      "theme": "냉감 체감",
+      "quote": "Die versprochene Klimaregulierung funktioniert tatsächlich, kein Schwitzen und kein Frieren",
+      "ko": "약속한 온도 조절이 실제로 됨, 땀도 안 나고 춥지도 않음"
+    },
+    {
+      "date": "2026-08-08",
+      "product": "Matratzenauflage",
+      "pad": true,
+      "tone": "긍정",
+      "theme": "냉감 체감",
+      "quote": "Die Matrazenauflage ist von guter Qualität und gefühlt etwas kühler als vorher.",
+      "ko": "품질이 좋고 전보다 조금 더 시원하게 느껴짐"
+    },
+    {
+      "date": "2026-10-22",
+      "product": "Unterbett",
+      "pad": true,
+      "tone": "긍정",
+      "theme": "수면 개선",
+      "quote": "Ich schlafe mit dem sleepcool Unterbett sehr viel besser.",
+      "ko": "sleepcool 매트리스 패드로 훨씬 잘 잠 (게시일 '3일 전' 기준)"
+    },
+    {
+      "date": "2026-07-07",
+      "product": "Matratzenauflage",
+      "pad": true,
+      "tone": "중립",
+      "theme": "수면 개선",
+      "quote": "Ich schlafe tatsächlich besser. Ich habe Hitze Schübe und es ist immer noch warm.",
+      "ko": "실제로 더 잘 자지만, 열감(갱년기 열감)이 있으면 여전히 더움"
+    },
+    {
+      "date": "2026-08-07",
+      "product": "Matratzenauflage",
+      "pad": true,
+      "tone": "부정",
+      "theme": "커버·시트를 덮으면 냉감 약함",
+      "quote": "Also die Matratzen Auflage kühlt nicht, wenn ein Betttuch drüber ist.",
+      "ko": "위에 시트를 덮으면 매트리스 패드가 시원하지 않음"
+    },
+    {
+      "date": "2026-07-04",
+      "product": "제품명 없음 (커버 언급)",
+      "pad": false,
+      "tone": "중립",
+      "theme": "커버·시트를 덮으면 냉감 약함",
+      "quote": "Allerdings finde ich den Kühleffekt deutlich intensiver ohne Bezug.",
+      "ko": "커버 없이 쓸 때 냉감이 훨씬 강함"
+    },
+    {
+      "date": "2026-05-31",
+      "product": "여름·겨울 이불 세트",
+      "pad": false,
+      "tone": "중립",
+      "theme": "커버·시트를 덮으면 냉감 약함",
+      "quote": "Finger weg von synthetischen Stoffen. Sonst kann das System nicht funktionieren.",
+      "ko": "합성섬유 커버를 쓰면 효과가 안 남"
+    },
+    {
+      "date": "2026-08-20",
+      "product": "Matratzenauflage",
+      "pad": true,
+      "tone": "중립",
+      "theme": "경쟁 제품보다 냉감 약함",
+      "quote": "allerdings war mein altes Outlast-Unterbett von Diamona etwas kühler!",
+      "ko": "예전에 쓰던 다른 브랜드(Diamona) Outlast 패드가 조금 더 시원했음"
+    },
+    {
+      "date": "2026-09-21",
+      "product": "제품명 없음",
+      "pad": false,
+      "tone": "부정",
+      "theme": "경쟁 제품보다 냉감 약함",
+      "quote": "Ich finde, der Kühleffekt könnte etwas besser sein. Das kann die Konkurrenz besser.",
+      "ko": "냉감이 더 좋았으면 함, 경쟁사가 더 잘함"
+    },
+    {
+      "date": "2026-07-12",
+      "product": "제품명 없음",
+      "pad": false,
+      "tone": "중립",
+      "theme": "차가운 매트가 아니라 온도 균형형",
+      "quote": "Man schläft gut darauf aber man darf sich keine Kühlmatte vorstellen.",
+      "ko": "잘 자지만 차가운 쿨매트를 기대하면 안 됨"
+    },
+    {
+      "date": "2026-05-06",
+      "product": "Bettdecke Cool.BREEZE",
+      "pad": false,
+      "tone": "긍정",
+      "theme": "차가운 매트가 아니라 온도 균형형",
+      "quote": "Nicht „eiskalt“, sondern einfach viel ausgeglichener vom Schlafklima her.",
+      "ko": "'얼음처럼 차갑지'는 않고 잠자리 온도가 훨씬 고름"
+    },
+    {
+      "date": "2026-07-29",
+      "product": "Topper",
+      "pad": false,
+      "tone": "중립",
+      "theme": "차가운 매트가 아니라 온도 균형형",
+      "quote": "Der \"cooling\"-Effekt ist eher ein ausgleichender Effekt.",
+      "ko": "'쿨링' 효과라기보다 온도를 고르게 해 주는 효과"
+    }
+  ],
+  "limits": "Trusted Shops 페이지 1·2쪽에 보이는 리뷰 약 40개 중 냉감·매트리스 패드 관련만 골라 담음 (상점 전체 646개 중 일부). 개별 리뷰 별점은 페이지에 표시되지 않아 tone(긍정·중립·부정)은 문구로 분류. 문구는 최대 125자 발췌"
+}

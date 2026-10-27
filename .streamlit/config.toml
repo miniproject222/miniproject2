@@ -1,0 +1,7 @@
+# Streamlit 공통 설정 (PM) - GitHub에 올라갑니다
+[theme]
+base = "light"
+primaryColor = "#504E76"
+backgroundColor = "#F5F6FB"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#504E76"

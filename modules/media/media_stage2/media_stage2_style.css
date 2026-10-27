@@ -1,0 +1,641 @@
+/* 3. 매체 제작 > 2단계: 프롬프트 만들기 - class는 media-s2- 로 시작, 색상은 공통 변수만 사용
+   이 파일은 media_page.py가 3번 탭을 열 때 읽어 화면에 넣습니다.
+   위젯에 key="media-s2-이름"을 붙이면 .st-key-media-s2-이름 class로 꾸밀 수 있습니다. */
+
+/* ①에서 확정하기 전 빈 상태 카드 (media_stage2.py key="media-s2-ab-empty") - 하위 탭 ①의 빈 카드와 같은 점선 모양 */
+.st-key-media-s2-ab-empty {
+  border-style: dashed !important;
+  background: var(--color-bg);
+  text-align: center;
+}
+
+/* A·B 소재 카드 (media_stage2.py media_s2_ab_section): HTML 격자 두 칸 - 두 칸 폭·높이가 항상 같고 글이 길어도 잘리지 않음.
+   세로를 줄여 아래 'A안·B안 프롬프트 만들기'가 첫 화면에 더 보이게 함 */
+.media-s2-ab-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.media-s2-ab-card {
+  padding: 10px 16px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.media-s2-ab-card b {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.media-s2-ab-card p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.media-s2-ab-card .media-desc {
+  font-size: 13px;
+}
+
+/* 독립 변수 한 줄 (카드 아래, 구분선 위) - 박스 없이 '🎯 독립 변수 : 변수 이름' */
+.media-s2-ab-var {
+  margin-top: 10px;
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.media-s2-ab-var span {
+  font-weight: 600;
+}
+
+.media-s2-ab-var b {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* 'A안·B안 프롬프트 만들기' 제목(조금 크게) + 옆 설명(작게) */
+.media-s2-head {
+  line-height: 1.6;
+  margin: -12px 0 6px;   /* 구분선 아래 기본 여백이 커서 위로 당기고, 프롬프트 박스와는 조금 띄워 가운데 맞춤 */
+}
+
+.media-s2-head b {
+  font-size: 17px;
+  color: var(--color-text);
+  margin-right: 6px;
+}
+
+.media-s2-head span {
+  font-size: 12.5px;
+  color: var(--color-sub);
+}
+
+/* '① 으로 가서 확정하기' - 글 옆 작은 버튼 */
+.st-key-media-s2-btn-go-confirm button {
+  min-height: 30px;
+  padding: 2px 12px;
+}
+
+.st-key-media-s2-btn-go-confirm button p {
+  font-size: 13px;
+}
+
+.st-key-media-s2-ab-pending {
+  gap: 12px !important;
+}
+
+.st-key-media-s2-btn-go-confirm {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+
+/* 'AI로 다듬기'·'되돌리기' - 꽉 찬 버튼이 많아 보여서 테두리만 있는 작은 알약 버튼으로
+   (media_style.css가 이 탭 버튼 글자를 흰색으로 고정해서, 더 구체적인 선택자로 덮어씀) */
+.st-key-media-root .st-key-media-s2-btn-refine button,
+.st-key-media-root .st-key-media-s2-btn-regen button,
+.st-key-media-root .st-key-media-s2-btn-reset-A button,
+.st-key-media-root .st-key-media-s2-btn-reset-B button {
+  min-height: 30px;
+  padding: 2px 14px;
+  border-radius: 999px;
+  background: transparent !important;
+  border: 1px solid var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button:hover,
+.st-key-media-root .st-key-media-s2-btn-regen button:hover,
+.st-key-media-root .st-key-media-s2-btn-reset-A button:hover,
+.st-key-media-root .st-key-media-s2-btn-reset-B button:hover {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button p,
+.st-key-media-root .st-key-media-s2-btn-regen button p,
+.st-key-media-root .st-key-media-s2-btn-regen button span,
+.st-key-media-root .st-key-media-s2-btn-reset-A button p,
+.st-key-media-root .st-key-media-s2-btn-reset-B button p,
+.st-key-media-root .st-key-media-s2-btn-refine button span,
+.st-key-media-root .st-key-media-s2-btn-reset-A button span,
+.st-key-media-root .st-key-media-s2-btn-reset-B button span {
+  font-size: 13px;
+  color: var(--color-primary) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button:disabled,
+.st-key-media-root .st-key-media-s2-btn-regen button:disabled {
+  opacity: 0.45;
+}
+
+/* '리포트에서 받은 규칙' - 빨간 알약 + 흰 원 안 ✕ 아이콘, 빨강은 반투명 */
+.st-key-media-root .st-key-media-s2-btn-rules button {
+  min-height: 30px;
+  padding: 2px 14px 2px 8px;
+  border-radius: 999px;
+  background: rgba(240, 82, 52, 0.16) !important;
+  border: 1px solid rgba(240, 82, 52, 0.35) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-rules button:hover {
+  background: rgba(240, 82, 52, 0.24) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-rules button p {
+  font-size: 13px;
+  color: #C8432A !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-rules button [data-testid="stIconMaterial"],
+.st-key-media-root .st-key-media-s2-btn-rules button span[data-testid] {
+  color: rgba(240, 82, 52, 0.85) !important;
+  font-size: 18px;
+}
+
+/* 리포트 규칙 팝업 표 (_media_s2_rules_dialog) - 열 폭을 고정해 비율을 맞춤 */
+.media-s2-rules h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.media-s2-rules h4 em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--color-sub);
+  font-size: 12px;
+}
+
+.media-s2-rules table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.media-s2-rules th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-sub);
+  background: var(--color-bg);
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.media-s2-rules td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+  word-break: keep-all;
+}
+
+.media-s2-rules-ban col:nth-child(1) { width: 6%; }
+.media-s2-rules-ban col:nth-child(2) { width: 47%; }
+.media-s2-rules-ban col:nth-child(3) { width: 47%; }
+.media-s2-rules-law col:nth-child(1) { width: 11%; }
+.media-s2-rules-law col:nth-child(2) { width: 22%; }
+.media-s2-rules-law col:nth-child(3) { width: 67%; }
+
+/* 프롬프트 A·B 칸: 두 칸 높이를 같게 (제목은 한 줄이라 흰 입력 상자 위치도 같음) */
+.st-key-media-s2-prompt-box-A,
+.st-key-media-s2-prompt-box-B {
+  height: 100%;
+}
+
+/* 좁은 화면: A·B 카드 위아래로 쌓기 */
+@media (max-width: 640px) {
+  .media-s2-ab-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 팝업 창 안 여백·요소 간격 줄이기 (st.dialog 안에서만) */
+[role="dialog"] .media-s2-rules {
+  margin-top: -4px;
+}
+
+[role="dialog"] .stMarkdown:has(.media-s2-rules) + .stMarkdown,
+[role="dialog"] [data-testid="stElementContainer"]:has(.media-s2-rules) {
+  margin-bottom: -8px;
+}
+
+/* 프롬프트를 어떻게 만들었는지 한 줄 (제목 아래) */
+.media-s2-how {
+  margin: -4px 0 4px;
+  font-size: 12.5px;
+  color: var(--color-sub);
+}
+
+/* 'A·B 다시 만들기' + 'AI로 다듬기' 묶음 */
+.st-key-media-s2-ai-btns {
+  gap: 8px !important;
+}
+
+/* 'AI 다듬기가 필요해요' 경고창의 '확인' 버튼: 팝업은 탭 영역(.st-key-media-root) 밖에 떠서
+   media_style.css의 흰 글자 규칙이 안 먹음 → 진한 보라 버튼 위 글자를 흰색으로 직접 지정 */
+.st-key-media-s2-btn-need-refine-ok button {
+  min-height: 34px;
+  padding: 4px 22px;
+}
+
+.st-key-media-s2-btn-need-refine-ok button p {
+  color: #fff !important;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ───────── 2026-10-26 배치 바꿈: 제목 줄 · 박스 안 A·B 요약 · 보기 화면(빨간 밑줄) · 버튼 모양 ───────── */
+
+/* 맨 위 제목 '📝 A안·B안 프롬프트 만들기' + (?) 버튼 */
+.media-s2-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.st-key-media-s2-title-row {
+  gap: 6px !important;
+  margin-bottom: 2px;
+}
+
+/* (?) 버튼: 글자 없는 작은 동그라미 */
+.st-key-media-s2-help button {
+  min-height: 26px;
+  width: 26px;
+  padding: 0 !important;
+  border-radius: 50%;
+  border: 1px solid var(--color-border) !important;
+  background: transparent !important;
+}
+
+.st-key-media-s2-help button [data-testid="stIconMaterial"],
+.st-key-media-s2-help button span {
+  color: var(--color-sub) !important;
+  font-size: 18px;
+}
+
+.st-key-media-s2-help button [data-testid="stPopoverButtonChevron"],
+.st-key-media-s2-help button svg:last-child {
+  display: none;   /* 아래 화살표 숨김 */
+}
+
+/* 프롬프트 박스 맨 위 A·B 소재 요약 (연한 보라 칸) */
+.media-s2-sum {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-primary) 9%, var(--color-card));
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text);
+}
+
+.media-s2-sum span {
+  font-size: 13px;
+  color: var(--color-sub);
+}
+
+/* 프롬프트 보기 화면 (입력 칸과 같은 흰 상자, 줄바꿈 유지) */
+.media-s2-view {
+  min-height: 230px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+/* 독립 변수 부분: 빨간 밑줄 */
+.media-s2-var {
+  text-decoration: underline;
+  text-decoration-color: #E5484D;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+/* '수정하기'·'수정 완료' - '되돌리기'와 같은 테두리 알약 */
+.st-key-media-root .st-key-media-s2-btn-edit-A button,
+.st-key-media-root .st-key-media-s2-btn-edit-B button {
+  min-height: 30px;
+  padding: 2px 14px;
+  border-radius: 999px;
+  background: transparent !important;
+  border: 1px solid var(--color-primary) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-edit-A button p,
+.st-key-media-root .st-key-media-s2-btn-edit-B button p,
+.st-key-media-root .st-key-media-s2-btn-edit-A button span,
+.st-key-media-root .st-key-media-s2-btn-edit-B button span {
+  font-size: 13px;
+  color: var(--color-primary) !important;
+}
+
+.st-key-media-s2-box-btns-A,
+.st-key-media-s2-box-btns-B {
+  gap: 8px !important;
+}
+
+/* 'AI로 다듬기' - 보라 그라데이션으로 채워 눈에 띄게 (위의 테두리 규칙을 덮어씀) */
+.st-key-media-root .st-key-media-s2-btn-refine button {
+  background: linear-gradient(90deg, #A79BF0 0%, #7B6BE0 55%, #5B4FC4 100%) !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(91, 79, 196, 0.25);
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button:hover {
+  background: linear-gradient(90deg, #9A8DEB 0%, #6E5ED9 55%, #5044B8 100%) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button p,
+.st-key-media-root .st-key-media-s2-btn-refine button span {
+  color: #fff !important;
+  font-weight: 600;
+}
+
+/* '리포트에서 받은 규칙 ↗' · 'AI 다듬기 목록 보러가기 ↗' - 연회색 알약 + 회색 글자 (위의 빨간 규칙을 덮어씀) */
+.st-key-media-root .st-key-media-s2-btn-rules button,
+.st-key-media-root .st-key-media-s2-btn-ai-list button {
+  min-height: 30px;
+  padding: 2px 14px;
+  border-radius: 999px;
+  background: #F0F0F4 !important;
+  border: 1px solid #E6E6EC !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-rules button:hover,
+.st-key-media-root .st-key-media-s2-btn-ai-list button:hover {
+  background: #E7E7EE !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-rules button p,
+.st-key-media-root .st-key-media-s2-btn-ai-list button p {
+  font-size: 13px;
+  color: #8C8AA0 !important;
+  letter-spacing: 0.2px;
+}
+
+.st-key-media-root .st-key-media-s2-btn-ai-list button:disabled {
+  opacity: 0.5;
+}
+
+.st-key-media-s2-link-btns {
+  gap: 8px !important;
+}
+
+/* AI 다듬기 결과 팝업 표 열 폭 */
+.media-s2-rules-ai col:nth-child(1) { width: 18%; }
+.media-s2-rules-ai col:nth-child(2) { width: 10%; }
+.media-s2-rules-ai col:nth-child(3) { width: 56%; }
+.media-s2-rules-ai col:nth-child(4) { width: 16%; }
+
+/* ───────── 2026-10-26 추가 수정: 비율·간격·색 ───────── */
+
+/* 제목과 (?) 버튼 높이 맞춤: 제목 위아래 여백을 없애고 버튼은 글자 높이에 맞춘 투명 아이콘 */
+.st-key-media-s2-title-row [data-testid="stMarkdownContainer"] p,
+.st-key-media-s2-title-row .media-s2-title {
+  margin: 0 !important;
+  line-height: 1.3;
+}
+
+.st-key-media-root .st-key-media-s2-help button {
+  min-height: 0 !important;
+  height: 26px;
+  width: 26px;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 50%;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.st-key-media-root .st-key-media-s2-help button:hover,
+.st-key-media-root .st-key-media-s2-help button:focus,
+.st-key-media-root .st-key-media-s2-help button:active {
+  background: transparent !important;   /* 누르거나 올렸을 때 생기던 동그란 배경 없앰 */
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.st-key-media-root .st-key-media-s2-help button [data-testid="stIconMaterial"],
+.st-key-media-root .st-key-media-s2-help button span {
+  color: var(--color-sub) !important;
+  font-size: 20px;
+  background: transparent !important;
+}
+
+/* 독립 변수 빨간 밑줄: 조금 더 얇게 */
+.media-s2-var {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* 프롬프트 박스 A·B: 안쪽 칸 높이를 고정해 두 박스 전체 크기와 비율을 똑같이 */
+.media-s2-sum {
+  height: 84px;                 /* A·B 요약 칸 높이 같게 (긴 글은 칸 안에서 스크롤) */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;      /* 글씨를 칸 세로 가운데에 */
+  padding: 8px 16px;
+}
+
+.st-key-media-s2-prompt-box-A [data-testid="stMarkdownContainer"] p,
+.st-key-media-s2-prompt-box-B [data-testid="stMarkdownContainer"] p {
+  margin: 0;
+}
+
+.media-s2-view {
+  height: 230px;                /* 보기 화면과 입력 칸 높이 같게, 두 박스 같게 */
+  min-height: 0;
+  overflow-y: auto;
+  margin-bottom: 6px;           /* 아래 '되돌리기·수정하기'와 간격 */
+}
+
+.st-key-media-s2-box-btns-A,
+.st-key-media-s2-box-btns-B {
+  margin-top: 4px;
+}
+
+/* 'AI로 다듬기': 'A·B 다시 만들기'와 같은 글자 크기·높이, 배경은 조금 연하게 */
+.st-key-media-root .st-key-media-s2-btn-refine button {
+  min-height: 30px;
+  padding: 2px 14px;
+  border: 1px solid transparent !important;   /* 다시 만들기 버튼 테두리 1px만큼 높이 맞춤 */
+  background: linear-gradient(90deg, #C9C0F6 0%, #A99CEE 55%, #8C7EE2 100%) !important;
+  box-shadow: 0 1px 4px rgba(91, 79, 196, 0.18);
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button:hover {
+  background: linear-gradient(90deg, #BDB2F2 0%, #9C8EEA 55%, #8072DC 100%) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button p,
+.st-key-media-root .st-key-media-s2-btn-refine button span {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* 독립 변수 줄과 '리포트에서 받은 규칙 ↗'·'AI 다듬기 목록 보러가기 ↗' 글자를 조금 더 진한 회색으로 */
+.media-s2-ab-var,
+.media-s2-ab-var span {
+  color: #4F4D66;
+}
+
+.st-key-media-root .st-key-media-s2-btn-rules button,
+.st-key-media-root .st-key-media-s2-btn-ai-list button {
+  background: #E8E8EE !important;
+  border: 1px solid #DADAE3 !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-rules button p,
+.st-key-media-root .st-key-media-s2-btn-ai-list button p {
+  color: #5E5C75 !important;
+}
+
+/* ───────── 2026-10-26 추가 수정 2 ───────── */
+
+/* (?) 버튼: 제목 글씨 바로 옆, 글씨 가운데 높이에 (버튼을 감싼 칸도 글자 높이에 맞춤) */
+.st-key-media-s2-title-row {
+  gap: 2px !important;
+  align-items: center !important;
+}
+
+.st-key-media-s2-help {
+  display: flex;
+  align-items: center;
+  height: auto !important;
+  min-height: 0 !important;
+  margin-top: 3px;
+}
+
+.st-key-media-s2-help [data-testid="stButton"],
+.st-key-media-s2-help .stButton {
+  display: flex;
+  align-items: center;
+}
+
+/* 프롬프트 독립 변수 밑줄: 1px → 1.5px */
+.media-s2-var {
+  text-decoration-thickness: 1.5px;
+}
+
+/* 'AI로 다듬기' 배경: 한 단계 진하게 */
+.st-key-media-root .st-key-media-s2-btn-refine button {
+  background: linear-gradient(90deg, #B4A8F2 0%, #9384E8 55%, #7565D9 100%) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-refine button:hover {
+  background: linear-gradient(90deg, #A699EE 0%, #8676E2 55%, #685AD0 100%) !important;
+}
+
+/* 독립 변수 줄: 위 박스 쪽으로 올림 */
+.media-s2-ab-var {
+  margin-top: -8px;
+}
+
+/* 요약 칸 아래와 '프롬프트 A · 대조군' 제목 사이 간격 */
+.media-s2-sum {
+  margin-bottom: 8px;
+}
+
+/* ───────── 2026-10-26 번역본 보기 ───────── */
+
+/* '번역본 보기' - '되돌리기'·'수정하기'와 같은 테두리 알약 */
+.st-key-media-root .st-key-media-s2-btn-ko-A button,
+.st-key-media-root .st-key-media-s2-btn-ko-B button {
+  min-height: 30px;
+  padding: 2px 14px;
+  border-radius: 999px;
+  background: transparent !important;
+  border: 1px solid var(--color-primary) !important;
+}
+
+.st-key-media-root .st-key-media-s2-btn-ko-A button p,
+.st-key-media-root .st-key-media-s2-btn-ko-B button p,
+.st-key-media-root .st-key-media-s2-btn-ko-A button span,
+.st-key-media-root .st-key-media-s2-btn-ko-B button span {
+  font-size: 13px;
+  color: var(--color-primary) !important;
+}
+
+/* 번역 팝업: 위 영어 · 아래 한국어, 높이는 글 길이만큼 */
+.media-s2-ko-label {
+  margin: 6px 0 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-sub);
+}
+
+.media-s2-view.media-s2-view-auto {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  margin-bottom: 4px;
+}
+
+/* (?) 버튼 조금 더 아래로 */
+.st-key-media-s2-help {
+  margin-top: 8px;
+}
+
+
+/* ── A·B 요약 칸 한 줄 (2026-10-27): 높이를 줄여 스크롤 없앰. 넘치면 …, 마우스를 올리면 전체 글(title) ── */
+.media-s2-sum {
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 8px 14px !important;
+  overflow: hidden !important;
+}
+.media-s2-sum > div {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-s2-sum br { display: none; }
+.media-s2-sum span::before { content: " · "; }
+
+/* 독립 변수를 도구 줄 왼쪽 맨 앞에 (따로 한 줄이던 것을 합침): 위로 올리던 여백은 없애고 줄바꿈 없이 */
+.st-key-media-s2-link-btns .media-s2-ab-var {
+  margin: 0 8px 0 0;
+  white-space: nowrap;
+}
+
+/* 2026-10-27 PM: ② 탭 바 오른쪽 칩 (media_s2_summary_chip): ① 요약 칩과 같은 '독립 변수 · 목표 KPI' 한 줄.
+   ②에서는 공통 목표 KPI 칩(media_style.css의 .st-key-media-kpi-chip)을 숨기고 이 칩을 같은 자리에 띄움 (④ media-s3-chip과 같은 방식) */
+.st-key-media-root:has(.st-key-media-s2-chip) [data-testid="stLayoutWrapper"]:has(> .st-key-media-kpi-chip),
+.st-key-media-root:has(.st-key-media-s2-chip) .st-key-media-kpi-chip {
+  display: none !important;
+}
+.st-key-media-s2-chip {
+  width: fit-content !important;
+  margin-left: auto;
+  padding: 6px 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+.st-key-media-s2-chip p {
+  font-size: 14px;
+  white-space: nowrap;
+}
+@media (min-width: 1280px) {
+  [data-testid="stLayoutWrapper"]:has(> .st-key-media-s2-chip) {
+    position: absolute;
+    top: -41px;   /* 공통 KPI 칩과 같은 자리 (하위 탭 바와 같은 줄) */
+    right: 0;
+    z-index: 1;
+    width: auto !important;
+    pointer-events: none;
+  }
+  .st-key-media-s2-chip {
+    pointer-events: auto;
+  }
+}
+
