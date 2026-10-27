@@ -13,7 +13,8 @@ import streamlit as st
 
 from common.common_store import store_get
 from modules.media.media_handoff import (MEDIA_HANDOFF_PLAN, media_handoff_clear_plan, media_handoff_plan,
-                                         media_handoff_set_plan, media_handoff_set_solution, media_handoff_solution)
+                                         media_handoff_set_plan, media_handoff_set_solution, media_handoff_solution,
+                                         media_tab_open)
 from modules.media.media_variable_ai import (MEDIA_VARIABLE_AI_RULE_SOURCE, MEDIA_VARIABLE_AI_VERSION, MEDIA_VARIABLE_B_MIN,
                                              media_variable_b_shortage, media_variable_generate,
                                              media_variable_solution_generate)
@@ -720,8 +721,10 @@ def media_variable_step():
     반드시 media_render() 안에서 부릅니다."""
     pressed = st.session_state.pop("media-hypo-loading", False)   # 2번 탭 '다음으로'
     # 버튼 없이 자동으로 불러옴: 이번 접속에서 아직 안 불렀거나, 2번 탭에서 다른 가설을 저장했을 때.
-    # 3번 탭 내용은 다른 탭을 보고 있을 때도 같이 그려지므로, 3번 탭을 직접 눌러 들어와도 이미 불러온 화면이 보임
-    auto = not st.session_state.get("media-hypo-loaded") or media_variable_is_stale(media_variable_loaded())
+    # 단, ③ 탭이 열려 있을 때만 (2026-10-27): 3번 탭 내용은 다른 탭을 보고 있을 때도 같이 그려져서, 예전에는 ③을 열지 않아도
+    # 접속할 때마다 AI(OpenAI)를 불러 비용이 나가고 첫 화면이 늦어졌음. 이제 ③을 처음 열 때 불러옴 (2번 탭 '다음으로'는 ③을 열면서 바로)
+    auto = ((not st.session_state.get("media-hypo-loaded") or media_variable_is_stale(media_variable_loaded()))
+            and media_tab_open())
 
     # 불러올 때만: 2번 탭 가설을 Supabase에서 다시 읽고 후보 묶음을 만듦 (같은 가설이면 AI를 다시 부르지 않음)
     if pressed or auto:

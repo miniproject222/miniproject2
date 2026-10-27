@@ -117,6 +117,11 @@
   display: none;
 }
 
+/* 로고 아래 메뉴는 로고와 떨어뜨려 더 아래에서 시작 (로고 자리는 그대로, 2026-10-27) */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2) {
+  margin-top: 40px;
+}
+
 /* 문제 분석 → 가설 수립 → 매체 제작은 이어지는 흐름: 탭 사이를 띄우고 아래 방향 화살표 */
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2),
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(3) {
