@@ -42,7 +42,7 @@
 | ① | 문제 분석 | 검색어 클릭 분석, 경쟁 포지션·리뷰 분석, 가설 재료 정리, PDF 리포트 다운로드 | Keepa 경쟁사 가격·평점·재고, 내부/외부 요인 분석 | `report` |
 | ② | 가설 수립 | 문제 해결 가설 제안 (현지 특성 반영), 선택한 가설 PDF | 경쟁사 부정 리뷰를 우리 홍보 포인트로 활용 | `hypothesis` |
 | ③ | 매체 제작 | 하위 탭 4개: 가설에서 변수 도출 → A/B 소재 준비(프롬프트 만들기·AI 다듬기) → 사진·영상 초안 제작 → 외주 정리(zip) | 광고 소재 레퍼런스 (따라 하기 / 피하기), 경쟁사 부정 리뷰 활용 | `media` |
-| ④ | 날씨 광고 타이밍 | 권역 날씨에 따른 광고(메타, 아마존) 예산·채널 추천, PDF 보고서 | 폭염 + 경쟁사 품절 → 광고 빈도 증가 | `weather` |
+| ④ | 날씨 광고 타이밍 | 권역 날씨에 따른 아마존 광고 예산 추천, PDF 보고서 | 폭염 + 경쟁사 품절 → 광고 빈도 증가 | `weather` |
 
 - 화면 구성: 화면 맨 왼쪽 **세로 아이콘 줄**에 홈, ①~④ 탭이 작업 순서대로 있고, 누르면 해당 화면으로 바뀝니다. (탭 이름과 순서는 `common/common_layout.py`의 `LAYOUT_TABS`, 모양은 `common/common_style.css`, 공통 디자인은 `design.md`·`ui_theme.py`)
 - 탭끼리는 `store_set` / `store_get`(Supabase `common_store`)으로 값을 넘깁니다: ① → ② → ③, 그리고 홈이 각 탭 값을 읽어 요약합니다.
@@ -271,7 +271,7 @@ API_KEY = st.secrets["AI_API_KEY"]          # O
 - 새 비밀값이 생기면 **PM이 Streamlit Cloud > App settings > Secrets에도 추가**해야 배포된 앱에서 동작합니다.
 - 배포가 실패하면 Streamlit Cloud 앱 화면 오른쪽 아래 **Manage app**에서 로그를 확인합니다.
 
-배포 주소: (배포 후 기재)
+배포 주소: https://seorimarketing.streamlit.app/
 
 ---
 
