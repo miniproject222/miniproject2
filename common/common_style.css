@@ -9,6 +9,7 @@
   --color-border: #EFEDE0;
   --radius: 18px;
   --font-main: "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --color-point: #7B6CF2;   /* 밝은 보라: 버튼·선택 강조 (①②③④ 탭과 같은 색, 2026-10-27) */
 }
 
 /* 사이드바 로고 */
@@ -40,7 +41,7 @@
   width: var(--common-rail-w);
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
+  gap: 14px;   /* 칸 사이 간격 (2026-10-27 8px → 14px) */
   box-sizing: border-box;
   padding: 12px 3px 16px;
   overflow-y: auto;
@@ -92,11 +93,11 @@
 }
 
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:hover {
-  background-color: color-mix(in srgb, var(--color-primary) 6%, transparent) !important;
+  background-color: color-mix(in srgb, var(--color-point) 5%, transparent) !important;
 }
 
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"][aria-selected="true"] {
-  background-color: color-mix(in srgb, var(--color-primary) 12%, transparent) !important;
+  background-color: color-mix(in srgb, var(--color-point) 8%, transparent) !important;   /* 2026-10-27 회보라(남색 12%) → 연보라 */
   color: var(--color-primary) !important;
 }
 
@@ -116,10 +117,15 @@
   display: none;
 }
 
+/* 로고 아래 메뉴는 로고와 떨어뜨려 더 아래에서 시작 (로고 자리는 그대로, 2026-10-27) */
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2) {
+  margin-top: 40px;
+}
+
 /* 문제 분석 → 가설 수립 → 매체 제작은 이어지는 흐름: 탭 사이를 띄우고 아래 방향 화살표 */
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2),
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(3) {
-  margin-bottom: 14px;
+  margin-bottom: 20px;
 }
 
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(2)::after,
@@ -127,7 +133,7 @@
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -16px;
+  bottom: -21px;
   width: 7px;
   height: 7px;
   margin-left: -5px;
@@ -138,13 +144,13 @@
 
 /* 날씨 광고 타이밍은 별도 단계: 화살표 없이 띄우고 구분선 */
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(5) {
-  margin-top: 14px;
+  margin-top: 20px;
 }
 
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(5)::before {
   content: "";
   position: absolute;
-  top: -12px;
+  top: -17px;
   left: 15%;
   right: 15%;
   height: 1px;

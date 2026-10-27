@@ -120,11 +120,12 @@ def home_todo_icon(todo):
 
 
 def home_card(tabs, code, title, body, cls=""):
-    """누르면 해당 탭으로 가는 카드 (예전 '자세히 →' 버튼 대신 카드 전체가 버튼, 마우스를 올리면 → 표시)"""
+    """누르면 해당 탭으로 가는 카드 (예전 '자세히 →' 버튼 대신 카드 전체가 버튼, 마우스를 올리면 → 표시).
+    2026-10-27 PM: 평소에는 제목 줄만 보이고, 마우스를 올리면 내용(.home-card-body)이 펼쳐짐 (정보가 너무 나열돼 보여서)"""
     return f"""
   <div class="home-float home-card home-click {cls}" data-home-goto="{tabs[code][0]}" title="{tabs[code][1]}에서 자세히">
     <div class="home-row-between"><span class="home-card-title">{title}</span><span class="home-card-go">→</span></div>
-    {body}
+    <div class="home-card-body"><div class="home-card-inner">{body}</div></div>
   </div>"""
 
 
@@ -250,7 +251,7 @@ def home_left_html(stores, temps, tabs, todos):
 # (각도°, 반지름) — 레퍼런스처럼 왼쪽 위 1개, 오른쪽 위 큰 점·작은 점. 2026-10-26 PM: 선 그림과 따로 그려 잘리지 않게
 HOME_RING_R = 488.75
 HOME_RING_CENTER_TOP = 366
-HOME_RING_DOTS = [(150, 5.5), (25, 6), (21.2, 3.8)]
+HOME_RING_DOTS = [(150, 5.5), (-28, 6), (-31.8, 3.8)]   # 2026-10-26 PM: 오른쪽 점 2개를 오른쪽 위(25°·21.2°) → 오른쪽 아래로
 
 
 def home_ring_dots_html():

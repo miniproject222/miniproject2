@@ -491,7 +491,6 @@ def _hypothesis_click_load() -> None:
         hypothesis_goto_tab("report")
         return
     st.session_state[HYPOTHESIS_LOADED_KEY] = True
-    st.session_state["hypothesis-just-loaded"] = True   # 이번 한 번만: 글자가 차례로 나타나는 효과
 
 
 def _hypothesis_click_store() -> None:
@@ -555,9 +554,10 @@ def hypothesis_tab_click() -> None:
     """hypothesis_goto_tab로 탭을 옮긴 직후 한 번: 브라우저에서도 그 탭을 눌러 둠 (보이지 않는 칸)."""
     index = st.session_state.pop("hypothesis-tab-click", None)
     if isinstance(index, int):
-        import streamlit.components.v1 as components
+        # st.iframe: Streamlit이 없앨 예정인 components.html 대신 (같은 출처 iframe에서 스크립트 실행, 높이는 1 이상만 됨).
+        # 칸은 hypothesis_style.css에서 숨김
         with st.container(key="hypothesis-tab-click-box"):
-            components.html(HYPOTHESIS_TAB_CLICK_JS.replace("__INDEX__", str(index)), height=0)
+            st.iframe(HYPOTHESIS_TAB_CLICK_JS.replace("__INDEX__", str(index)), height=1)
 
 
 def hypothesis_render_skeleton(report: dict | None) -> None:
@@ -674,7 +674,6 @@ def hypothesis_render_side(index: int, problem: dict, sqp: dict | None, saved: d
     )
     # 아이콘 3개는 가설마다 늘었다 줄었다 하지 않게 항상 같은 자리에 둠 (쓸 수 없으면 흐리게 + 이유 말풍선)
     has_evidence = bool(hypothesis_evidence_rows(problem))
-    has_saved = bool(saved and isinstance(saved.get("selected"), dict))
     with st.container(key=f"hypothesis-side-{index}"):
         if st.button("", icon=":material/fact_check:", key=f"hypothesis-btn-side-judge-{index}", type="tertiary",
                      disabled=not is_sqp_main,
@@ -684,11 +683,7 @@ def hypothesis_render_side(index: int, problem: dict, sqp: dict | None, saved: d
                      disabled=not has_evidence,
                      help="근거 · 출처" if has_evidence else "근거 · 출처 (이 가설은 원문 근거가 없어요)"):
             hypothesis_dialog_evidence(problem)
-        # 가설을 선택(저장)한 뒤에만 열림: ① 요약 + ② 가설 PDF 다운로드
-        if st.button("", icon=":material/download:", key=f"hypothesis-btn-side-pdf-{index}", type="tertiary",
-                     disabled=not has_saved,
-                     help="가설 보고서 PDF" if has_saved else "가설 보고서 PDF ('다음으로'로 가설을 저장하면 열려요)"):
-            hypothesis_dialog_pdf(saved)
+    # PDF 다운로드는 제목 줄 '불러오기' 왼쪽으로 옮김 (hypothesis_render). 이 아이콘 줄은 CSS로 화면에서 숨김 (기능은 그대로)
 
 
 def hypothesis_render():
@@ -707,6 +702,11 @@ def hypothesis_render():
             with st.popover("", icon=":material/help:", type="tertiary", help="이 탭 안내"):
                 st.markdown("① 문제 분석의 상위 문제로 가설 후보를 자동으로 만들고, 그중 하나를 골라 ③ 광고 소재로 넘겨요.\n\n"
                             "**순서**: 오른쪽 위 '불러오기' → 가설 1·2·3 중 하나 '선택하기' → '다음으로'(저장하고 ③으로 이동, ③에서 자동으로 불러옴)")
+        # 가설을 선택(저장)한 뒤에만 열림: ① 요약 + ② 가설 PDF 다운로드 (예전 오른쪽 아이콘 줄 맨 아래에 있던 것)
+        has_saved = bool(saved and isinstance(saved.get("selected"), dict))
+        if st.button("PDF 다운로드", icon=":material/picture_as_pdf:", key="hypothesis-btn-pdf", disabled=not has_saved,
+                     help="가설 보고서 PDF" if has_saved else "가설 보고서 PDF ('다음으로'로 가설을 저장하면 열려요)"):
+            hypothesis_dialog_pdf(saved)
         st.button("불러오기", icon=":material/download:", key="hypothesis-btn-load", on_click=_hypothesis_click_load,
                   help="① 탭에서 저장한 리포트로 가설 후보를 만듭니다 (저장된 리포트가 없으면 ① 탭으로 이동)")
         st.button("다음으로", icon=":material/arrow_forward:", key="hypothesis-btn-store", type="primary",
@@ -723,7 +723,6 @@ def hypothesis_render():
     if not loaded:
         hypothesis_render_skeleton(report)
         return
-    reveal = st.session_state.pop("hypothesis-just-loaded", False)   # 불러오기 직후 한 번: 글자가 차례로 나타남
     # 후보 계산은 0.01초 정도라 바로 그림 (예전 '로딩 표시 최소 1초'는 모든 탭이 같이 기다려 ① 다음으로·② 불러오기가 1초 늦어져서 뺌)
     candidates = hypothesis_pick_candidates(report)
     sqp = report.get("sqp") if report else None
@@ -784,10 +783,7 @@ def hypothesis_render():
 
     with candidates_col:
         with st.container(key="hypothesis-heading-candidates"):
-            # 불러오기 직후 한 번: 글자가 차례로 나타남 (.hypothesis-reveal). 제목과 같은 칸에 넣어야
-            # 왼쪽에만 빈 칸이 하나 더 생겨 오른쪽 카드보다 아래로 밀리지 않음 (예전 위치 어긋남의 원인)
-            st.markdown("#### :material/science: 가설 후보" + ('<span class="hypothesis-reveal"></span>' if reveal else ""),
-                        unsafe_allow_html=True)
+            st.markdown("#### :material/science: 가설 후보")
         # 제목 줄은 그대로 두고 그 아래 탭·박스만 내림 (오른쪽에도 같은 간격을 둬 윗선 정렬 유지)
         st.markdown('<div class="hypothesis-heading-gap"></div>', unsafe_allow_html=True)
         opened = st.session_state.get(HYPOTHESIS_OPEN_KEY, 0)

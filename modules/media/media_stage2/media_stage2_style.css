@@ -583,3 +583,59 @@
 .st-key-media-s2-help {
   margin-top: 8px;
 }
+
+
+/* ── A·B 요약 칸 한 줄 (2026-10-27): 높이를 줄여 스크롤 없앰. 넘치면 …, 마우스를 올리면 전체 글(title) ── */
+.media-s2-sum {
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 8px 14px !important;
+  overflow: hidden !important;
+}
+.media-s2-sum > div {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-s2-sum br { display: none; }
+.media-s2-sum span::before { content: " · "; }
+
+/* 독립 변수를 도구 줄 왼쪽 맨 앞에 (따로 한 줄이던 것을 합침): 위로 올리던 여백은 없애고 줄바꿈 없이 */
+.st-key-media-s2-link-btns .media-s2-ab-var {
+  margin: 0 8px 0 0;
+  white-space: nowrap;
+}
+
+/* 2026-10-27 PM: ② 탭 바 오른쪽 칩 (media_s2_summary_chip): ① 요약 칩과 같은 '독립 변수 · 목표 KPI' 한 줄.
+   ②에서는 공통 목표 KPI 칩(media_style.css의 .st-key-media-kpi-chip)을 숨기고 이 칩을 같은 자리에 띄움 (④ media-s3-chip과 같은 방식) */
+.st-key-media-root:has(.st-key-media-s2-chip) [data-testid="stLayoutWrapper"]:has(> .st-key-media-kpi-chip),
+.st-key-media-root:has(.st-key-media-s2-chip) .st-key-media-kpi-chip {
+  display: none !important;
+}
+.st-key-media-s2-chip {
+  width: fit-content !important;
+  margin-left: auto;
+  padding: 6px 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+.st-key-media-s2-chip p {
+  font-size: 14px;
+  white-space: nowrap;
+}
+@media (min-width: 1280px) {
+  [data-testid="stLayoutWrapper"]:has(> .st-key-media-s2-chip) {
+    position: absolute;
+    top: -41px;   /* 공통 KPI 칩과 같은 자리 (하위 탭 바와 같은 줄) */
+    right: 0;
+    z-index: 1;
+    width: auto !important;
+    pointer-events: none;
+  }
+  .st-key-media-s2-chip {
+    pointer-events: auto;
+  }
+}
+

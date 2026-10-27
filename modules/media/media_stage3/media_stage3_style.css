@@ -162,8 +162,8 @@
   transition: background 0.15s, color 0.15s;
 }
 .st-key-media-s3-photo-tools button:hover {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: #7B6CF2;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-color: #7B6CF2;
   color: var(--color-card);
 }
 .st-key-media-s3-photo-tools button [data-testid="stIconMaterial"] {
@@ -272,7 +272,7 @@
   color: var(--color-text) !important;
 }
 .st-key-media-root [class*="st-key-media-s3-btn-view-"] button:hover {
-  border-color: var(--color-primary);
+  border-color: #7B6CF2;
 }
 .st-key-media-s3-video-head {
   flex-wrap: nowrap;
@@ -380,8 +380,8 @@
   color: var(--color-text) !important;
 }
 [class*="st-key-media-s3-hist-tools-"] button:hover {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: #7B6CF2;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-color: #7B6CF2;
 }
 .st-key-media-root [class*="st-key-media-s3-hist-tools-"] button:hover [data-testid="stIconMaterial"] {
   color: var(--color-card) !important;
@@ -471,6 +471,23 @@
 .st-key-media-root:has(.st-key-media-s3-sub) [data-testid="stLayoutWrapper"]:has(> .st-key-media-step-nav-2) {
   display: none;
 }
+
+/* 영상 초안 제작 탭에서는 ③ 공통 이전/다음 줄도 보여 줌 (2026-10-27): 위 ④ 줄 '다음: 만든 결과 보기'와 따로,
+   '← A/B 소재 준비'·'다음: 외주 정리 →'로 바로 가는 길. 둘 다 흰 버튼 (사진·만든 결과 보기 탭은 ④ 줄과 겹쳐서 숨김 그대로) */
+.st-key-media-root:has(.st-key-media-s3-sub [role="tab"]:nth-of-type(2)[aria-selected="true"]) .st-key-media-step-nav-2,
+.st-key-media-root:has(.st-key-media-s3-sub [role="tab"]:nth-of-type(2)[aria-selected="true"]) [data-testid="stLayoutWrapper"]:has(> .st-key-media-step-nav-2) {
+  display: flex;
+}
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled) {
+  background: var(--color-card) !important;
+  border: 1px solid #7B6CF2 !important;
+  box-shadow: none !important;
+}
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled):hover {
+  background: color-mix(in srgb, #7B6CF2 8%, var(--color-card)) !important;
+}
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled) p,
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled) span { color: #7B6CF2 !important; }
 
 /* ⑤ 외주 정리 (media_stage3_export_render): 사진·영상 탭처럼 100% 화면에서 스크롤 없이 한 화면
    ④ 안쪽 탭 줄이 없어서 그만큼(약 60px) 더 씀. 넘치는 글은 카드 안에서만 스크롤 */
@@ -926,20 +943,20 @@ div[role="dialog"]:has(.media-s3-sb-table) {
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"]:hover {
   background: transparent !important;
-  color: var(--color-primary) !important;
-  border-bottom-color: color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
+  color: #7B6CF2 !important;
+  border-bottom-color: color-mix(in srgb, #7B6CF2 35%, transparent) !important;
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"][aria-selected="true"] {
   background: transparent !important;
-  color: var(--color-primary) !important;
-  border-bottom-color: var(--color-primary) !important;
+  color: #7B6CF2 !important;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-bottom-color: #7B6CF2 !important;
   box-shadow: none !important;
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"] p {
   font-size: 13.5px;
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"][aria-selected="true"] p {
-  color: var(--color-primary) !important;
+  color: #7B6CF2 !important;
   font-weight: 700;
 }
 
@@ -992,4 +1009,323 @@ div[role="dialog"]:has(.media-s3-sb-table) {
   font-size: 13px;
   line-height: 1.35;
   background: rgba(0, 0, 0, 0.55);
+}
+
+/* 만든 결과 보기 v5: 가설 카드 = 날짜 → 단일 변수 → B안 → (맨 아래) 개수 · 작은 '외주로 보내기'. 스크롤 없음.
+   카드 전체가 '열기' 버튼 (투명 버튼이 카드를 덮고, '외주로 보내기'만 그 위에 올라옴). 가설 전문은 열었을 때 맨 위에서 봄 */
+[class*="st-key-media-s3-hist-item-"] {
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+[class*="st-key-media-s3-hist-item-"]:hover {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+[class*="st-key-media-s3-hist-item-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-date) { overflow: hidden; }
+[class*="st-key-media-s3-hist-openbtn-"] {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1;
+  margin: 0 !important;
+}
+[class*="st-key-media-s3-hist-openbtn-"] > div,
+[class*="st-key-media-s3-hist-openbtn-"] button {
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0;
+  cursor: pointer;
+}
+.media-s3-hist-date { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.85rem; color: var(--color-sub); }
+.media-s3-hist-now {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #16a34a 14%, transparent);
+  color: #15803d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.media-s3-hist-var { margin-top: 6px; font-weight: 700; font-size: 1rem; color: var(--color-text); line-height: 1.4; }
+.media-s3-hist-b {
+  margin-top: 6px;
+  font-size: 0.84rem;
+  color: var(--color-sub);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.media-s3-hist-b b { color: var(--color-primary); margin-right: 4px; }
+/* 맨 아래 줄: 개수 + 작은 보내기 (카드 덮개 버튼보다 위) */
+[class*="st-key-media-s3-hist-itembtn-"] {
+  position: relative;
+  z-index: 2;
+  flex-wrap: nowrap;
+  min-height: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+  pointer-events: none;
+}
+[class*="st-key-media-s3-hist-itembtn-"] > * { pointer-events: auto; }
+.media-s3-hist-meta { margin-top: 0; font-size: 0.75rem; white-space: nowrap; }
+[class*="st-key-media-s3-hist-send-"] button {
+  min-height: 0 !important;
+  height: 30px;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  background: var(--color-card) !important;
+  border: 1px solid var(--color-primary) !important;
+  white-space: nowrap;
+}
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button p,
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] [data-testid="stIconMaterial"] {
+  color: var(--color-primary) !important;
+  font-size: 0.78rem !important;
+  font-weight: 600;
+}
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button:hover { background: var(--color-primary) !important; }
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button:hover p,
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button:hover [data-testid="stIconMaterial"] { color: #fff !important; }
+.media-s3-hist-sent {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #16a34a 14%, transparent);
+  color: #15803d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* 열었을 때: 제목 줄에 가설 전문을 줄바꿈해 다 보여 주고(스크롤 없음), 아래 세 칸이 남는 높이를 씀 */
+.st-key-media-s3-hist-area:has(.st-key-media-s3-hist-cols) { height: var(--d-h); }
+.st-key-media-s3-hist-head { flex-wrap: nowrap; align-items: center; }
+.st-key-media-s3-hist-head > [data-testid="stElementContainer"]:has(.media-s3-hist-headtext) { flex: 1 1 0; min-width: 0; }
+.media-s3-hist-headtext { font-size: 0.86rem; line-height: 1.5; color: var(--color-text); }
+.media-s3-hist-headtext b { color: var(--color-primary); }
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-cols),
+.st-key-media-s3-hist-cols {
+  flex: 1 1 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-A > [data-testid="stElementContainer"]:has(.media-s3-hist-big),
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-B > [data-testid="stElementContainer"]:has(.media-s3-hist-big) {
+  flex: 1 1 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+/* 카드 높이는 고정 (빈 공간 없이, 카드끼리 같은 높이). 글 칸이 남는 높이를 쓰고 B안은 넘치면 …로 */
+.st-key-media-s3-hist-list,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-list) { height: 200px !important; }
+[class*="st-key-media-s3-hist-item-"] { height: 100% !important; }
+[class*="st-key-media-s3-hist-item-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-date) { flex: 1 1 0 !important; min-height: 0 !important; }
+/* 열었을 때: 제목 줄(가설 전문, 최대 3줄 자리)을 뺀 높이를 아래 세 칸에 (계산값이라 칸이 접히지 않음) */
+.st-key-media-s3-hist-area:has(.st-key-media-s3-hist-cols) { height: auto; }
+.st-key-media-s3-hist-area { --d-col: calc(var(--d-h) - 88px); }
+.st-key-media-s3-hist-head { min-height: 72px; }
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-cols),
+.st-key-media-s3-hist-cols {
+  flex: 0 0 auto !important;
+  height: var(--d-col) !important;
+}
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-A > [data-testid="stElementContainer"]:has(.media-s3-hist-big),
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-B > [data-testid="stElementContainer"]:has(.media-s3-hist-big) {
+  flex: 0 0 auto !important;
+  height: max(50px, calc(var(--d-col) - 96px)) !important;
+}
+.media-s3-hist-b { -webkit-line-clamp: 3; }
+
+/* ── 영상 A·B 초안 제목 줄 (2026-10-27): '프롬프트 보기'를 작은 알약으로 줄이고 제목·물음표를 한 줄에 (높이를 줄여 스크롤 줄임) ── */
+.st-key-media-s3-video-head [data-testid="stMarkdown"] > div { flex-wrap: nowrap; }
+.st-key-media-s3-video-head [data-testid="stMarkdownContainer"] p { white-space: nowrap; }
+.st-key-media-root .st-key-media-s3-btn-view-video button {
+  min-height: 30px !important;
+  padding: 2px 12px !important;
+  border-radius: 999px !important;
+}
+.st-key-media-root .st-key-media-s3-btn-view-video button p { font-size: 13px; }
+
+/* ── 영상 초안 제작: 오른쪽 영상 카드 높이를 왼쪽 스토리보드 카드와 같게 (2026-10-27) ──
+   줄 전체 높이는 예전 그대로(--media-s3-h - 20px) 두고, 왼쪽 칸을 풀어(display: contents) 줄을 격자로 바꿈:
+   1행 = 스토리보드 카드 | 영상 카드 (같은 높이), 2행 = 왼쪽 아래 줄(만든 영상 보기·사용법·넘기기), 3행 = 안내 한 줄.
+   화면 높이·글자 크기가 달라도 격자가 아래 줄 높이를 빼고 나눠서 두 카드 아래 끝이 항상 같음 */
+.st-key-media-s3-video-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
+  grid-auto-rows: auto;
+  column-gap: 1rem;
+  row-gap: 1rem;
+  height: calc(var(--media-s3-h) - 20px);
+}
+.st-key-media-s3-video-row > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-left),
+.st-key-media-s3-video-row .st-key-media-s3-video-left {
+  display: contents !important;
+}
+.st-key-media-s3-video-row > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-right) {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 0;
+}
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-sb-card) {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+}
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-actions) {
+  grid-column: 1;
+  grid-row: 2;
+}
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-note) {
+  grid-column: 1;
+  grid-row: 3;
+}
+.st-key-media-s3-video-right,
+.st-key-media-s3-video-right > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-card),
+.st-key-media-s3-video-row .st-key-media-s3-video-card {
+  height: 100% !important;
+  min-height: 0;
+}
+
+
+/* 2026-10-27 정리: 영상 A·B 초안 제목 줄 = 제목(물음표) · 작은 목표 칩 · 오른쪽 작은 '프롬프트' 글자 버튼 */
+.st-key-media-s3-video-head { gap: 8px; min-height: 36px; }
+.media-s3-video-goal {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.st-key-media-root .st-key-media-s3-btn-view-video button {
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 999px !important;
+  background: var(--color-card) !important;
+}
+.st-key-media-root .st-key-media-s3-btn-view-video button p,
+.st-key-media-root .st-key-media-s3-btn-view-video [data-testid="stIconMaterial"] { font-size: 12px !important; color: var(--color-sub) !important; }
+.st-key-media-root .st-key-media-s3-btn-view-video button:hover { border-color: #7B6CF2 !important; }
+
+/* 2026-10-27 정리: 가설 카드 아래 줄 = 왼쪽 개수(남는 폭, 넘치면 …) · 오른쪽 작은 보내기 (서로 겹치지 않게) */
+[class*="st-key-media-s3-hist-itembtn-"] { gap: 8px; justify-content: space-between; }
+[class*="st-key-media-s3-hist-itembtn-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-meta) { flex: 1 1 0; min-width: 0; }
+.media-s3-hist-meta { overflow: hidden; text-overflow: ellipsis; font-size: 0.75rem; color: var(--color-sub); }
+[class*="st-key-media-s3-hist-itembtn-"] > [data-testid="stElementContainer"]:has([class*="st-key-media-s3-hist-send-"]),
+[class*="st-key-media-s3-hist-itembtn-"] > [class*="st-key-media-s3-hist-send-"],
+[class*="st-key-media-s3-hist-itembtn-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-sent) { flex: 0 0 auto; }
+[class*="st-key-media-s3-hist-send-list-"] button { height: 28px; padding: 0 10px !important; }
+.media-s3-hist-sent { padding: 3px 10px; font-size: 0.74rem; }
+
+/* 스토리보드 크게 보기 · 고치기 팝업 (media_s3_storyboard_edit_dialog): 화면 폭 거의 끝까지, 칸 제목은 표 머리처럼 */
+div[role="dialog"]:has(.st-key-media-s3-sb-edit) {
+  width: 96vw !important;
+  max-width: 96vw !important;
+}
+.media-s3-sb-edit-head { font-size: 0.8rem; font-weight: 600; color: var(--color-sub); padding: 2px 2px 0; }
+.st-key-media-s3-sb-edit textarea { font-size: 0.8rem; line-height: 1.45; }
+.st-key-media-s3-sb-edit [data-testid="stHorizontalBlock"] { gap: 8px; }
+/* 팝업은 ③ 탭(.st-key-media-root) 밖에 그려져 탭의 버튼 색 규칙이 안 걸림 → 여기서 직접 (글자가 안 보이던 문제) */
+.st-key-media-s3-sb-edit button[kind="primaryFormSubmit"] {
+  background: #7B6CF2 !important;
+  border: 1px solid #7B6CF2 !important;
+}
+.st-key-media-s3-sb-edit button[kind="primaryFormSubmit"]:hover { background: color-mix(in srgb, #7B6CF2 86%, #000) !important; }
+.st-key-media-s3-sb-edit button[kind="primaryFormSubmit"] p { color: #fff !important; }
+.st-key-media-s3-sb-edit button[kind="secondaryFormSubmit"] {
+  background: var(--color-card) !important;
+  border: 1px solid #7B6CF2 !important;
+}
+.st-key-media-s3-sb-edit button[kind="secondaryFormSubmit"] p { color: #7B6CF2 !important; }
+
+/* 2026-10-27 정리 2: 가설 카드 아래 줄 높이·세로 위치를 모든 카드에서 같게.
+   줄 높이 고정(38px) + 가운데 정렬, 안쪽 글·버튼의 기본 여백 제거, '외주로 보내기'와 '✔ 외주로 보냄'은 같은 크기 알약 */
+[class*="st-key-media-s3-hist-itembtn-"] {
+  height: 38px !important;
+  min-height: 38px !important;
+  padding-top: 8px !important;
+  align-items: center !important;
+  flex: 0 0 auto !important;
+}
+[class*="st-key-media-s3-hist-itembtn-"] > * { margin: 0 !important; align-self: center !important; }
+[class*="st-key-media-s3-hist-itembtn-"] [data-testid="stMarkdown"],
+[class*="st-key-media-s3-hist-itembtn-"] [data-testid="stMarkdownContainer"],
+[class*="st-key-media-s3-hist-itembtn-"] [data-testid="stMarkdownContainer"] > div { margin: 0 !important; padding: 0 !important; }
+.media-s3-hist-meta { margin: 0 !important; line-height: 30px; letter-spacing: 0; }
+[class*="st-key-media-s3-hist-send-list-"] button,
+.media-s3-hist-sent {
+  box-sizing: border-box;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.76rem;
+}
+.media-s3-hist-sent { border: 1px solid color-mix(in srgb, #16a34a 35%, transparent); line-height: 1; }
+.media-s3-hist-sent { width: max-content; gap: 4px; white-space: nowrap; }
+[class*="st-key-media-s3-hist-itembtn-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-sent) { width: auto !important; min-width: 120px; overflow: visible; }
+.media-s3-hist-sent { min-width: 120px; justify-content: center; }
+/* 크게 보기 · 고치기: 고칠 수 없는 칸(장면·길이)은 회색 글로, 팝업 안 여백을 줄여 스크롤 없이 한 화면 */
+.media-s3-sb-edit-fixed {
+  min-height: 76px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-sub);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.st-key-media-s3-sb-edit [data-testid="stVerticalBlock"] { gap: 6px !important; }
+.st-key-media-s3-sb-edit textarea { padding: 8px 10px !important; }
+div[role="dialog"]:has(.st-key-media-s3-sb-edit) { margin-top: 2vh !important; margin-bottom: 0 !important; }
+
+/* 2026-10-27: 열었을 때 네 칸(사진 A · 사진 B · 영상 A · 영상 B) — 칸이 좁아져 머리 줄 아이콘을 작게, 영상은 칸 높이 안에 */
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] { gap: 4px !important; }
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] button {
+  width: 26px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  padding: 0 !important;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] [data-testid="stIconMaterial"] { font-size: 16px !important; }
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-cardhead-"] [data-testid="stCheckbox"] label p { font-size: 0.78rem; }
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-V"] > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-media-s3-hist-bigvid-"]) {
+  overflow: hidden;
+  min-height: 0 !important;
+}
+.st-key-media-s3-hist-cols [class*="st-key-media-s3-hist-card-V"] video { max-height: 100%; }
+
+/* 2026-10-27 크게 보기 · 고치기 v2: 위 표(읽기만) + 아래 '첫 3초 · B' 고치는 칸. 글자 작게, 스크롤 없이 한 화면 */
+.media-s3-sb-table-edit { font-size: 0.76rem; line-height: 1.38; margin-bottom: 4px; }
+.media-s3-sb-table-edit td { padding: 4px 8px; }
+.media-s3-sb-table-edit tr.media-s3-sb-b td { background: color-mix(in srgb, #7B6CF2 9%, transparent); color: var(--color-text); }
+.media-s3-sb-table-edit tr.media-s3-sb-b td:first-child { font-weight: 700; color: #7B6CF2; }
+.media-s3-sb-edit-title { font-size: 0.82rem; font-weight: 600; color: #7B6CF2; margin: 2px 0 2px; }
+.st-key-media-s3-sb-edit [data-testid="stWidgetLabel"] p { font-size: 0.76rem; color: var(--color-sub); }
+.st-key-media-s3-sb-edit [data-testid="stVerticalBlock"] { gap: 6px; }
+
+/* 2026-10-27: 카드 아무 데나 한 번 누르면 열리게 — 덮개 버튼과 그 안의 모든 감싸개를 카드 크기로 (예전: 실제 버튼이 위 40px뿐),
+   아래 개수 글자는 누름을 막지 않게 (보내기 버튼만 따로 눌림) */
+[class*="st-key-media-s3-hist-openbtn-"] div,
+[class*="st-key-media-s3-hist-openbtn-"] button {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+}
+[class*="st-key-media-s3-hist-itembtn-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-meta) { pointer-events: none; }
+
+/* 스토리보드 크게 보기 · 고치기 팝업이 열려 있는 동안 뒤 화면의 말풍선(도움말)은 숨김
+   (팝업을 열 때 마우스가 올라가 있던 버튼·물음표의 말풍선이 닫히지 않고 팝업 위에 남던 문제, 2026-10-27) */
+body:has(.st-key-media-s3-sb-edit) [data-testid="stTooltipContent"],
+body:has(.st-key-media-s3-sb-edit) [data-baseweb="tooltip"] {
+  display: none !important;
 }

@@ -359,19 +359,6 @@
   display: none;
 }
 
-/* ── 불러오기 직후 한 번: 글자가 위에서부터 차례로 나타남 (데이터를 불러오는 느낌) ── */
-[class*="st-key-report-card-"]:has(.report-reveal) .report-row {
-  animation: report-reveal 0.5s ease-out both;
-}
-[class*="st-key-report-card-"]:has(.report-reveal) .report-row:nth-child(2) { animation-delay: 0.25s; }
-[class*="st-key-report-card-"]:has(.report-reveal) .report-row:nth-child(3) { animation-delay: 0.5s; }
-@keyframes report-reveal {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  [class*="st-key-report-card-"] .report-row { animation: none !important; }
-}
 
 /* ── 홈 화면처럼 여러 색 쓰기 (홈 탭 home_page.py HOME_COLORS와 같은 값, ① 탭 클래스에만 적용) ── */
 :root {
@@ -423,12 +410,15 @@
 }
 
 /* 불러오기·저장하기 버튼: 홈 버튼과 같은 밝은 보라 */
-.st-key-report-btn-load button {
+.st-key-report-btn-load button,
+.st-key-report-btn-pdf button:not(:disabled) {   /* 'PDF 다운로드'(2026-10-27 PM)도 불러오기와 같은 모양 */
   background: var(--color-card);
   border: 1px solid var(--report-purple);
 }
 .st-key-report-btn-load button p,
-.st-key-report-btn-load button span { color: var(--report-purple) !important; }
+.st-key-report-btn-load button span,
+.st-key-report-btn-pdf button:not(:disabled) p,
+.st-key-report-btn-pdf button:not(:disabled) span { color: var(--report-purple) !important; }
 .st-key-report-btn-save button:not(:disabled) {
   background: var(--report-purple);
   border-color: var(--report-purple);
@@ -761,4 +751,17 @@
 .st-key-report-loading [data-testid="stSpinner"] div {
   font-size: 16px;
   color: var(--color-text);
+}
+
+/* 불러오기·PDF 다운로드: 마우스를 올리면 공통 버튼 hover(진한 배경) 대신 연보라 + 살짝 떠오름 (2026-10-27) */
+.st-key-report-btn-load button,
+.st-key-report-btn-pdf button {
+  transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.st-key-report-btn-load button:hover,
+.st-key-report-btn-pdf button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--report-purple) 8%, var(--color-card)) !important;
+  border-color: var(--report-purple) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--report-purple) 18%, transparent);
 }
