@@ -1011,6 +1011,7 @@ div[role="dialog"]:has(.media-s3-sb-table) {
   background: rgba(0, 0, 0, 0.55);
 }
 
+
 /* ── 영상 A·B 초안 제목 줄 (2026-10-27): '프롬프트 보기'를 작은 알약으로 줄이고 제목·물음표를 한 줄에 (높이를 줄여 스크롤 줄임) ── */
 .st-key-media-s3-video-head [data-testid="stMarkdown"] > div { flex-wrap: nowrap; }
 .st-key-media-s3-video-head [data-testid="stMarkdownContainer"] p { white-space: nowrap; }
@@ -1195,4 +1196,132 @@ div[role="dialog"]:has(.media-s3-sb-table) {
   height: 100% !important;
   min-height: 0;
 }
+
+
+/* 만든 결과 보기 v5: 가설 카드 = 날짜 → 단일 변수 → B안 → (맨 아래) 개수 · 작은 '외주로 보내기'. 스크롤 없음.
+   카드 전체가 '열기' 버튼 (투명 버튼이 카드를 덮고, '외주로 보내기'만 그 위에 올라옴). 가설 전문은 열었을 때 맨 위에서 봄 */
+[class*="st-key-media-s3-hist-item-"] {
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+[class*="st-key-media-s3-hist-item-"]:hover {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+[class*="st-key-media-s3-hist-item-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-date) { overflow: hidden; }
+[class*="st-key-media-s3-hist-openbtn-"] {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1;
+  margin: 0 !important;
+}
+[class*="st-key-media-s3-hist-openbtn-"] > div,
+[class*="st-key-media-s3-hist-openbtn-"] button {
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0;
+  cursor: pointer;
+}
+.media-s3-hist-date { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.85rem; color: var(--color-sub); }
+.media-s3-hist-now {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #16a34a 14%, transparent);
+  color: #15803d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.media-s3-hist-var { margin-top: 6px; font-weight: 700; font-size: 1rem; color: var(--color-text); line-height: 1.4; }
+.media-s3-hist-b {
+  margin-top: 6px;
+  font-size: 0.84rem;
+  color: var(--color-sub);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.media-s3-hist-b b { color: var(--color-primary); margin-right: 4px; }
+/* 맨 아래 줄: 개수 + 작은 보내기 (카드 덮개 버튼보다 위) */
+[class*="st-key-media-s3-hist-itembtn-"] {
+  position: relative;
+  z-index: 2;
+  flex-wrap: nowrap;
+  min-height: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+  pointer-events: none;
+}
+[class*="st-key-media-s3-hist-itembtn-"] > * { pointer-events: auto; }
+.media-s3-hist-meta { margin-top: 0; font-size: 0.75rem; white-space: nowrap; }
+[class*="st-key-media-s3-hist-send-"] button {
+  min-height: 0 !important;
+  height: 30px;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  background: var(--color-card) !important;
+  border: 1px solid var(--color-primary) !important;
+  white-space: nowrap;
+}
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button p,
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] [data-testid="stIconMaterial"] {
+  color: var(--color-primary) !important;
+  font-size: 0.78rem !important;
+  font-weight: 600;
+}
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button:hover { background: var(--color-primary) !important; }
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button:hover p,
+.st-key-media-root [class*="st-key-media-s3-hist-send-"] button:hover [data-testid="stIconMaterial"] { color: #fff !important; }
+.media-s3-hist-sent {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #16a34a 14%, transparent);
+  color: #15803d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* 열었을 때: 제목 줄에 가설 전문을 줄바꿈해 다 보여 주고(스크롤 없음), 아래 세 칸이 남는 높이를 씀 */
+.st-key-media-s3-hist-area:has(.st-key-media-s3-hist-cols) { height: var(--d-h); }
+.st-key-media-s3-hist-head { flex-wrap: nowrap; align-items: center; }
+.st-key-media-s3-hist-head > [data-testid="stElementContainer"]:has(.media-s3-hist-headtext) { flex: 1 1 0; min-width: 0; }
+.media-s3-hist-headtext { font-size: 0.86rem; line-height: 1.5; color: var(--color-text); }
+.media-s3-hist-headtext b { color: var(--color-primary); }
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-cols),
+.st-key-media-s3-hist-cols {
+  flex: 1 1 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-A > [data-testid="stElementContainer"]:has(.media-s3-hist-big),
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-B > [data-testid="stElementContainer"]:has(.media-s3-hist-big) {
+  flex: 1 1 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+/* 카드 높이는 고정 (빈 공간 없이, 카드끼리 같은 높이). 글 칸이 남는 높이를 쓰고 B안은 넘치면 …로 */
+.st-key-media-s3-hist-list,
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-list) { height: 200px !important; }
+[class*="st-key-media-s3-hist-item-"] { height: 100% !important; }
+[class*="st-key-media-s3-hist-item-"] > [data-testid="stElementContainer"]:has(.media-s3-hist-date) { flex: 1 1 0 !important; min-height: 0 !important; }
+/* 열었을 때: 제목 줄(가설 전문, 최대 3줄 자리)을 뺀 높이를 아래 세 칸에 (계산값이라 칸이 접히지 않음) */
+.st-key-media-s3-hist-area:has(.st-key-media-s3-hist-cols) { height: auto; }
+.st-key-media-s3-hist-area { --d-col: calc(var(--d-h) - 88px); }
+.st-key-media-s3-hist-head { min-height: 72px; }
+[data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-hist-cols),
+.st-key-media-s3-hist-cols {
+  flex: 0 0 auto !important;
+  height: var(--d-col) !important;
+}
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-A > [data-testid="stElementContainer"]:has(.media-s3-hist-big),
+.st-key-media-s3-hist-cols .st-key-media-s3-hist-card-B > [data-testid="stElementContainer"]:has(.media-s3-hist-big) {
+  flex: 0 0 auto !important;
+  height: max(50px, calc(var(--d-col) - 96px)) !important;
+}
+.media-s3-hist-b { -webkit-line-clamp: 3; }
 

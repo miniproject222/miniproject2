@@ -85,3 +85,5 @@
   - 2026-10-25 실제 OpenAI(`gpt-6.1-sol`) 호출 확인: 리포트 규칙을 써서 약 25초에 답, 바꾼 곳 4개 모두 근거 ID 확인 통과
 - `media_stage2_judge.py`: 이전에 만든 A/B 결과·판정 코드 보관 (흐름에서 빠져 화면에 연결하지 않음, 다시 필요하면 `media_s2_judge_render()`를 연결)
 - `data/media_ab_result_dummy_202610.json`: 판정 코드가 쓰는 A/B 결과 더미 (보관)
+
+- **탭 바 오른쪽 요약 칩 (2026-10-27 PM)**: ① 가설에서 변수 도출의 요약 칩과 같은 `[독립 변수] … · [🎯 목표 KPI] …` 한 줄(`media_s2_summary_chip`, key `media-s2-chip`, ⓘ에 2번 탭 가설). ②에서는 공통 목표 KPI 칩 대신 보여 줌 (④ `media-s3-chip`과 같은 방식, `media_stage2_style.css`)

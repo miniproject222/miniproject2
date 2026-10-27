@@ -25,7 +25,11 @@ from modules.media.media_stage2.media_stage2_ai import (MEDIA_S2_AI_KEY, MEDIA_S
                                                         media_s2_generate, media_s2_listing, media_s2_mode,
                                                         media_s2_translate)
 # 1단계(min)가 다른 하위 탭용으로 만든 함수: 확정한 A/B 설계 + 상태, '① 으로 가서 확정하기' 버튼 콜백
-from modules.media.media_variable import media_variable_confirmed_plan, media_variable_go_step
+from modules.media.media_variable import (media_variable_candidates, media_variable_confirmed_plan,
+                                          media_variable_go_step, media_variable_goal_text,
+                                          media_variable_hypo_tip, media_variable_kpi_text, media_variable_label,
+                                          media_variable_loaded,
+                                          media_variable_plan)
 
 MEDIA_S2_TAB_LABEL = "A/B 소재 준비"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
 MEDIA_S2_DIR = Path(__file__).resolve().parent   # 2단계 폴더 (data/ 경로 만들 때 사용)
@@ -470,9 +474,26 @@ def media_s2_prompt_section(plan: dict) -> None:
     media_s2_refine_section(gen, plan)
 
 
+def media_s2_summary_chip() -> None:
+    """② 탭 바 오른쪽 칩 '[독립 변수] … · [🎯 목표 KPI] …' — ① 가설에서 변수 도출의 요약 칩과 같은 내용·모양 (2026-10-27 PM).
+    ②에서는 공통 '목표 KPI' 칩(media_variable_kpi_chip) 대신 이 칩을 보여 줌 (공통 칩은 media_stage2_style.css에서 ②일 때만 숨김).
+    값은 ①에서 확정한 plan (확정 전이면 고르는 중인 값), ⓘ에는 ①과 같이 2번 탭 가설."""
+    current, _, _ = media_variable_plan()
+    plan = media_variable_confirmed_plan()[0] or current
+    picked = media_variable_candidates()["picked"]
+    hypo = media_variable_loaded()
+    variable = f"{plan.get('variable')} ({media_variable_label(picked)})" if picked else (plan.get("variable") or "없음")
+    # 이번 접속에 ①을 아직 안 열어 가설을 안 불러왔으면 확정한 KPI 숫자만 (가설 Then은 불러온 뒤)
+    goal = media_variable_goal_text(plan, hypo) if hypo.get("text") else media_variable_kpi_text(plan)
+    with st.container(key="media-s2-chip"):
+        st.markdown(f":violet-badge[독립 변수] {variable} · :green-badge[🎯 목표 KPI] {goal}",
+                    help=media_variable_hypo_tip(hypo) if hypo.get("text") else None)
+
+
 def media_stage2_render():
     """하위 탭 ② A/B 소재 준비 (이름은 MEDIA_S2_TAB_LABEL). 반드시 media_render() 안에서 부릅니다.
     ①에서 확정하기 전에는 빈 카드만 보여 줍니다."""
+    media_s2_summary_chip()   # 탭 바 오른쪽: 독립 변수 + 목표 KPI (① 요약 칩과 같은 정보, 공통 KPI 칩 대신)
     plan = media_s2_ab_section()
     if plan is None:
         return

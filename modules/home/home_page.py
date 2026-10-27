@@ -250,7 +250,7 @@ def home_left_html(stores, temps, tabs, todos):
 # (각도°, 반지름) — 레퍼런스처럼 왼쪽 위 1개, 오른쪽 위 큰 점·작은 점. 2026-10-26 PM: 선 그림과 따로 그려 잘리지 않게
 HOME_RING_R = 488.75
 HOME_RING_CENTER_TOP = 366
-HOME_RING_DOTS = [(150, 5.5), (25, 6), (21.2, 3.8)]
+HOME_RING_DOTS = [(150, 5.5), (-28, 6), (-31.8, 3.8)]   # 2026-10-26 PM: 오른쪽 점 2개를 오른쪽 위(25°·21.2°) → 오른쪽 아래로
 
 
 def home_ring_dots_html():
