@@ -31,6 +31,7 @@ REPORT_HELP_ABOUT = "Keepa·경쟁사 DB·검색어 분석으로 서리의 내�
 REPORT_HELP_RULE = ("**순위 기준**: ② 가설로 만들어 ③ 탭에서 바로 제작할 수 있는 문제(지금 ③은 메인 이미지)를 먼저, "
                     "그다음 이미지(서브·광고 배너 문구)로 고칠 수 있는 문제, 같은 조건 안에서는 위험도 → 심각도 순. 3순위부터는 다른 문제여도 됨")
 REPORT_LOADING_TEXT = "Keepa·경쟁사 DB·검색어 분석으로 문제 분석 결과를 만드는 중…"   # 불러오는 동안 화면 가운데 카드 문구
+REPORT_SHOW_SIDE = False   # 오른쪽 끝 아이콘 줄 표시 (2026-10-27 PM: 숨김, PDF는 위쪽 'PDF 다운로드' 버튼으로)
 REPORT_LOADED_KEY = "report-loaded"   # 이번 접속에서 '불러오기'를 눌렀는지 (누르기 전에는 화면을 비워 둠)
 
 
@@ -46,6 +47,11 @@ def report_render():
             help_box = st.popover("", icon=":material/help:", type="tertiary", help="순위 기준 · 저장 상태 안내")
         # 설명 말풍선(help)은 두지 않음: 누른 뒤 탭이 바뀌는 순간 화면 왼쪽 위 구석에 떠 있는 경우가 있어서,
         # 같은 문구를 불러오는 동안 화면 가운데 카드(REPORT_LOADING_TEXT)로 보여 줌
+        # 2026-10-27 PM: 오른쪽 아이콘 줄의 PDF(핵심 문제 전체 · 리포트 다운로드)를 '불러오기' 왼쪽 버튼으로 옮김.
+        # 데이터는 아래에서 계산하므로 여기서는 표시만 남기고, 계산 뒤에 창을 엶 (불러오기 전에는 꺼 둠)
+        if st.button("PDF 다운로드", icon=":material/picture_as_pdf:", key="report-btn-pdf", disabled=not loaded,
+                     help=None if loaded else "'불러오기'를 누른 뒤 받을 수 있어요"):
+            st.session_state["report-open-pdf"] = True
         st.button("불러오기", icon=":material/download:", key="report-btn-load", on_click=report_click_load)
         st.button("다음으로", icon=":material/arrow_forward:", key="report-btn-save", type="primary", disabled=not loaded,
                   on_click=report_click_save, help="지금 결과를 리포트로 저장하고 ② 가설 탭으로 넘어갑니다")
@@ -89,6 +95,8 @@ def report_render():
         with col:
             report_show_rank_card(data, keys[rank - 1] if len(keys) >= rank else None, rank)
     report_fill_help(help_box, data)
+    if st.session_state.pop("report-open-pdf", False):   # 위 'PDF 다운로드' 버튼
+        report_dialog_problems(data, summary, kpis, steps, utm_rows)
 
     # 오른쪽 끝 아이콘 (① 탭 안에서만 보이고 화면에 고정: report_style.css .st-key-report-side)
     # 아이콘: 테마 색 한 가지로 보이는 Material 아이콘 (마우스를 올리면 이름)
@@ -102,6 +110,8 @@ def report_render():
                ("ab", ":material/science:", report_dialog_ab, (data,))]
     if worst:
         buttons.insert(2, ("funnel", ":material/filter_alt:", report_dialog_funnel, (ga4["funnel"], worst)))
+    if not REPORT_SHOW_SIDE:   # 2026-10-27 PM: 오른쪽 아이콘 줄 숨김 (다시 보이려면 REPORT_SHOW_SIDE = True)
+        return
     with st.container(key="report-side"):
         for name, icon, dialog, args in buttons:
             if st.button("", icon=icon, key=f"report-btn-side-{name}", type="tertiary"):
