@@ -83,7 +83,16 @@ MEDIA_S2_AI_SYSTEM = """너는 amazon.de(독일)에서 파는 냉감패드의 "�
     "avoid": ["..."], "include": ["..."], "slot_warnings": ["..."]}
 10. 기본 프롬프트는 수업 형식 6줄(Subject: / Composition: / Lighting: / Background: / Style: / Negative:)이야.
     줄 이름·순서·줄 수는 그대로 두고, 각 줄 내용만 AI 이미지 모델이 더 잘 알아듣게 구체적으로 다듬어.
-11. [독일 디자인·사진 DB]의 내용은 "사실"처럼 근거로 써도 돼 (Style·Background 줄의 색·톤 등)."""
+11. [독일 디자인·사진 DB]의 내용은 "사실"처럼 근거로 써도 돼 (Style·Background 줄의 색·톤 등).
+12. [사용자가 직접 고친 프롬프트 A]가 있으면, 사용자가 고치거나 더한 내용(한국어일 수 있어)에서
+    전체 분위기와 배경(조명·배경·색감·스타일·톤)만 뽑아 영어로 옮겨 기본 프롬프트의 {slot} 밖 줄
+    (Lighting·Background·Style)에 반영해. 기본 프롬프트에 넣으니 B에도 똑같이 적용돼.
+    - 사용자가 원한 분위기는 반드시 반영해. 기본 프롬프트에 그와 반대되는 분위기 표현
+      (예: 따뜻한 분위기를 원했는데 neutral tones, cool, without warm/sunset light 같은 말)이 있으면
+      그 표현을 지우거나 사용자 요청에 맞게 바꿔. 독일 디자인 DB보다 사용자 요청이 먼저야.
+      단, 흰 배경 같은 아마존 메인 이미지 규칙과 금지 표현은 지켜 (예: 따뜻한 조명이어도 배경은 순백 유지).
+    - 피사체·구도·독립 변수(빈칸 A·B 문구)·고정 요소를 바꾸는 내용은 반영하지 말고 slot_warnings에 알려.
+    - 이렇게 반영한 곳의 근거 ID는 USER-EDIT로 붙여. 단, 1~10 규칙(금지 표현·아마존 규칙·줄 형식)이 먼저야."""
 
 MEDIA_S2_AI_RETRY_NOTE = "\n\n[다시 요청] 앞 답이 JSON 형식이 아니었어. 설명 없이 위 형식의 JSON만 다시 답해."
 
@@ -272,6 +281,9 @@ def media_s2_ai_message(material: dict) -> str:
         block("아마존 메인 이미지 규칙", ided(material["amazon"])),
         block("넣을 것 - 사실", ided(material["facts"])),
         block("독일 디자인·사진 DB", ided(material.get("design", []))),
+        *([block("사용자가 직접 고친 프롬프트 A (분위기·배경만 뽑아 기본 프롬프트에 반영, 규칙 12)",
+                 [material["edits"]["A"]])]
+          if material.get("edits") else []),
     ])
 
 
@@ -377,7 +389,7 @@ def media_s2_ai_validate(raw: str, draft: dict, material: dict) -> dict:
     if base and all(lb in draft["base"] for lb in labels):
         lines = [ln.strip() for ln in base.strip().splitlines() if ln.strip()]
         if len(lines) != len(labels) or any(not ln.startswith(lb) for ln, lb in zip(lines, labels)):
-            errors.append("6줄 형식(Subject·Composition·Lighting·Background·Style·Negative)이 바뀌었어요")
+            errors.append("프롬프트 줄 형식(Subject·Composition·Lighting·Background·Style·Negative)이 바뀌었어요")
     missing = [f for f in draft["fixed"] if f not in base]
     if base and missing:
         errors.append("고정 요소가 빠지거나 바뀌었어요: " + ", ".join(missing))
@@ -410,10 +422,14 @@ def media_s2_ai_validate(raw: str, draft: dict, material: dict) -> dict:
     }}
 
 
-def media_s2_ai_run(draft: dict) -> dict:
+def media_s2_ai_run(draft: dict, edits: dict | None = None) -> dict:
     """재료 → 지시문 → OpenAI 부르기 → 확인. JSON이 깨졌으면 한 번만 다시 요청하고, 또 깨지면 취소.
+    edits: 사용자가 직접 고친 프롬프트 {"A": ...} (고쳤을 때만, 수정은 A에서만). AI가 여기서 분위기·배경만 뽑아
+    기본 프롬프트에 넣어 A·B에 똑같이 반영하고, 근거 ID는 USER-EDIT (2026-10-27 PM).
     호출 자체가 실패하면 RuntimeError를 그대로 올립니다 (화면에서 경고로 보여 줌)."""
     material = media_s2_ai_material(draft)
+    if edits:
+        material = {**material, "edits": edits, "ids": [*material["ids"], "USER-EDIT"]}
     message = media_s2_ai_message(material)
     check = media_s2_ai_validate(media_s2_ai_call(MEDIA_S2_AI_SYSTEM, message), draft, material)
     if check["broken"]:
