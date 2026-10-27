@@ -16,7 +16,9 @@ MEDIA_S3_WORK_JSON = {"media-s3-storyboard": "storyboard.json", "media-s3-storyb
                     "media-s3-video-links": "video_links.json",   # 영상 파일 이름 → Higgsfield 주소
                     "media-s3-file-group": "file_group.json",     # 작업 공간 파일 이름 → 만든 가설 묶음 id
                     "media-s3-history": "history.json",           # 만든 결과 기록 목록 (session 키 → 파일)
-                    "media-s3-pick": "pick.json"}                 # '만든 결과 보기'에서 ⑤로 보내려고 고른 기록(file) 목록
+                    "media-s3-pick": "pick.json",                 # '만든 결과 보기'에서 ⑤로 보내려고 고른 기록(file) 목록
+                    "media-s3-group-storyboard": "group_storyboard.json",   # 가설 묶음 id → 그 가설로 확정한 스토리보드
+                    "media-s3-send-group": "send_group.json"}     # '만든 결과 보기'에서 외주로 보내려고 고른 가설 묶음 id
 MEDIA_S3_SESSION_ONLY = {"media-s3-assets-photos", "media-s3-assets-videos",   # 폴더에서 읽지도, 폴더에 쓰지도 않는 키
                          "media-s3-storyboard", "media-s3-storyboard-done"}
 MEDIA_S3_HISTORY_DIR = MEDIA_S3_WORK_DIR / "history"   # 만든 결과 사본 (작업 공간에서 지우거나 바꿔도 남음)
