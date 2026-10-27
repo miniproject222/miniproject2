@@ -9,13 +9,14 @@
   color: var(--color-sub);
 }
 
-/* 3번 탭(광고 소재·솔루션 = 최상위 탭 줄의 4번째)을 연 동안만 페이지 위·양옆 여백을 줄임
+/* 3번 탭(최상위 탭 줄의 4번째)을 연 동안만 페이지 폭·여백: ①·②·④ 탭과 같게 (최대 1720px, 위 1rem·양옆 3.5rem·아래 1rem)
+   → 제목 줄과 '불러오기'·'다음으로' 버튼이 다른 탭과 같은 자리에 옴 (2026-10-26, 예전 1400px·양옆 2.5rem·아래 3rem)
    (다른 탭에는 적용되지 않음. 탭 순서가 바뀌면 nth-of-type 숫자를 맞춰야 함)
    weather_style.css의 "5번째 탭 선택" 규칙이 다른 탭 안의 하위 탭에도 걸릴 수 있어, 같은 속성을 !important로 다시 정함 */
 @media (min-width: 768px) {
   [data-testid="stMainBlockContainer"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stTabs"] > div > [role="tablist"] > [role="tab"]:nth-of-type(4)[aria-selected="true"]) {
-    max-width: 1400px !important;
-    padding: 1rem 2.5rem 3rem !important;
+    max-width: 1720px !important;
+    padding: 1rem 3.5rem 1rem !important;
   }
 }
 /* 2·3단계 CSS를 넣는 칸 (media_page.py의 media_load_stage_css) - 칸은 숨기고 style만 적용 */
@@ -99,16 +100,17 @@
 }
 
 .st-key-media-step [role="tab"]:hover {
-  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-card)) !important;
-  border-color: color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
-  color: var(--color-primary) !important;
+  background: color-mix(in srgb, #7B6CF2 8%, var(--color-card)) !important;
+  border-color: color-mix(in srgb, #7B6CF2 40%, transparent) !important;
+  color: #7B6CF2 !important;
 }
 
+/* 고른 단계: ① '다음으로'·② 고른 '가설 N'과 같은 밝은 보라 (예전 진한 보라) */
 .st-key-media-step [role="tab"][aria-selected="true"] {
-  background: var(--color-primary) !important;
-  border-color: var(--color-primary) !important;
+  background: #7B6CF2 !important;
+  border-color: #7B6CF2 !important;
   color: var(--color-card) !important;
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 25%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, #7B6CF2 28%, transparent);
 }
 
 .st-key-media-step [role="tab"][aria-selected="true"] p {
@@ -127,19 +129,9 @@
   display: none;
 }
 
-/* 가설 불러오기 (media_variable.py) - 불러온 가설·변수 도출이 아래에서 살짝 떠오르며 나타남 */
-.st-key-media-hypo-box {
-  animation: media-fade-up 0.45s ease-out;
-}
-
-@keyframes media-fade-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* 넓은 화면: '다시 불러오기' 버튼을 페이지 제목 줄 오른쪽 끝으로 올림
+/* 넓은 화면: 하위 탭 바 폭
    (--media-tabbar-w = 하위 탭 바가 차지할 최대 폭. 탭 이름이 길어져도 탭 바는 이 폭 안에서 가로 스크롤되어
-    오른쪽 카드와 겹치지 않음. 음수 여백은 실제 화면에서 잰 값. 제목이 바뀌면 맞춰야 함) */
+    오른쪽 카드와 겹치지 않음) */
 @media (min-width: 768px) {
   .st-key-media-root {
     --media-tabbar-w: 580px;   /* 하위 탭 4개를 따로 띄운 알약(간격 8px) 실측 + 글꼴 차이 여유. 탭 이름이 길어지면 화면에서 다시 잼 */
@@ -156,17 +148,6 @@
 
   .st-key-media-step > div > [role="tablist"] > [role="tab"] {
     flex: 1 1 auto;
-  }
-
-  .st-key-media-hypo-load-row {
-    position: relative;
-    z-index: 1;
-    margin-top: -119px;
-    pointer-events: none;   /* 줄 전체가 탭 바를 덮으므로 클릭은 버튼만 받음 */
-  }
-
-  .st-key-media-hypo-load-row button {
-    pointer-events: auto;
   }
 }
 
@@ -186,25 +167,26 @@
   gap: 2px !important;
   padding: 8px 14px;
   background: var(--color-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;   /* ①·② 카드처럼 테두리 없이 그림자 (자리는 남겨 고른 카드 2px 테두리와 크기 같게) */
   border-radius: 12px;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 8%, transparent);
   transition: border-color 0.15s;
 }
 
 [class*="st-key-media-variable-card-"]:hover {
-  border-color: var(--color-sub);
+  border-color: color-mix(in srgb, #7B6CF2 45%, transparent);
 }
 
 /* 고른 블럭: 테두리를 진하게 (2px로 늘어난 만큼 안쪽 여백을 줄여 블럭 크기는 그대로) */
 [class*="st-key-media-variable-card-on-"],
 [class*="st-key-media-variable-card-on-"]:hover {
   padding: 7px 13px;
-  border: 2px solid var(--color-primary);
+  border: 2px solid #7B6CF2;
 }
 
 /* 키보드로 고를 때도 어느 블럭인지 보이게 */
 [class*="st-key-media-variable-card-"]:has(button:focus-visible) {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid #7B6CF2;
   outline-offset: 2px;
 }
 
@@ -305,9 +287,10 @@
 .st-key-media-variable-a-card {
   gap: 2px !important;
   padding: 8px 14px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  border: 1px solid transparent;
   border-radius: 12px;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .st-key-media-variable-a-card p {
@@ -397,4 +380,107 @@
 
 .st-key-media-hypo-summary p {
   white-space: normal;
+}
+
+/* ── 제목 줄: ① 문제 분석·② 가설 세우기와 같은 구조 (2026-10-26) ──
+   제목 · 바로 옆 물음표(설명) (media_page.py media_header). 단계 이동은 단계마다 맨 아래 이전/다음 버튼 */
+.st-key-media-head { flex-wrap: nowrap !important; }
+.st-key-media-head .st-key-media-head-title,
+.st-key-media-head > [data-testid="stLayoutWrapper"]:has(> .st-key-media-head-title) {
+  flex: 0 0 auto !important;
+  width: auto !important;
+}
+.st-key-media-head .st-key-media-head-title .ui-title { width: auto; }
+.st-key-media-head .st-key-media-help,
+.st-key-media-head > [data-testid="stLayoutWrapper"]:has(> .st-key-media-help) {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  align-self: flex-end;
+  margin-left: -6px;
+  padding-bottom: 2px;
+}
+
+/* ── 버튼 색: ①·② 탭과 같게 (2026-10-26) ──
+   주 버튼(primary) = 밝은 보라 채움 + 흰 글자 (① '다음으로'·② '선택하기'),
+   보조 버튼(secondary) = 흰 바탕 + 밝은 보라 테두리·글자 (① '불러오기').
+   일부러 다르게 만든 버튼은 빼고 그 단계 CSS 그대로: 'AI로 다듬기'(보라 그라데이션), 'AI 다듬기 목록'(회색),
+   리포트 규칙 칩, 사진 위 ←·→(반투명 동그라미). 아이콘만 있는 버튼(tertiary)은 바꾸지 않음.
+   팝업(경고창·솔루션 창)은 ③ 칸 밖에 그려져 key로 따로 지정 */
+.st-key-media-root .stButton button[kind="primary"]:not(:disabled),
+.st-key-media-root .stDownloadButton button[kind="primary"]:not(:disabled),
+.st-key-media-btn-variable-need-confirm-ok button:not(:disabled),
+.st-key-media-s2-btn-need-refine-ok button:not(:disabled),
+.st-key-media-variable-solution-actions .stButton button[kind="primary"]:not(:disabled),
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="primary"]:not(:disabled) {
+  background: #7B6CF2 !important;
+  border: 1px solid #7B6CF2 !important;
+}
+.st-key-media-root .stButton button[kind="primary"]:not(:disabled):hover,
+.st-key-media-root .stDownloadButton button[kind="primary"]:not(:disabled):hover,
+.st-key-media-btn-variable-need-confirm-ok button:not(:disabled):hover,
+.st-key-media-s2-btn-need-refine-ok button:not(:disabled):hover,
+.st-key-media-variable-solution-actions .stButton button[kind="primary"]:not(:disabled):hover,
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="primary"]:not(:disabled):hover {
+  background: color-mix(in srgb, #7B6CF2 86%, #000) !important;
+}
+.st-key-media-btn-variable-need-confirm-ok button:not(:disabled) p,
+.st-key-media-s2-btn-need-refine-ok button:not(:disabled) p { color: var(--color-card) !important; }
+
+.st-key-media-root .stElementContainer:not(.st-key-media-s2-btn-refine):not(.st-key-media-s2-btn-ai-list):not(.st-key-media-s2-btn-rules):not(.st-key-media-s3-prev):not(.st-key-media-s3-next) .stButton button[kind="secondary"]:not(:disabled),
+.st-key-media-root .stDownloadButton button[kind="secondary"]:not(:disabled),
+.st-key-media-variable-solution-actions .stButton button[kind="secondary"]:not(:disabled),
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="secondary"]:not(:disabled) {
+  background: var(--color-card) !important;
+  border: 1px solid #7B6CF2 !important;
+}
+.st-key-media-root .stElementContainer:not(.st-key-media-s2-btn-refine):not(.st-key-media-s2-btn-ai-list):not(.st-key-media-s2-btn-rules):not(.st-key-media-s3-prev):not(.st-key-media-s3-next) .stButton button[kind="secondary"]:not(:disabled):hover,
+.st-key-media-root .stDownloadButton button[kind="secondary"]:not(:disabled):hover,
+.st-key-media-variable-solution-actions .stButton button[kind="secondary"]:not(:disabled):hover,
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="secondary"]:not(:disabled):hover {
+  background: color-mix(in srgb, #7B6CF2 8%, var(--color-card)) !important;
+}
+.st-key-media-root .stElementContainer:not(.st-key-media-s2-btn-refine):not(.st-key-media-s2-btn-ai-list):not(.st-key-media-s2-btn-rules):not(.st-key-media-s3-prev):not(.st-key-media-s3-next) .stButton button[kind="secondary"]:not(:disabled) p,
+.st-key-media-root .stElementContainer:not(.st-key-media-s2-btn-refine):not(.st-key-media-s2-btn-ai-list):not(.st-key-media-s2-btn-rules):not(.st-key-media-s3-prev):not(.st-key-media-s3-next) .stButton button[kind="secondary"]:not(:disabled) span,
+.st-key-media-root .stDownloadButton button[kind="secondary"]:not(:disabled) p,
+.st-key-media-root .stDownloadButton button[kind="secondary"]:not(:disabled) span,
+.st-key-media-variable-solution-actions .stButton button[kind="secondary"]:not(:disabled) p,
+.st-key-media-variable-solution-actions .stButton button[kind="secondary"]:not(:disabled) span,
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="secondary"]:not(:disabled) p,
+.st-key-media-variable-solution-actions .stDownloadButton button[kind="secondary"]:not(:disabled) span {
+  color: #7B6CF2 !important;
+}
+/* 글자가 있는 팝오버 버튼('이 탭 사용법' 등)도 보조 버튼과 같은 흰 바탕 + 보라 테두리·글자 (물음표만 있는 tertiary는 그대로) */
+.st-key-media-root [data-testid="stPopover"] button[kind="secondary"]:not(:disabled) {
+  background: var(--color-card) !important;
+  border: 1px solid #7B6CF2 !important;
+}
+.st-key-media-root [data-testid="stPopover"] button[kind="secondary"]:not(:disabled) p,
+.st-key-media-root [data-testid="stPopover"] button[kind="secondary"]:not(:disabled) span {
+  color: #7B6CF2 !important;
+}
+
+/* ── 카드: ①·② 탭과 같은 모양 (2026-10-27) ──
+   바깥 카드 = 테두리 없는 흰 카드 + 그림자 (모서리 var(--radius)),
+   카드 안 상자(Higgsfield 로그인 · 솔루션 팝업 칸) = ① 안쪽 상자처럼 연한 회보라 바탕, 테두리 없음.
+   ① 확정 전 빈 상태 카드(media-s2-ab-empty)는 ② 빈 상태처럼 점선 그대로 */
+.st-key-media-root .st-key-media-s2-prompt-box-A,
+.st-key-media-root .st-key-media-s2-prompt-box-B,
+.st-key-media-root .st-key-media-s2-result,
+.st-key-media-root [class*="st-key-media-s3-photo-card-"],
+.st-key-media-root .st-key-media-s3-sb-card,
+.st-key-media-root .st-key-media-s3-video-card,
+.st-key-media-root .st-key-media-s3-export-left,
+.st-key-media-root .st-key-media-s3-export-right,
+.st-key-media-root .st-key-media-variable-locked {
+  border: none !important;
+  border-radius: var(--radius) !important;
+  background: var(--color-card) !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 7%, transparent) !important;
+}
+.st-key-media-root .st-key-media-s3-hf-login,
+.st-key-media-variable-solution-steps,
+[class*="st-key-media-variable-solution-box-"] {
+  border: none !important;
+  border-radius: 14px !important;
+  background: var(--color-bg) !important;
 }

@@ -13,7 +13,8 @@ import streamlit as st
 
 from common.common_store import store_get
 from modules.media.media_handoff import (MEDIA_HANDOFF_PLAN, media_handoff_clear_plan, media_handoff_plan,
-                                         media_handoff_set_plan, media_handoff_set_solution, media_handoff_solution)
+                                         media_handoff_set_plan, media_handoff_set_solution, media_handoff_solution,
+                                         media_tab_open)
 from modules.media.media_variable_ai import (MEDIA_VARIABLE_AI_RULE_SOURCE, MEDIA_VARIABLE_AI_VERSION, MEDIA_VARIABLE_B_MIN,
                                              media_variable_b_shortage, media_variable_generate,
                                              media_variable_solution_generate)
@@ -70,7 +71,7 @@ MEDIA_VARIABLE_LEAVE_KEY = "media-variable-need-confirm"   # ①을 떠나려다
 def media_variable_saved(fresh: bool = False) -> dict:
     """2번 가설 탭이 저장한 가설 {"text", "if", "because", "then", "problem"} (저장 전이면 빈 dict).
     새 모양("selected" 칸)을 먼저 읽고, 없으면 예전 평평한 키(text, if_text …)를 읽습니다.
-    fresh면 이번 접속에 기억해 둔 값 대신 Supabase에서 다시 읽습니다 ('다시 불러오기' 버튼·자동 불러오기)."""
+    fresh면 이번 접속에 기억해 둔 값 대신 Supabase에서 다시 읽습니다 (2번 탭 '다음으로'·자동 불러오기)."""
     saved = store_get("hypothesis", fresh=fresh)
     if not isinstance(saved, dict):
         return {}
@@ -203,7 +204,7 @@ def media_variable_hypo_tip(hypo: dict) -> str:
 
 def media_variable_is_stale(hypo: dict) -> bool:
     """불러온 가설이 2번 탭에 지금 저장된 가설과 다른지 (2번 탭에서 '선택하기'로 다른 가설을 고른 뒤 다시 불러오지 않음).
-    이번 접속에 기억해 둔 값으로만 비교합니다 (다른 사람이 저장한 값은 '다시 불러오기'를 눌러야 반영). 맞으면 자동으로 다시 불러옴."""
+    이번 접속에 기억해 둔 값으로만 비교합니다 (다른 사람이 저장한 값은 2번 탭에서 '다음으로'를 다시 눌러야 반영). 맞으면 자동으로 다시 불러옴."""
     saved = media_variable_saved()
     return bool(saved) and saved != hypo
 
@@ -505,7 +506,7 @@ def media_variable_ab_step(plan: dict, price: str, defaults: list[str], cands: d
         gen = st.session_state.get(MEDIA_VARIABLE_GEN_KEY) or {}
         st.caption(f"옵션이 {len(options)}개만 나왔어요 (최소 {MEDIA_VARIABLE_B_MIN}개) · "
                    + ("AI 키를 넣으면 옵션을 더 만들어요" if gen.get("source") == MEDIA_VARIABLE_AI_RULE_SOURCE
-                      else "오른쪽 위 '다시 불러오기'를 누르면 다시 만들어요"))
+                      else "② 가설 탭에서 '다음으로'를 다시 누르면 다시 만들어요"))
     if defaults:   # 리포트 탭을 아직 안 열었거나 리포트 칸 이름이 바뀌었을 때 바로 알아차리도록
         st.caption(f"1번 리포트 값이 없어 기본값으로 보여 줘요: {', '.join(defaults)}")
 
@@ -710,20 +711,20 @@ def media_variable_locked_step() -> None:
 
 
 def _media_variable_start_load() -> None:
-    """'다시 불러오기' 버튼 콜백. 다음 화면 그리기에서 스피너를 띄우고 불러오도록 표시만 해 둡니다 (AI가 오래 걸릴 수 있어서)."""
+    """다시 불러오기 표시 (예전 '↻ 다시 불러오기' 버튼 콜백, 버튼은 2026-10-27 삭제). 다음 화면 그리기에서 스피너를 띄우고 불러오도록 표시만 해 둡니다."""
     st.session_state["media-hypo-loading"] = True
 
 
 def media_variable_step():
     """하위 탭 '가설에서 변수 도출': 2번 탭 가설을 자동으로 불러옴 → 요약 칩(독립 변수·목표 KPI) → 후보 변수 선택·단일 변수 선정.
-    오른쪽 위 '다시 불러오기'는 다른 사람이 방금 저장한 가설을 Supabase에서 다시 읽을 때만 씁니다.
+    (가설 '다시 불러오기' 버튼은 2026-10-27 삭제: 2번 탭 '다음으로'·자동 불러오기로만 불러옴)
     반드시 media_render() 안에서 부릅니다."""
-    pressed = st.session_state.pop("media-hypo-loading", False)   # '다시 불러오기' 또는 2번 탭 '다음으로'
+    pressed = st.session_state.pop("media-hypo-loading", False)   # 2번 탭 '다음으로'
     # 버튼 없이 자동으로 불러옴: 이번 접속에서 아직 안 불렀거나, 2번 탭에서 다른 가설을 저장했을 때.
-    # 3번 탭 내용은 다른 탭을 보고 있을 때도 같이 그려지므로, 3번 탭을 직접 눌러 들어와도 이미 불러온 화면이 보임
-    auto = not st.session_state.get("media-hypo-loaded") or media_variable_is_stale(media_variable_loaded())
-    with st.container(horizontal=True, horizontal_alignment="right", key="media-hypo-load-row"):
-        st.button("↻ 다시 불러오기", key="media-btn-hypo-load", on_click=_media_variable_start_load)
+    # 단, ③ 탭이 열려 있을 때만 (2026-10-27): 3번 탭 내용은 다른 탭을 보고 있을 때도 같이 그려져서, 예전에는 ③을 열지 않아도
+    # 접속할 때마다 AI(OpenAI)를 불러 비용이 나가고 첫 화면이 늦어졌음. 이제 ③을 처음 열 때 불러옴 (2번 탭 '다음으로'는 ③을 열면서 바로)
+    auto = ((not st.session_state.get("media-hypo-loaded") or media_variable_is_stale(media_variable_loaded()))
+            and media_tab_open())
 
     # 불러올 때만: 2번 탭 가설을 Supabase에서 다시 읽고 후보 묶음을 만듦 (같은 가설이면 AI를 다시 부르지 않음)
     if pressed or auto:

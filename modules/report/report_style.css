@@ -359,19 +359,6 @@
   display: none;
 }
 
-/* ── 불러오기 직후 한 번: 글자가 위에서부터 차례로 나타남 (데이터를 불러오는 느낌) ── */
-[class*="st-key-report-card-"]:has(.report-reveal) .report-row {
-  animation: report-reveal 0.5s ease-out both;
-}
-[class*="st-key-report-card-"]:has(.report-reveal) .report-row:nth-child(2) { animation-delay: 0.25s; }
-[class*="st-key-report-card-"]:has(.report-reveal) .report-row:nth-child(3) { animation-delay: 0.5s; }
-@keyframes report-reveal {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  [class*="st-key-report-card-"] .report-row { animation: none !important; }
-}
 
 /* ── 홈 화면처럼 여러 색 쓰기 (홈 탭 home_page.py HOME_COLORS와 같은 값, ① 탭 클래스에만 적용) ── */
 :root {
@@ -722,4 +709,43 @@
 .st-key-report-card-rank2 .report-row-q {
   word-break: keep-all;
   overflow-wrap: anywhere;
+}
+
+/* ② 가설 재료 줄 사이 구분선: 왼쪽 탭 줄의 '매체 제작 | 날씨 광고 타이밍' 사이 선과 같은 굵기(1px)·색 (공통 변수 색) */
+.st-key-report-card-rank1 .report-detail-row + .report-detail-row,
+.st-key-report-card-rank2 .report-detail-row + .report-detail-row {
+  border-top: 1px solid color-mix(in srgb, var(--color-sub) 45%, transparent);
+}
+
+/* 불러오기 직후 로딩 표시: 화면 가운데 카드 (문구 = report_page.REPORT_LOADING_TEXT).
+   자리(.st-key-report-loading)는 크기 0으로 화면에 고정해 배치 칸을 차지하지 않고, 카드만 화면 정가운데에 고정.
+   이전 실행의 화면 요소가 이 칸에 잠깐 남더라도 보이지 않게 로딩 카드 말고는 숨김 */
+[data-testid="stLayoutWrapper"]:has(> .st-key-report-loading) {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: visible;
+  z-index: 1000;
+}
+.st-key-report-loading > :not(:has([data-testid="stSpinner"])) {
+  display: none !important;
+}
+.st-key-report-loading [data-testid="stSpinner"] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: 80vw;
+  background: var(--color-card);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  padding: 22px 30px;
+}
+.st-key-report-loading [data-testid="stSpinner"] p,
+.st-key-report-loading [data-testid="stSpinner"] div {
+  font-size: 16px;
+  color: var(--color-text);
 }

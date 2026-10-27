@@ -1,5 +1,4 @@
 # 1. 문제 분석 (검색어 클릭 분석은 가상 SQP + 실제 Keepa·DWD, 경쟁 포지션 분석은 실제 데이터만)
-import time
 from datetime import date, datetime
 from pathlib import Path
 
@@ -31,7 +30,7 @@ REPORT_TOP_HEIGHT = 560   # (참고용) 1순위·2순위 카드 높이는 report
 REPORT_HELP_ABOUT = "Keepa·경쟁사 DB·검색어 분석으로 서리의 내부·외부 문제를 찾아 위험도 순으로 정리해요."
 REPORT_HELP_RULE = ("**순위 기준**: ② 가설로 만들어 ③ 탭에서 바로 제작할 수 있는 문제(지금 ③은 메인 이미지)를 먼저, "
                     "그다음 이미지(서브·광고 배너 문구)로 고칠 수 있는 문제, 같은 조건 안에서는 위험도 → 심각도 순. 3순위부터는 다른 문제여도 됨")
-REPORT_LOAD_MIN_SEC = 1.0   # 불러오기 로딩 표시 최소 시간 (초): 너무 빨리 끝나도 '불러오는 느낌'이 나게
+REPORT_LOADING_TEXT = "Keepa·경쟁사 DB·검색어 분석으로 문제 분석 결과를 만드는 중…"   # 불러오는 동안 화면 가운데 카드 문구
 REPORT_LOADED_KEY = "report-loaded"   # 이번 접속에서 '불러오기'를 눌렀는지 (누르기 전에는 화면을 비워 둠)
 
 
@@ -45,27 +44,28 @@ def report_render():
             ui.page_header("1. 문제 분석")   # 설명 한 줄(REPORT_HELP_ABOUT)은 옆 물음표 안으로 (한 화면에 들어오게)
         with st.container(key="report-help"):   # 안내 문구는 화면에 늘어놓지 않고 이 물음표 하나에 모음 (내용은 아래에서 채움)
             help_box = st.popover("", icon=":material/help:", type="tertiary", help="순위 기준 · 저장 상태 안내")
-        st.button("불러오기", icon=":material/download:", key="report-btn-load", on_click=report_click_load,
-                  help="Keepa·경쟁사 DB·검색어 분석으로 문제 분석 결과를 만듭니다")
+        # 설명 말풍선(help)은 두지 않음: 누른 뒤 탭이 바뀌는 순간 화면 왼쪽 위 구석에 떠 있는 경우가 있어서,
+        # 같은 문구를 불러오는 동안 화면 가운데 카드(REPORT_LOADING_TEXT)로 보여 줌
+        st.button("불러오기", icon=":material/download:", key="report-btn-load", on_click=report_click_load)
         st.button("다음으로", icon=":material/arrow_forward:", key="report-btn-save", type="primary", disabled=not loaded,
                   on_click=report_click_save, help="지금 결과를 리포트로 저장하고 ② 가설 탭으로 넘어갑니다")
     if st.session_state.pop("report-redirect-toast", False):   # ② 탭 '불러오기'에서 ① 리포트가 없어 넘어온 경우
         st.toast("저장된 ① 리포트가 없어 ① 탭으로 왔어요. 결과를 확인하고 '다음으로'를 눌러 주세요", icon=":material/info:")
     if st.session_state.pop("report-saved-toast", False):
         st.toast("리포트를 저장하고 ② 가설 탭으로 넘어왔어요", icon=":material/check_circle:")
+    # 로딩 표시 자리: 화면 가운데 카드 (report_style.css, 화면 배치 칸은 차지하지 않음).
+    # 불러오기 전·후 모두 같은 순서 자리에 두어야, 불러오는 동안 이전 화면 요소(기본 틀 카드)가 이 칸에 들어와 보이지 않음
+    loading_box = st.container(key="report-loading")
     if not loaded:
         report_show_empty(help_box)
         return
 
     just = st.session_state.pop("report-just-loaded", False)
-    if just:   # 불러오기 직후: 데이터를 실제로 불러오는 동안 로딩 표시 (최소 1초)
-        started = time.time()
-        with st.spinner("Keepa·경쟁사 DB·검색어 분석 데이터를 불러오는 중…"):
+    if just:   # 불러오기 직후: 데이터를 실제로 불러오는 동안만 로딩 표시 (일부러 기다리지 않음 - 예전 최소 1초 대기 삭제)
+        with loading_box, st.spinner(REPORT_LOADING_TEXT):
             data = report_load_data()
-            time.sleep(max(0.0, REPORT_LOAD_MIN_SEC - (time.time() - started)))
     else:
         data = report_load_data()
-    data["reveal"] = just   # 불러오기 직후 한 번만 글자가 차례로 나타남 (report_style.css .report-reveal)
     ga4, sqp = data["ga4"], data["sqp"]
     steps = report_funnel_steps(ga4["funnel"]) if ga4 else []
     worst = min(steps, key=lambda s: s["diff"]) if steps else None
@@ -319,7 +319,7 @@ def report_save_store(payload):
 def report_click_load():
     """'불러오기' 버튼: 이번 접속에서 분석을 실행해 화면을 채움 (다시 누르면 최신 값으로 다시 계산)."""
     st.session_state[REPORT_LOADED_KEY] = True
-    st.session_state["report-just-loaded"] = True   # 이번 한 번만: 로딩 표시 + 글자가 차례로 나타나는 효과
+    st.session_state["report-just-loaded"] = True   # 이번 한 번만: 불러오는 동안 화면 가운데 로딩 표시
     st.session_state["report-load-count"] = st.session_state.get("report-load-count", 0) + 1
 
 
@@ -328,9 +328,8 @@ def report_click_save():
     payload = st.session_state.get("report-current-payload")
     if payload:
         report_save_store(payload)
-        # ② 탭은 넘어가자마자 이 리포트로 가설 후보를 만들도록 '불러오기'를 누른 상태로 (로딩·나타나는 효과 포함)
+        # ② 탭은 넘어가자마자 이 리포트로 가설 후보를 만들도록 '불러오기'를 누른 상태로
         st.session_state["hypothesis-loaded"] = True
-        st.session_state["hypothesis-just-loaded"] = True
         report_goto_tab("hypothesis")
 
 
@@ -369,9 +368,10 @@ def report_tab_click() -> None:
     """report_goto_tab로 탭을 옮긴 직후 한 번: 브라우저에서도 그 탭을 눌러 둠 (보이지 않는 칸)."""
     index = st.session_state.pop("report-tab-click", None)
     if isinstance(index, int):
-        import streamlit.components.v1 as components
+        # st.iframe: Streamlit이 없앨 예정인 components.html 대신 (같은 출처 iframe에서 스크립트 실행, 높이는 1 이상만 됨).
+        # 칸은 report_style.css에서 숨김
         with st.container(key="report-tab-click-box"):
-            components.html(REPORT_TAB_CLICK_JS.replace("__INDEX__", str(index)), height=0)
+            st.iframe(REPORT_TAB_CLICK_JS.replace("__INDEX__", str(index)), height=1)
 
 
 def report_problem_html(p):
@@ -396,7 +396,7 @@ def report_show_rank_card(data, k, rank):
     """N순위 문제 1개를 자세히: 근거 전체 · 심각도 · ③ 이미지로 고치기 · ② 가설 재료(행동·KPI·테스트) · 가설 탭 질문."""
     with st.container(border=True, key=f"report-card-rank{rank}"):
         # 'N순위 문제' 머리줄은 없앰 (아래 배지에 'N순위 · 내부/외부'가 있어 같은 내용, 한 화면에 들어오게)
-        marks = '<span class="report-loaded-mark"></span>' + report_reveal_mark(data)   # 배지 줄과 같은 칸에 (따로 두면 카드 위에 빈 줄이 생김)
+        marks = '<span class="report-loaded-mark"></span>'   # 배지 줄과 같은 칸에 (따로 두면 카드 위에 빈 줄이 생김)
         if not k:
             st.markdown(marks + '<div class="report-desc">이 순위에 들어갈 문제가 없어요</div>', unsafe_allow_html=True)
             return
@@ -542,11 +542,6 @@ def report_factor_row(f, tag):
     rank = f'<span class="report-rank-chip">{f["rank_label"]}</span>' if f.get("rank_label") else ""
     return report_row_html(f'<span class="report-level report-level-{REPORT_LEVEL_CLASS[f["level"]]}">'
                            f'{REPORT_LEVEL_DOTS[f["level"]]} {f["level"]}</span>', tag, rank + f["title"], f["detail"])
-
-
-def report_reveal_mark(data):
-    """불러오기 직후 한 번만: 카드 안 글자가 차례로 나타나게 하는 표시 (report_style.css .report-reveal)."""
-    return '<span class="report-reveal"></span>' if data.get("reveal") else ""
 
 
 def report_show_funnel(funnel, worst):

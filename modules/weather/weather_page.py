@@ -1,5 +1,6 @@
 # 4. 날씨 광고 타이밍
 # 화면 구성 (2단): [본문: 권역 날씨 4칸 → 예산·채널 액션 → 30°C 이상 권역 그래프] | [오른쪽: 경쟁사 재고 → 오늘의 추천]
+import json
 from datetime import date
 from html import escape
 
@@ -7,7 +8,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 import ui_theme as ui
-from common.common_store import store_set
+from common.common_store import store_get, store_set
 from modules.weather.weather_data import (
     WEATHER_HOT_C,
     WEATHER_STOCK_LABEL,
@@ -225,6 +226,13 @@ def _weather_forecast_section(plan):
         st.plotly_chart(_weather_amazon_chart(plan), config={"displayModeBar": False}, key="weather-chart-amazon", width="stretch")
 
 
+def _weather_same(saved, payload) -> bool:
+    """Supabase에 저장된 값과 새 값이 같은지 (JSON으로 바꿔 비교: 저장 뒤 키 순서·튜플↔리스트 차이는 무시)."""
+    def norm(value):
+        return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
+    return saved is not None and norm(saved) == norm(payload)
+
+
 def weather_save_store(plan, is_sample_weather=False):
     """홈 탭이 읽는 store("weather"): 광고 빈도 배수·근거·알림(오늘의 추천 첫 줄). 내용이 바뀔 때만 저장."""
     days = weather_amazon_days(plan)
@@ -247,8 +255,12 @@ def weather_save_store(plan, is_sample_weather=False):
                           for r in plan["regions"] for c in r.get("cities", []) if "now" in c and "max7" in c}}
     if st.session_state.get("weather-stored-payload") != payload:
         first = "weather-stored-payload" not in st.session_state
-        store_set("weather", payload)
         st.session_state["weather-stored-payload"] = payload
+        # 이미 저장된 값(홈이 이번 실행에서 먼저 읽어 둔 값)과 같으면 다시 저장·다시 그리기를 하지 않음
+        # (예전: 접속할 때마다 같은 값을 Supabase에 쓰고 화면 전체를 한 번 더 그려 첫 화면이 늦어짐)
+        if _weather_same(store_get("weather"), payload):
+            return
+        store_set("weather", payload)
         if first:
             # 홈 탭은 ④보다 먼저 그려져 첫 화면에서는 아직 이 값이 없음 → 이번 접속 처음 저장할 때만 한 번 다시 그려 홈에 반영
             st.rerun()

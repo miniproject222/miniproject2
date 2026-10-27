@@ -47,19 +47,26 @@ MEDIA_S3_HISTORY = "media-s3-history"           # 만든 결과 기록 목록
 MEDIA_S3_PICK = "media-s3-pick"                 # ⑤로 보내려고 고른 기록(file) 목록 ('만든 결과 보기'의 체크)
 MEDIA_S3_NOTES = "media-s3-notes"               # 위쪽 알림(예시 프롬프트 등) → 각 탭 아래 안내 줄에 붙임
 MEDIA_S3_PHOTO_IDX = "media-s3-photo-idx"       # 사진 넘겨 보기에서 지금 보는 사진 번호
-# 영상 스토리보드 틀 (자사몰 A/B, 10초): 첫 3초만 A·B가 다르고(A = 지금 방식, B = 가설의 이유가 보임) 나머지는 공통.
+MEDIA_S3_GROUP_SB = "media-s3-group-storyboard"  # 가설 묶음 id → 그 가설로 확정한 스토리보드 (가설을 바꿔도 남음)
+MEDIA_S3_SB_GROUP = "media-s3-sb-group"          # 지금 스토리보드 표가 어느 가설 묶음 것인지 (바뀌면 표를 바꿔 끼움)
+MEDIA_S3_SEND = "media-s3-send-group"            # '만든 결과 보기'에서 외주로 보내려고 고른 가설 묶음 id
+# 영상 스토리보드 틀 (자사몰 A/B, 15초): 첫 3초만 A·B가 다르고(A = 지금 방식, B = 가설의 이유가 보임) 나머지는 공통.
 # 외주는 한 번 찍고 두 버전으로 편집. AI가 가설·리포트 값으로 채울 자리, 지금은 예시 (가설: 두께·원단이 보이면 클릭↑)
 MEDIA_S3_STORYBOARD_SAMPLE = [
     {"장면": "1 첫 3초 · A", "길이(초)": 3, "화면": "침대에 깔린 냉감패드를 멀리서 보여 줌 (두께·원단은 안 보임)", "움직임": "고정 카메라",
      "자막": "", "피할 것": "B와 다른 배경·조명"},
     {"장면": "1 첫 3초 · B", "길이(초)": 3, "화면": "같은 침대, 손이 원단을 쓸고 모서리를 들어 두께 클로즈업", "움직임": "쓸기 → 모서리 들기",
      "자막": "", "피할 것": "실제보다 두꺼워 보이는 연출"},
-    {"장면": "2 공통 · 증거", "길이(초)": 4, "화면": "손바닥을 패드에 대는 장면", "움직임": "손을 천천히 올려놓기",
+    {"장면": "2 공통 · 문제", "길이(초)": 4, "화면": "30℃ 전후 무더운 독일 여름밤 침실, 등을 대고 누워 뒤척임", "움직임": "천천히 다가가는 카메라",
+     "자막": "", "피할 것": "과장된 땀·괴로운 표정"},
+    {"장면": "3 공통 · 증거", "길이(초)": 4, "화면": "손바닥을 패드에 대는 장면", "움직임": "손을 천천히 올려놓기",
      "자막": "Die Hautoberfläche fühlt sich bis zu 7,8 °C kühler an (Wärmebildmessung, Fertigprodukt)",
      "피할 것": "체온을 낮춘다, 얼음·서리 연출"},
-    {"장면": "3 공통 · 마무리", "길이(초)": 3, "화면": "90×200 침대에 깔린 모습, OEKO-TEX 라벨 → 자사몰 구매 안내", "움직임": "위에서 내려오는 카메라",
+    {"장면": "4 공통 · 마무리", "길이(초)": 4, "화면": "90×200 침대에 깔린 모습, OEKO-TEX 라벨 → 자사몰 구매 안내", "움직임": "위에서 내려오는 카메라",
      "자막": "OEKO-TEX® STANDARD 100 · Jetzt im Shop", "피할 것": "친환경 아이콘, 직접 만든 인증 마크"},
 ]
+# 새 가설로 들어왔을 때 보이는 빈 틀: 장면 순서·길이만 두고 내용은 빈칸 ('스토리보드 만들기'나 직접 입력으로 채움)
+MEDIA_S3_STORYBOARD_BLANK = [{**r, "화면": "", "움직임": "", "자막": "", "피할 것": ""} for r in MEDIA_S3_STORYBOARD_SAMPLE]
 
 
 def media_s3_input() -> dict:
@@ -126,44 +133,47 @@ def media_s3_video_prompt(src: dict, storyboard: list, ver: str = "") -> str:
     A·B는 첫 장면만 다르고 나머지 문장은 글자까지 같습니다 (공통 장면이 비슷하게 나오도록)."""
     rows = media_s3_video_versions(storyboard).get(ver) or storyboard
     scenes = [f"{i}. ({r.get('길이(초)', '')}s) {r.get('화면', '')} / {r.get('움직임', '')}"
-              + (f" / 자막: {r['자막']}" if r.get("자막") else "") + (f" / 피할 것: {r['피할 것']}" if r.get("피할 것") else "")
+              + (f" / 피할 것: {r['피할 것']}" if r.get("피할 것") else "")   # 자막 글은 넣지 않음 (AI가 화면에 글자를 그려 깨짐)
               for i, r in enumerate(rows, 1) if r.get("화면")]
     return "\n".join([f"Short product video draft, {MEDIA_S3_VIDEO_SECONDS} seconds, 16:9, realistic and calm, no exaggeration, "
-                      "silent autoplay (no sound, short German subtitles on screen).",
+                      "silent, no sound. Absolutely no on-screen text: no subtitles, captions, letters, numbers, logos or "
+                      "labels anywhere in the frame (subtitles are added later in editing).",
                       "Product: cooling mattress pad 90x200 cm, the same product look in every scene.",
                       "Scenes:", *scenes,
                       *(["Avoid: " + ", ".join(media_s3_video_avoid(src))] if media_s3_video_avoid(src) else [])])
 
 
 def _media_s3_sub_time(sec: float, sep: str) -> str:
-    return f"00:{int(sec) // 60:02d}:{int(sec) % 60:02d}{sep}000"
+    ms = int(round(sec * 1000))
+    return f"00:{ms // 60000:02d}:{ms // 1000 % 60:02d}{sep}{ms % 1000:03d}"
 
 
 def media_s3_video_subs(rows: list, ver: str = "") -> dict:
     """초안 영상에 붙일 한국어 설명 자막 {"vtt", "srt"}: 스토리보드 장면 길이대로 시간을 나누고,
     장면마다 '[영상 A · 첫 3초] 화면 설명'과 (있으면) 독일어 자막의 뜻을 한국어로 보여 줍니다.
     AI 영상에 글자를 직접 넣으면 한글이 깨져서, 영상 위에 겹쳐 보이는 자막 파일로 만듭니다 (앱 재생기·zip의 .srt)."""
-    def short(text: str, n: int = 55) -> str:   # 영상을 덜 가리게 한두 줄로
-        text = str(text).strip().split(". ")[0].rstrip(".")
-        return text if len(text) <= n else text[:n].rstrip() + "…"
-
     cues, t = [], 0.0
     for i, r in enumerate(rows):
         sec = float(r.get("길이(초)") or 0) or 3.0
         hv = media_s3_scene_version(r)
         part = (f"첫 {int(sec)}초 · {'A안 (지금 방식)' if hv == 'A' else 'B안 (가설 장면)'}" if hv
                 else f"공통 장면 {i}" if ver else str(r.get("장면", "")))
-        lines = [f"[영상 {ver} · {part}]" if ver else f"[{part}]", short(r.get("화면", ""))]
+        head = f"[영상 {ver} · {part}]" if ver else f"[{part}]"
+        desc = str(r.get("화면", "")).strip()
+        for de_name in ("SEORI REIF Kühlauflage", "SEORI REIF Kuehlauflage", "Kühlauflage"):   # 설명은 전부 한국어로
+            desc = desc.replace(de_name, "서리 냉감패드")
         de = str(r.get("자막") or "").strip()
-        if de:
-            ko = ""
-            if media_s3_ai_ready("OPENAI_API_KEY"):
-                try:
-                    ko = media_s3_translate(de)
-                except MediaS3AIError:
-                    ko = ""
-            lines.append(f"자막 뜻: {short(ko or de)}")
-        cues.append((t, t + sec, [line for line in lines if line]))
+        ko = ""
+        if de and media_s3_ai_ready("OPENAI_API_KEY"):
+            try:
+                ko = media_s3_translate(de)
+            except MediaS3AIError:
+                ko = ""
+        if de and ko:   # 글이 길어 자르지 않고, 장면 시간을 반씩: 앞 = 화면 설명, 뒤 = 독일어 자막의 한국어 뜻
+            cues.append((t, t + sec / 2, [head, desc]))
+            cues.append((t + sec / 2, t + sec, [head, "자막 뜻: " + ko.replace("ΔT", "온도차").replace("Δ", "")]))   # 번역이 안 되면 독일어는 넣지 않음 (한국어만)
+        else:
+            cues.append((t, t + sec, [head, desc]))
         t += sec
     vtt = "WEBVTT\n\n" + "\n".join(f"{_media_s3_sub_time(a, '.')} --> {_media_s3_sub_time(b, '.')}\n" + "\n".join(ls) + "\n"
                                      for a, b, ls in cues)
@@ -178,6 +188,47 @@ def media_s3_video_subtitles(name: str, kind: str = "vtt") -> str | None:
         if (name == key or name.endswith("_" + key)) and isinstance(info, dict) and info.get(f"subs_{kind}"):
             return info[f"subs_{kind}"]
     return None
+
+
+def media_s3_vtt_cues(vtt: str) -> list:
+    """WEBVTT 글 → 자막 cue [(시작초, 끝초, [줄…])] (영상에 구워 넣을 때 씀)."""
+    def sec(t: str) -> float:
+        h, m, s = t.strip().replace(",", ".").split(":")
+        return int(h) * 3600 + int(m) * 60 + float(s)
+
+    cues = []
+    for block in vtt.replace("\r", "").split("\n\n"):
+        lines = [x for x in block.strip().split("\n") if x.strip()]
+        if lines and "-->" in lines[0]:
+            a, b = lines[0].split("-->")
+            cues.append((sec(a), sec(b), lines[1:]))
+    return cues
+
+
+def media_s3_video_burned(name: str, content: bytes) -> bytes | None:
+    """한국어 설명 자막을 구워 넣은 영상 (자막 정보가 없거나 ffmpeg가 없으면 None)."""
+    from modules.media.media_stage3.media_stage3_burn import media_s3_burn_subs
+    vtt = media_s3_video_subtitles(name)
+    return media_s3_burn_subs(content, media_s3_vtt_cues(vtt)) if vtt else None
+
+
+def media_s3_video_download(name: str, content: bytes) -> tuple:
+    """영상 내려받기 (데이터, 파일 이름, 도움말). 한국어 설명 자막이 있으면 영상에 구워 넣은 MP4 하나
+    (앱에서 보던 그대로, 어떤 재생기로 열어도 자막이 보임). 굽기가 안 되면 영상 + 같은 이름 .srt를 zip으로."""
+    import io
+    import zipfile
+    srt = media_s3_video_subtitles(name, "srt")
+    if not srt:
+        return content, name, f"{name} 내려받기"
+    burned = media_s3_video_burned(name, content)
+    if burned:
+        return burned, name, "한국어 설명 자막이 들어간 영상 (앱에서 보던 그대로)"
+    stem = name.rsplit(".", 1)[0]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(name, content)
+        z.writestr(f"{stem}.srt", srt.encode("utf-8-sig"))
+    return buf.getvalue(), f"{stem}.zip", "영상 + 한국어 설명 자막(.srt) 묶음. 압축을 풀고 같은 폴더에서 VLC 등으로 열면 자막이 켜져요"
 
 
 def media_s3_play(name: str, content: bytes) -> None:
@@ -255,7 +306,7 @@ A/B 테스트는 사진 A와 B가 **딱 한 가지(단일 변수)만** 달라야
 
 ※ AI 사진은 아마존 메인 이미지로 쓰지 않아요 (촬영 참고용).""",
     "video": """**이 탭은 뭐 하는 곳?**
-자사몰에서 클릭률을 비교할 **영상 A·B의 설계도(스토리보드)**를 만들고, 그 설계도로 **10초 초안 영상 A·B**를 AI로 만들어 보는 곳이에요.
+자사몰에서 클릭률을 비교할 **영상 A·B의 설계도(스토리보드)**를 만들고, 그 설계도로 **15초 초안 영상 A·B**를 AI로 만들어 보는 곳이에요.
 
 **왜 하나요?**
 같은 가설을 영상에서도 시험해요. **첫 3초만** A(지금 방식)와 B(가설의 이유가 보이는 장면)가 다르고, 나머지 장면은 같아요.
@@ -264,7 +315,7 @@ A/B 테스트는 사진 A와 B가 **딱 한 가지(단일 변수)만** 달라야
 **순서**
 1. **스토리보드 만들기** (AI가 2번 가설의 이유 + 리포트 값으로 채움) → 표에서 직접 고치기
 2. **스토리보드 확정**
-3. **영상 A·B 초안 만들기** (Higgsfield, 10초·480p·소리 없음, A·B 동시에) → '만든 영상 보기'에서 비교
+3. **영상 A·B 초안 만들기** (Higgsfield, 15초·480p·소리 없음, A·B 동시에) → '만든 영상 보기'에서 비교
 
 **표시 뜻**: 확정됨 = 지금 표로 영상을 만듦 · 다시 확정 필요 = 표가 바뀜, 확정을 다시 눌러야 반영 · 금지 표현 있음 = 리포트 금지어가 들어 있음""",
     "history": """**이 탭은 뭐 하는 곳?**
@@ -389,6 +440,69 @@ def media_s3_photo_carousel():
                       args=(MEDIA_S3_PHOTOS, name, "media-s3-photo-files"))
 
 
+MEDIA_S3_AB_PLAY = "▶ A·B 이어 보기"   # 만든 영상 팝업의 첫 선택지 (영상 A·B가 다 있을 때만)
+MEDIA_S3_AB_CARD_SEC = 2.5             # 'A안'·'B안' 제목 카드를 보여 주는 시간(초)
+
+
+def _media_s3_link(name: str) -> dict:
+    for key, info in (st.session_state.get(MEDIA_S3_VIDEO_LINKS) or {}).items():
+        if (name == key or name.endswith("_" + key)) and isinstance(info, dict):
+            return info
+    return {}
+
+
+def media_s3_latest_ab(kept: list) -> dict:
+    """작업 공간 영상 중 가장 최근 영상 A·B {"A": (이름, 내용), "B": …} (둘 다 있어야 이어 보기)."""
+    out = {}
+    for name, content in kept:
+        part = name.split("_")
+        if len(part) > 2 and part[1] in ("A", "B"):
+            out[part[1]] = (name, content)
+    return out if set(out) == {"A", "B"} else {}
+
+
+def media_s3_ab_player(ab: dict) -> None:
+    """A안 제목 카드 → 영상 A → B안 제목 카드 → 영상 B를 차례로 틀어 주는 재생기 (한국어 설명 자막 포함).
+    영상 파일을 합치지 않고 화면에서만 이어 붙입니다 (합친 파일을 만들려면 ffmpeg가 필요)."""
+    import json
+    seq = []
+    for v, title in (("A", "A안 · 지금 방식"), ("B", "B안 · 가설")):
+        name, content = ab[v]
+        info = _media_s3_link(name)
+        seq.append({"title": title, "sub": info.get("hook", ""),
+                    "src": "data:video/mp4;base64," + base64.b64encode(content).decode(),
+                    "vtt": ("data:text/vtt;base64," + base64.b64encode(info["subs_vtt"].encode("utf-8")).decode())
+                    if info.get("subs_vtt") else ""})
+    page = """<div id="w" style="position:relative;width:100%;aspect-ratio:16/9;max-height:420px;background:#000;border-radius:10px;overflow:hidden;font-family:sans-serif">
+<video id="v" playsinline muted style="width:100%;height:100%;object-fit:contain"></video>
+<div id="c" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#1f2430;color:#fff;text-align:center;padding:24px;cursor:pointer">
+<div id="ct" style="font-size:30px;font-weight:700">▶ A·B 이어 보기</div>
+<div id="cs" style="font-size:15px;opacity:.85;max-width:80%">누르면 A안 → B안 순서로 재생돼요</div></div></div>
+<style>video::cue{font-size:13px;background:rgba(0,0,0,.55)}</style>
+<script>
+const seq = __SEQ__, v = document.getElementById('v'), c = document.getElementById('c'),
+      ct = document.getElementById('ct'), cs = document.getElementById('cs');
+let i = -1;
+function next() {
+  i += 1;
+  if (i >= seq.length) { ct.textContent = '끝 · 다시 보기'; cs.textContent = 'A안과 B안은 첫 3초만 달라요'; c.style.display = 'flex'; i = -1; return; }
+  ct.textContent = seq[i].title; cs.textContent = seq[i].sub ? '첫 3초: ' + seq[i].sub : '';
+  c.style.display = 'flex'; v.pause();
+  setTimeout(() => {
+    v.querySelectorAll('track').forEach(t => t.remove());
+    v.src = seq[i].src;
+    if (seq[i].vtt) { const t = document.createElement('track'); t.kind = 'subtitles'; t.label = '한국어 설명';
+      t.srclang = 'ko'; t.src = seq[i].vtt; t.default = true; v.appendChild(t); }
+    v.onloadedmetadata = () => { if (v.textTracks[0]) v.textTracks[0].mode = 'showing'; };
+    c.style.display = 'none'; v.play();
+  }, __CARD__);
+}
+v.onended = next;
+c.onclick = () => { if (c.style.display !== 'none' && (i === -1)) next(); };
+</script>""".replace("__SEQ__", json.dumps(seq)).replace("__CARD__", str(int(MEDIA_S3_AB_CARD_SEC * 1000)))
+    st.iframe(page, height=430)   # 예전 components v1 html (Streamlit이 없앨 예정) 대신. 같은 출처 iframe에서 스크립트 실행
+
+
 def media_s3_video_labels(names: list) -> list:
     """팝업에서 고를 이름: '영상 A', '영상 B' (같은 이름이 또 있으면 '영상 A (2)'처럼 번호)."""
     out, seen = [], {}
@@ -418,18 +532,26 @@ def media_s3_video_dialog():
             return
         names = [n for n, _ in kept]
         labels = media_s3_video_labels(names)
+        ab = media_s3_latest_ab(kept)
+        if ab and st.session_state.get("media-s3-video-view") == MEDIA_S3_AB_PLAY:   # A·B 이어 보기
+            media_s3_ab_player(ab)
+            with st.container(horizontal=True, vertical_alignment="center", key="media-s3-video-dialog-info"):
+                st.segmented_control("볼 영상", [MEDIA_S3_AB_PLAY, *labels], key="media-s3-video-view",
+                                     on_change=_media_s3_video_view_set, args=(names,), label_visibility="collapsed")
+            return
         idx = st.session_state.get("media-s3-video-idx", len(kept) - 1) % len(kept)
         st.session_state["media-s3-video-idx"] = idx
         st.session_state["media-s3-video-view"] = labels[idx]
         name, content = kept[idx]
         media_s3_play(name, content)
         with st.container(horizontal=True, vertical_alignment="center", key="media-s3-video-dialog-info"):
-            st.segmented_control("볼 영상", labels, key="media-s3-video-view", on_change=_media_s3_video_view_set,
-                                 args=(names,), label_visibility="collapsed")
+            st.segmented_control("볼 영상", ([MEDIA_S3_AB_PLAY] if ab else []) + labels, key="media-s3-video-view",
+                                 on_change=_media_s3_video_view_set, args=(names,), label_visibility="collapsed")
             st.space("stretch")
             with st.container(horizontal=True, gap="small", width="content"):
-                st.download_button("", content, file_name=name, key=f"media-s3-video-files-dl-{name}", type="tertiary",
-                                   icon=":material/download:", help=f"{name} 내려받기")
+                data, fname, tip = media_s3_video_download(name, content)
+                st.download_button("", data, file_name=fname, key=f"media-s3-video-files-dl-{name}", type="tertiary",
+                                   icon=":material/download:", help=tip)
                 st.button("", key=f"media-s3-video-files-rm-{name}", type="tertiary", icon=":material/delete:",
                           help=f"{name} 지우기", on_click=_media_s3_remove_file,
                           args=(MEDIA_S3_VIDEOS, name, "media-s3-video-files"))
@@ -509,11 +631,28 @@ def media_s3_photo_section(src: dict):
         media_s3_photo_dialog()
 
 
+def media_s3_storyboard_sync(gid: str) -> None:
+    """가설 묶음이 바뀌면 스토리보드 표·확정본을 그 가설 것으로 바꿔 끼웁니다 (확정한 적이 없으면 빈 틀).
+    이전 가설로 만든 표가 새 가설에서 '확정됨'으로 남아 있지 않게 합니다. 같은 가설이면 고치던 표를 그대로 둡니다."""
+    if st.session_state.get(MEDIA_S3_SB_GROUP) == gid:
+        return
+    st.session_state[MEDIA_S3_SB_GROUP] = gid
+    done = (st.session_state.get(MEDIA_S3_GROUP_SB) or {}).get(gid)
+    st.session_state[MEDIA_S3_STORYBOARD] = [dict(r) for r in done or MEDIA_S3_STORYBOARD_BLANK]
+    st.session_state[MEDIA_S3_STORYBOARD_DONE] = done
+    st.session_state["media-s3-storyboard-ver"] = st.session_state.get("media-s3-storyboard-ver", 0) + 1   # 표 위젯을 새로 그림
+
+
 def _media_s3_confirm_storyboard() -> None:
-    """'스토리보드 확정' 버튼 콜백. 지금 표를 확정본으로 보관합니다."""
-    st.session_state[MEDIA_S3_STORYBOARD_DONE] = media_s3_storyboard_rows(  # 빈 줄은 빼고 확정 (영상 프롬프트·PDF에 None이 안 들어가게)
-        st.session_state.get(MEDIA_S3_STORYBOARD, MEDIA_S3_STORYBOARD_SAMPLE))
-    media_s3_store_json(MEDIA_S3_STORYBOARD_DONE, st.session_state[MEDIA_S3_STORYBOARD_DONE])
+    """'스토리보드 확정' 버튼 콜백. 지금 표를 확정본으로 보관하고, 지금 가설의 스토리보드로도 남깁니다 (외주로 보낼 때 씀)."""
+    rows = media_s3_storyboard_rows(  # 빈 줄은 빼고 확정 (영상 프롬프트·PDF에 None이 안 들어가게)
+        st.session_state.get(MEDIA_S3_STORYBOARD, MEDIA_S3_STORYBOARD_BLANK))
+    st.session_state[MEDIA_S3_STORYBOARD_DONE] = rows
+    media_s3_store_json(MEDIA_S3_STORYBOARD_DONE, rows)
+    gid = (st.session_state.get(MEDIA_S3_GROUP) or {}).get("id", "")
+    by_group = {**(st.session_state.get(MEDIA_S3_GROUP_SB) or {}), gid: rows}
+    st.session_state[MEDIA_S3_GROUP_SB] = by_group
+    media_s3_store_json(MEDIA_S3_GROUP_SB, by_group)
 
 
 def media_s3_storyboard_section(src: dict):
@@ -539,7 +678,7 @@ def media_s3_storyboard_section(src: dict):
                 st.session_state["media-s3-storyboard-ver"] = st.session_state.get("media-s3-storyboard-ver", 0) + 1
             except MediaS3AIError as err:
                 st.warning(str(err))
-    rows = st.session_state.get(MEDIA_S3_STORYBOARD, MEDIA_S3_STORYBOARD_SAMPLE)
+    rows = st.session_state.get(MEDIA_S3_STORYBOARD, MEDIA_S3_STORYBOARD_BLANK)
     edited = st.data_editor(rows, num_rows="dynamic", hide_index=True, width="stretch",
                             key=f"media-s3-storyboard-editor-{st.session_state.get('media-s3-storyboard-ver', 0)}")
     if list(edited) != rows or not st.session_state.get(MEDIA_S3_STORYBOARD):
@@ -663,7 +802,8 @@ def media_s3_video_section(src: dict):
                                               prompt=p)
                             subs = media_s3_video_subs(versions[v], v)
                             links = {**st.session_state.get(MEDIA_S3_VIDEO_LINKS, {}),
-                                     name: {"subs_vtt": subs["vtt"], "subs_srt": subs["srt"]}}
+                                     name: {"subs_vtt": subs["vtt"], "subs_srt": subs["srt"],
+                                            "hook": str(versions[v][0].get("화면", "")) if v else ""}}
                             st.session_state[MEDIA_S3_VIDEO_LINKS] = links
                             media_s3_store_json(MEDIA_S3_VIDEO_LINKS, links)
                         st.toast("영상 초안이 완성됐어요. '만든 영상 보기'에서 볼 수 있어요", icon="🎬")
@@ -726,7 +866,8 @@ def media_s3_video_job_step():
             subs = media_s3_video_subs(job.get("rows") or [], job.get("ver") or "") if job.get("rows") else {}
             links = {**st.session_state.get(MEDIA_S3_VIDEO_LINKS, {}),
                      name: {"job_id": job["job_id"], "url": url, "seconds": int(time.time() - job.get("started", time.time())),
-                            **({"subs_vtt": subs["vtt"], "subs_srt": subs["srt"]} if subs else {})}}
+                            **({"subs_vtt": subs["vtt"], "subs_srt": subs["srt"]} if subs else {}),
+                            "hook": str((job.get("rows") or [{}])[0].get("화면", "")) if job.get("ver") else ""}}
             st.session_state[MEDIA_S3_VIDEO_LINKS] = links
             media_s3_store_json(MEDIA_S3_VIDEO_LINKS, links)
             st.toast(f"{tag} 초안이 완성됐어요 ({_media_s3_elapsed(job)}). '만든 영상 보기'에서 볼 수 있어요", icon="🎬")
@@ -754,18 +895,35 @@ def media_s3_set_pick(files: list) -> None:
     media_s3_store_json(MEDIA_S3_PICK, files)
 
 
+def media_s3_group_latest(gid: str) -> list:
+    """가설 묶음 gid로 만든 결과 중 칸마다 최신 하나씩 (사진 A·사진 B·영상 A·영상 B·올린 사진은 이름별)."""
+    latest = {}
+    for e in st.session_state.get(MEDIA_S3_HISTORY) or []:
+        if e["group"].get("id") == gid:
+            # 영상 이름은 video_{버전}_{작업 번호}_ai.mp4처럼 매번 달라서 버전(A·B)으로 묶음
+            slot = f"video_{e['name'].split('_')[1]}" if e["kind"] == "영상" and e["name"].count("_") >= 2 else e["name"]
+            latest[slot] = e["file"]   # 기록은 만든 순서라 마지막이 최신
+    return list(latest.values())
+
+
 def media_s3_pick() -> list:
-    """⑤로 보내려고 고른 기록(file) 목록. 아직 고른 적이 없으면 지금 가설로 만든 결과(같은 이름은 최신)를 고른 것으로 봄."""
+    """⑤로 보내려고 고른 기록(file) 목록. 아직 고른 적이 없으면 지금 가설로 만든 결과(칸마다 최신)를 고른 것으로 봄."""
     history = st.session_state.get(MEDIA_S3_HISTORY) or []
     alive = {e["file"] for e in history}
     if MEDIA_S3_PICK in st.session_state:
         return [f for f in st.session_state[MEDIA_S3_PICK] if f in alive]   # 5개 넘어 지워진 기록은 뺌
-    gid = (st.session_state.get(MEDIA_S3_GROUP) or {}).get("id")
-    latest = {}
-    for e in history:
-        if e["group"].get("id") == gid:
-            latest[e["name"]] = e["file"]   # 기록은 만든 순서라 마지막이 최신
-    return list(latest.values())
+    return media_s3_group_latest((st.session_state.get(MEDIA_S3_GROUP) or {}).get("id"))
+
+
+def media_s3_send_group() -> dict:
+    """외주로 보낼 가설 묶음: '만든 결과 보기'에서 '외주로 보내기'를 누른 가설. 고른 적이 없거나 기록이 지워졌으면 지금 가설."""
+    now = st.session_state.get(MEDIA_S3_GROUP) or {"id": ""}
+    gid = st.session_state.get(MEDIA_S3_SEND) or now["id"]
+    if gid != now["id"]:
+        for e in reversed(st.session_state.get(MEDIA_S3_HISTORY) or []):
+            if e["group"].get("id") == gid:
+                return e["group"]
+    return now
 
 
 def _media_s3_toggle_pick(file: str) -> None:
@@ -775,13 +933,16 @@ def _media_s3_toggle_pick(file: str) -> None:
 
 
 def media_s3_assets_value() -> dict:
-    """⑤로 넘기는 값: 확정한 스토리보드와 '만든 결과 보기'에서 고른 사진·영상의 기록 이름 (모양은 MEDIA_HANDOFF_ASSETS_SAMPLE).
-    파일 자체는 이 컴퓨터의 기록 폴더(data/workspace/history/)에 있고, ⑤가 이름으로 찾아 zip에 넣습니다."""
+    """⑤로 넘기는 값: 보낼 가설과 그 가설로 확정한 스토리보드, '만든 결과 보기'에서 고른 사진·영상의 기록 이름
+    (모양은 MEDIA_HANDOFF_ASSETS_SAMPLE + "group"). 파일 자체는 이 컴퓨터의 기록 폴더(data/workspace/history/)에 있고,
+    ⑤가 이름으로 찾아 zip에 넣습니다. "group"은 ⑤ 브리프의 가설·단일 변수·A/B 설명에 씁니다."""
     kinds = {e["file"]: e["kind"] for e in st.session_state.get(MEDIA_S3_HISTORY) or []}
     picks = media_s3_pick()
-    return {"storyboard": st.session_state.get(MEDIA_S3_STORYBOARD_DONE) or [],
+    group = media_s3_send_group()
+    return {"storyboard": (st.session_state.get(MEDIA_S3_GROUP_SB) or {}).get(group["id"]) or [],
             "photos": [f for f in picks if kinds.get(f) == "사진"],
-            "videos": [f for f in picks if kinds.get(f) == "영상"]}
+            "videos": [f for f in picks if kinds.get(f) == "영상"],
+            "group": group}
 
 
 def _media_s3_handoff() -> None:
@@ -790,8 +951,18 @@ def _media_s3_handoff() -> None:
     st.session_state["media-s3-handoff-toast"] = True
 
 
+def _media_s3_send_group(gid: str) -> None:
+    """가설 기록 '외주로 보내기' 콜백: 그 가설로 만든 결과(칸마다 최신)를 고르고 바로 ⑤ 외주 정리로 넘깁니다."""
+    st.session_state[MEDIA_S3_SEND] = gid
+    media_s3_store_json(MEDIA_S3_SEND, gid)
+    media_s3_set_pick(media_s3_group_latest(gid))
+    _media_s3_handoff()
+
+
 MEDIA_S3_HANDOFF_HELP = ("**⑤로 넘기기란?** '만든 결과 보기'에서 '⑤로 보내기'를 체크한 사진·영상과 확정한 스토리보드를 "
                          "⑤ 외주 정리로 보내는 버튼이에요. ⑤에서는 넘긴 것만 PDF·zip으로 묶어요.  \n"
+                         "**가설 통째로 보내기**: '만든 결과 보기'의 가설 카드에서 '외주로 보내기'를 누르면 "
+                         "그 가설로 만든 최신 사진·영상과 그 가설의 스토리보드가 바로 넘어가요  \n"
                          "**보낼 것**: 지금 체크된 사진·영상 수  \n"
                          "**다시 넘기기 필요**: 넘긴 뒤에 체크나 스토리보드가 바뀌었다는 뜻. 버튼을 다시 누르면 최신으로 바뀌어요  \n"
                          "**넘김 완료**: ⑤가 지금 내용 그대로 받고 있어요")
@@ -870,9 +1041,17 @@ def _media_s3_history_delete(file: str) -> None:
         media_s3_set_pick([f for f in st.session_state[MEDIA_S3_PICK] if f != file])
 
 
-def _media_s3_history_open(gid: str | None) -> None:
-    """가설 기록을 열거나(gid) 목록으로 돌아갑니다(None)."""
-    st.session_state["media-s3-hist-open"] = gid
+MEDIA_S3_HIST_POPUP = "media-s3-hist-popup"   # 가설 기록 목록에서 누른 기록 id (팝업이 열려 있는 동안만)
+
+
+def _media_s3_history_popup_open(gid: str) -> None:
+    """가설 기록 한 줄을 누르면: 그 기록의 만든 결과를 팝업으로 엶 (닫을 때까지 화면을 다시 그려도 열린 채)."""
+    st.session_state[MEDIA_S3_HIST_POPUP] = gid
+
+
+def _media_s3_history_popup_close() -> None:
+    """팝업 닫기 (X · 바깥 누르기 · ESC)."""
+    st.session_state.pop(MEDIA_S3_HIST_POPUP, None)
 
 
 def media_s3_history_tile(e: dict, picks: list, latest: bool, no: int, where: str = "card") -> None:
@@ -905,8 +1084,10 @@ def media_s3_history_tile(e: dict, picks: list, latest: bool, no: int, where: st
             st.space("stretch")
             with st.container(horizontal=True, gap="small", width="content", key=f"media-s3-hist-tools-{k}"):
                 if content is not None:
-                    st.download_button("", content, file_name=e["name"], type="tertiary", icon=":material/download:",
-                                       key=f"media-s3-hist-dl-{k}")
+                    data, fname, tip = (media_s3_video_download(e["name"], content) if e["kind"] == "영상"
+                                        else (content, e["name"], None))
+                    st.download_button("", data, file_name=fname, type="tertiary", icon=":material/download:",
+                                       key=f"media-s3-hist-dl-{k}", help=tip)
                 if e.get("prompt"):
                     with st.popover("", icon=":material/description:"):
                         st.code(e["prompt"], language=None, wrap_lines=True)
@@ -921,14 +1102,17 @@ def media_s3_history_items(gid: str, slot: str) -> list:
     return slots["V"] + slots["U"] if slot == "V" else slots[slot]
 
 
-@st.dialog("만든 결과 전부 보기", width="large")
-def media_s3_history_dialog(gid: str, slot: str, title: str):
-    """'사진 A 전부 보기' 팝업: 그 칸의 버전을 한 번에 (최신부터). 버전마다 ⑤로 보내기·내려받기·프롬프트·지우기."""
+def media_s3_history_grid(gid: str, slot: str, picks: list) -> None:
+    """팝업의 '… 전부' 탭: 그 칸의 모든 버전을 3열로 (최신부터). 버전마다 ⑤로 보내기·내려받기·프롬프트·지우기."""
     items = media_s3_history_items(gid, slot)
-    st.markdown(f"**{title}** · {len(items)}개 (최신부터)")
     if not items:
         st.caption("남은 결과가 없어요.")
         return
+
+    cols = st.columns(3)
+    for k, (no, e) in enumerate(reversed(list(enumerate(items, start=1)))):
+        with cols[k % 3]:
+            media_s3_history_tile(e, picks, no == len(items), no, where=f"dlg{slot}")
     picks = media_s3_pick()
     with st.container(key="media-s3-hist-dialog"):
         cols = st.columns(3)
@@ -937,20 +1121,21 @@ def media_s3_history_dialog(gid: str, slot: str, title: str):
                 media_s3_history_tile(e, picks, no == len(items), no, where="dlg")
 
 
-@st.dialog("가설 크게 보기", width="large")
-def media_s3_hypothesis_dialog(gid: str):
-    """가설 기록 카드의 '크게 보기': 날짜, 가설 전문, 단일 변수, 사진 A·B, 만든 개수."""
-    entries = [e for e in st.session_state.get(MEDIA_S3_HISTORY) or [] if e["group"].get("id") == gid]
-    if not entries:
-        st.caption("기록이 없어요.")
-        return
-    g = entries[-1]["group"]
-    slots = media_s3_history_slots(entries)
-    st.caption(f"{min(e['created'] for e in entries)} ~ {max(e['created'] for e in entries)}")
-    st.markdown(f"### {g.get('hypothesis') or '가설 문장이 기록되지 않았어요'}")
-    st.markdown(f"**단일 변수** {g.get('variable') or '-'}  \n**사진 A** {g.get('a') or '-'}  \n**사진 B** {g.get('b') or '-'}")
-    st.caption(f"사진 A {len(slots['A'])}장 · 사진 B {len(slots['B'])}장 · 영상 {len(slots['V'])}개")
+def media_s3_send_button(gid: str, sent_gid: str | None, where: str) -> None:
+    """'외주로 보내기' 버튼 (가설 카드·열었을 때 제목 줄). 이미 이 가설을 보냈으면 '보냄' 표시만."""
+    if gid == sent_gid:
+        st.markdown('<div class="media-s3-hist-sent" title="⑤ 외주 정리가 이 가설로 만든 사진·영상을 받고 있어요">'
+                    '✔ 외주로 보냄</div>', unsafe_allow_html=True)
+    else:
+        st.button("외주로 보내기", key=f"media-s3-hist-send-{where}-{gid}", icon=":material/send:",
+                  on_click=_media_s3_send_group, args=(gid,),
+                  help="이 가설로 만든 최신 사진 A·B와 영상, 확정한 스토리보드를 ⑤ 외주 정리로 넘겨요")
 
+
+def media_s3_sent_gid() -> str | None:
+    """⑤ 외주 정리가 지금 받고 있는 가설 묶음 id (아직 넘긴 적이 없으면 None)."""
+    saved = media_handoff_assets()
+    return None if saved["sample"] else (saved.get("group") or {}).get("id")
 
 def _media_s3_history_step(key: str, step: int, count: int) -> None:
     """칸 안 ‹ › 버전 넘기기 (끝에서 넘기면 처음으로)."""
@@ -958,7 +1143,8 @@ def _media_s3_history_step(key: str, step: int, count: int) -> None:
 
 
 def media_s3_history_card(gid: str, slot: str, title: str, diff: str, picks: list, empty: str) -> None:
-    """열었을 때 칸 하나 (사진 A / 사진 B / 영상): 한 장씩 크게, 맨 위 한 줄에 ‹ n/전체 › · ⑤ · 내려받기 · 지우기 · 전부 보기.
+    """팝업 '한눈에 보기'의 칸 하나 (사진 A / 사진 B / 영상): 한 장씩 크게, 맨 위 한 줄에 ‹ n/전체 › · ⑤ · 내려받기 · 지우기
+    (모든 버전은 팝업의 '… 전부' 탭).
     그 사진만 다른 점은 사진 아래쪽에 띠로 얹어 높이를 더 쓰지 않음 (스크롤 없이 한 화면)."""
     items = media_s3_history_items(gid, slot)
     key = f"media-s3-hist-i-{gid}-{slot}"
@@ -981,13 +1167,13 @@ def media_s3_history_card(gid: str, slot: str, title: str, diff: str, picks: lis
                 st.checkbox("⑤", key=f"media-s3-pick-{e['file']}", on_change=_media_s3_toggle_pick, args=(e["file"],))
                 with st.container(horizontal=True, gap="small", width="content", key=f"media-s3-hist-tools-card-{slot}"):
                     if content is not None:
-                        st.download_button("", content, file_name=e["name"], type="tertiary", icon=":material/download:",
-                                           key=f"media-s3-hist-dl-card-{e['file']}", help=f"{e['created'][5:]} · 내려받기")
+                        data, fname, tip = (media_s3_video_download(e["name"], content) if e["kind"] == "영상"
+                                            else (content, e["name"], None))
+                        st.download_button("", data, file_name=fname, type="tertiary", icon=":material/download:",
+                                           key=f"media-s3-hist-dl-card-{e['file']}",
+                                           help=f"{e['created'][5:]} · " + (tip or "내려받기"))
                     st.button("", key=f"media-s3-hist-rm-card-{e['file']}", type="tertiary", icon=":material/delete:",
                               help="이 버전 지우기", on_click=_media_s3_history_delete, args=(e["file"],))
-            if st.button("", key=f"media-s3-hist-all-{slot}", icon=":material/grid_view:", type="tertiary",
-                         help=f"{title} 전부 보기", disabled=not items):
-                media_s3_history_dialog(gid, slot, title)
         if not e:
             st.markdown(f'<div class="media-s3-hist-big media-s3-hist-empty">{empty}{tag}</div>', unsafe_allow_html=True)
         elif content is None:
@@ -1008,39 +1194,109 @@ def media_s3_history_card(gid: str, slot: str, title: str, diff: str, picks: lis
                         unsafe_allow_html=True)
 
 
+def media_s3_history_title(g: dict) -> str:
+    """가설 기록 한 줄 제목: 단일 변수 + 사진 B(이 가설에서 바꾼 것). 가설 문장은 기록마다 거의 같아 제목으로 쓰지 않음."""
+    variable, b = (g.get("variable") or "").strip(), (g.get("b") or "").strip()
+    if variable or b:
+        return " · ".join(x for x in (variable, f"B: {b}" if b else "") if x)
+    return (g.get("hypothesis") or "가설 기록 없음").strip()
+
+
 def media_s3_history_list(groups: list, gid_now: str, picks: list) -> None:
-    """처음 화면: 가설 기록을 세로 카드로 나란히 (맨 위 날짜 → 가설 → 개수 → 크게 보기·열기)."""
+
+    """처음 화면: 가설 기록을 한 줄씩 (날짜 · 시간 · 제목 · 개수). 마우스를 올리면 가설 전문, 누르면 만든 결과 팝업.
+    줄 전체를 덮는 투명 버튼(media-s3-hist-libtn-)이 누름을 받음."""
     with st.container(horizontal=True, vertical_alignment="center", key="media-s3-hist-listhead"):
-        st.markdown(f"**가설 기록** · 최근 {MEDIA_S3_HISTORY_KEEP}개 · '열기'를 누르면 그 가설로 만든 사진·영상이 보여요")
+        st.markdown(f"**가설 기록** · 최근 {MEDIA_S3_HISTORY_KEEP}개 · 마우스를 올리면 가설이, 누르면 그 가설로 만든 사진·영상이 보여요")
         st.space("stretch")
         media_s3_guide("history", compact=True)
-    with st.container(horizontal=True, gap="medium", key="media-s3-hist-list"):
+    with st.container(key="media-s3-hist-rows"):
         for gid, entries in groups:
             g = entries[-1]["group"]
             slots = media_s3_history_slots(entries)
             picked = sum(e["file"] in picks for e in entries)
+            day, _, clock = max(e["created"] for e in entries).partition(" ")
+            meta = (f"사진 A {len(slots['A'])} · 사진 B {len(slots['B'])} · 영상 {len(slots['V'])}"
+                    + (f" · ✔ {picked}개 보냄" if picked else ""))
+            with st.container(key=f"media-s3-hist-li-{gid}"):
+                st.markdown(
+                    f'<div class="media-s3-hist-li"><span class="media-s3-hist-li-date">{day}</span>'
+                    f'<span class="media-s3-hist-li-time">{clock}</span>'
+                    f'<span class="media-s3-hist-li-title">{html.escape(media_s3_history_title(g))}</span>'
+                    + ('<span class="media-s3-hist-li-now">지금 가설</span>' if gid == gid_now else "")
+                    + f'<span class="media-s3-hist-li-meta">{meta}</span></div>'
+                    f'<div class="media-s3-hist-li-preview"><b>가설</b> {html.escape(g.get("hypothesis") or "-")}'
+                    f'<br><b>단일 변수</b> {html.escape(g.get("variable") or "-")}'
+                    f'<br><b>사진 A</b> {html.escape(g.get("a") or "-")}<br><b>사진 B</b> {html.escape(g.get("b") or "-")}</div>',
+                    unsafe_allow_html=True)
+                st.button("열기", key=f"media-s3-hist-libtn-{gid}", on_click=_media_s3_history_popup_open, args=(gid,))
+
+
+@st.dialog("가설 기록 · 만든 결과", width="large", on_dismiss=_media_s3_history_popup_close)
+def media_s3_history_popup(gid: str) -> None:
+    """가설 기록 한 줄을 누르면 뜨는 팝업 (예전 '크게 보기' 팝업과 '열기' 화면을 합침):
+    위 날짜·개수·가설 전문·단일 변수, 아래 탭 '한눈에 보기'(사진 A | 사진 B | 영상, 칸마다 한 장씩 ‹ ›)와 칸별 '전부'.
+    버전마다 ⑤로 보내기·내려받기·지우기는 예전과 같은 함수. 기록은 매번 session_state에서 다시 읽음 (지운 뒤에도 바로 맞게)."""
+    entries = [e for e in st.session_state.get(MEDIA_S3_HISTORY) or [] if e["group"].get("id") == gid]
+    if not entries:
+        st.caption("남은 결과가 없어요.")
+        return
+    g = entries[-1]["group"]
+    slots = media_s3_history_slots(entries)
+    picks = media_s3_pick()
+    with st.container(key="media-s3-hist-pop"):
+        st.caption(f"{min(e['created'] for e in entries)} ~ {max(e['created'] for e in entries)} · "
+                   f"사진 A {len(slots['A'])}장 · 사진 B {len(slots['B'])}장 · 영상 {len(slots['V'])}개")
+        st.markdown(f'<div class="media-s3-hist-pop-hypo">{html.escape(g.get("hypothesis") or "가설 문장이 기록되지 않았어요")}</div>',
+                    unsafe_allow_html=True)
+        st.markdown(f"**단일 변수** {html.escape(g.get('variable') or '-')} · 사진 A와 사진 B는 이것만 달라요")
+        tabs = st.tabs(["한눈에 보기", f"사진 A 전부 ({len(slots['A'])})", f"사진 B 전부 ({len(slots['B'])})",
+                        f"영상 전부 ({len(slots['V']) + len(slots['U'])})"])
+        with tabs[0], st.container(horizontal=True, gap="medium", key="media-s3-hist-cols"):
+            for slot, title in (("A", "사진 A"), ("B", "사진 B"), ("V", "영상")):
+                diff = g.get(slot.lower(), "") if slot in ("A", "B") else ""
+                media_s3_history_card(gid, slot, title, f"{title}만 다른 점: {diff}" if diff else "", picks,
+                                      "아직 영상을 만들지 않았어요" if slot == "V" else f"아직 {title}를 만들지 않았어요")
+        for tab, slot in zip(tabs[1:], ("A", "B", "V")):
+            with tab:
+                media_s3_history_grid(gid, slot, picks)
+
+    """처음 화면: 가설 기록을 세로 카드로 나란히. 카드마다 날짜 → 단일 변수 → B안(가설마다 다른 부분) → 개수·'외주로 보내기'.
+    카드 아무 데나 누르면 열림 (투명한 '열기' 버튼이 카드 전체를 덮음). 가설 전문은 열었을 때 맨 위에서 봄 (카드 안 스크롤 없음)."""
+    with st.container(horizontal=True, vertical_alignment="center", key="media-s3-hist-listhead"):
+        st.markdown(f"**가설 기록** · 최근 {MEDIA_S3_HISTORY_KEEP}개 · 카드를 누르면 가설 전문과 만든 사진·영상이 보여요")
+        st.space("stretch")
+        media_s3_guide("history", compact=True)
+    sent_gid = media_s3_sent_gid()
+    with st.container(horizontal=True, gap="medium", key="media-s3-hist-list"):
+        for gid, entries in groups:
+            g = entries[-1]["group"]
+            slots = media_s3_history_slots(entries)
             with st.container(border=True, key=f"media-s3-hist-item-{gid}"):
+                st.button("", key=f"media-s3-hist-openbtn-{gid}", on_click=_media_s3_history_open, args=(gid,),
+                          help="눌러서 가설 전문과 만든 사진·영상 보기")
                 st.markdown(f'<div class="media-s3-hist-date">{max(e["created"] for e in entries)}'
-                            f'{" · 🟢 지금 가설" if gid == gid_now else ""}</div>'
-                            f'<div class="media-s3-hist-item-text">{html.escape(g.get("hypothesis") or g.get("variable") or "가설 기록 없음")}</div>'
-                            f'<div class="media-s3-hist-meta">단일 변수 {html.escape(g.get("variable") or "-")}<br>'
-                            f'사진 A {len(slots["A"])} · 사진 B {len(slots["B"])} · 영상 {len(slots["V"])}'
-                            f'{f" · ✔ {picked}개 보냄" if picked else ""}</div>', unsafe_allow_html=True)
-                with st.container(horizontal=True, key=f"media-s3-hist-itembtn-{gid}"):
-                    if st.button("크게 보기", key=f"media-s3-hist-big-{gid}", icon=":material/open_in_new:"):
-                        media_s3_hypothesis_dialog(gid)
-                    st.button("열기", key=f"media-s3-hist-openbtn-{gid}", type="primary", icon=":material/chevron_right:",
-                              icon_position="right", on_click=_media_s3_history_open, args=(gid,))
+                            f'{"<span class=media-s3-hist-now>지금 가설</span>" if gid == gid_now else ""}</div>'
+                            f'<div class="media-s3-hist-var">{html.escape(g.get("variable") or "단일 변수 기록 없음")}</div>'
+                            f'<div class="media-s3-hist-b"><b>B안</b> {html.escape(g.get("b") or "-")}</div>',
+                            unsafe_allow_html=True)
+                with st.container(horizontal=True, vertical_alignment="center", key=f"media-s3-hist-itembtn-{gid}"):
+                    st.markdown(f'<div class="media-s3-hist-meta">사진 A {len(slots["A"])} · 사진 B {len(slots["B"])} · '
+                                f'영상 {len(slots["V"])}</div>', unsafe_allow_html=True)
+                    st.space("stretch")
+                    media_s3_send_button(gid, sent_gid, "list")
 
 
 def media_s3_history_detail(gid: str, entries: list, picks: list) -> None:
-    """가설 하나 열기: 사진 A | 사진 B | 영상 세 칸을 세로로 길게 나란히. 칸마다 한 장씩, ‹ ›로 다른 버전, '전부 보기' 팝업."""
+    """가설 하나 열기: 맨 위에 가설 전문(잘리지 않게 줄바꿈, 아래 칸이 남는 높이를 씀)과 '외주로 보내기',
+    아래에 사진 A | 사진 B | 영상 세 칸을 세로로 길게 나란히. 칸마다 한 장씩, ‹ ›로 다른 버전, '전부 보기' 팝업."""
     g = entries[-1]["group"]
     with st.container(horizontal=True, vertical_alignment="center", key="media-s3-hist-head"):
         st.button("가설 목록", key="media-s3-hist-back", type="primary", icon=":material/arrow_back:",
                   on_click=_media_s3_history_open, args=(None,))
-        st.markdown(f"**단일 변수** {html.escape(g.get('variable') or '-')} · 사진 A와 사진 B는 이것만 달라요",
-                    help=f"가설: {g['hypothesis']}" if g.get("hypothesis") else None)
+        st.markdown(f'<div class="media-s3-hist-headtext"><b>단일 변수</b> {html.escape(g.get("variable") or "-")} · '
+                    f'{html.escape(g.get("hypothesis") or "가설 문장이 기록되지 않았어요")}</div>', unsafe_allow_html=True)
+        media_s3_send_button(gid, media_s3_sent_gid(), "detail")
     with st.container(horizontal=True, gap="medium", key="media-s3-hist-cols"):
         for slot, title in (("A", "사진 A"), ("B", "사진 B"), ("V", "영상")):
             diff = g.get(slot.lower(), "") if slot in ("A", "B") else ""
@@ -1048,9 +1304,10 @@ def media_s3_history_detail(gid: str, entries: list, picks: list) -> None:
                                   "아직 영상을 만들지 않았어요" if slot == "V" else f"아직 {title}를 만들지 않았어요")
 
 
+
 def media_s3_history_section():
-    """④-3 만든 결과 보기 (100% 화면에서 스크롤 없이): 처음엔 가설 기록 목록만 보이고, 하나를 누르면
-    위 반반에 사진 A 버전들 | 사진 B 버전들, 아래에 영상이 나옵니다. 버전마다 ⑤로 보내기·내려받기·지우기."""
+    """④-3 만든 결과 보기: 가설 기록 목록(날짜·시간·제목, 마우스를 올리면 가설 전문)만 보이고,
+    한 줄을 누르면 그 가설로 만든 사진 A · 사진 B · 영상을 팝업으로 봅니다. 버전마다 ⑤로 보내기·내려받기·지우기."""
     history = st.session_state.get(MEDIA_S3_HISTORY) or []
     if not history:
         st.caption("아직 만든 결과가 없어요. 사진 초안 제작·영상 초안 제작에서 만들면 여기에 쌓여요.")
@@ -1059,12 +1316,13 @@ def media_s3_history_section():
     by_id = dict(groups)
     gid_now = (st.session_state.get(MEDIA_S3_GROUP) or {}).get("id")
     picks = media_s3_pick()
-    gid = st.session_state.get("media-s3-hist-open")
     with st.container(key="media-s3-hist-area"):
-        if gid in by_id:
-            media_s3_history_detail(gid, by_id[gid], picks)
-        else:
-            media_s3_history_list(groups, gid_now, picks)
+        media_s3_history_list(groups, gid_now, picks)
+    gid = st.session_state.get(MEDIA_S3_HIST_POPUP)
+    if gid in by_id:   # 누른 기록: 닫을 때까지 매번 다시 엶 (팝업 안 버튼으로 화면을 다시 그려도 열린 채)
+        media_s3_history_popup(gid)
+    elif gid:          # 그 사이 지워진 기록
+        st.session_state.pop(MEDIA_S3_HIST_POPUP, None)
 
 
 def media_s3_video_tab(src: dict):
@@ -1082,6 +1340,8 @@ def media_s3_video_tab(src: dict):
             if st.button(f"만든 영상 보기 ({count})", key="media-s3-btn-view-videos", icon=":material/video_library:",
                          disabled=not count):
                 st.session_state["media-s3-video-idx"] = count - 1   # 가장 최근 영상부터
+                if media_s3_latest_ab(media_s3_current(MEDIA_S3_VIDEOS)):   # A·B가 다 있으면 이어 보기부터
+                    st.session_state["media-s3-video-view"] = MEDIA_S3_AB_PLAY
                 media_s3_video_dialog()
             media_s3_guide("video")
             media_s3_handoff_step("video")
@@ -1151,6 +1411,7 @@ def media_stage3_render():
     media_s3_store_load()   # 탭을 옮기거나 새로고침해도 작업물이 남게 폴더에서 다시 읽음
     src = media_s3_input()
     st.session_state[MEDIA_S3_GROUP] = media_s3_group(src)   # 지금 가설 묶음 (결과를 가설별로 나누는 기준)
+    media_s3_storyboard_sync(st.session_state[MEDIA_S3_GROUP]["id"])   # 가설이 바뀌면 스토리보드를 그 가설 것(없으면 빈 틀)으로
     media_s3_history_migrate()
     # 알림은 줄을 따로 쓰지 않고 각 탭 아래 짧은 안내 줄에 붙임 (한 화면에 스크롤 없이 보이게)
     notes = []

@@ -14,7 +14,7 @@ import streamlit as st
 from modules.media.media_handoff import (media_handoff_assets, media_handoff_check, media_handoff_prompt,
                                          media_handoff_set_assets)
 from modules.media.media_stage3.media_stage3 import (MEDIA_S3_MEDIA_NOTE, MEDIA_S3_PICK, media_s3_group, media_s3_guide,
-                                                    media_s3_video_subtitles, media_s3_video_versions,
+                                                    media_s3_video_burned, media_s3_video_subtitles, media_s3_video_versions,
                                                     media_s3_set_pick,
                                                     media_s3_storyboard_dialog, media_s3_text_dialog)
 from modules.media.media_stage3.media_stage3_pdf import media_s3_brief, media_s3_build_pdf
@@ -25,7 +25,7 @@ from modules.media.media_stage3.media_stage3_store import media_s3_store_history
 MEDIA_S3_EXPORT_TAB_LABEL = "외주 정리"   # 하위 탭 이름 (여기서 바꾸면 탭과 이전/다음 버튼 글자가 함께 바뀜)
 MEDIA_S3_EXPORT_PDF_NAME = "외주_촬영_브리프.pdf"
 
-def media_s3_brief_ctx(src: dict, storyboard: list) -> dict:
+def media_s3_brief_ctx(src: dict, storyboard: list, group: dict) -> dict:
     """브리프 1·2번에 쓸 값: 1번 리포트(검색어 클릭 분석·금지 표현·이미지 문제) + 1단계 KPI + 영상 스토리보드 A·B."""
     from modules.media.media_stage3.media_stage3_ai import MEDIA_S3_VIDEO_HOOK, MEDIA_S3_VIDEO_SECONDS
     from modules.media.media_handoff import media_handoff_plan
@@ -39,22 +39,22 @@ def media_s3_brief_ctx(src: dict, storyboard: list) -> dict:
     return {"sqp": report.get("sqp") if isinstance(report.get("sqp"), dict) else {}, "kpi_photo": kpi,
             "hooks": hooks, "common": versions["A"][1:] if hooks else [],
             "video_sec": MEDIA_S3_VIDEO_SECONDS, "hook_sec": MEDIA_S3_VIDEO_HOOK,
-            "fixed_ko": media_s3_export_ko(src, media_s3_group(src))["fixed"],
+            "fixed_ko": media_s3_export_ko(src, group)["fixed"],
             "forbidden": (report.get("ad_claims") or {}).get("forbidden") or [],
             "image_fixes": report.get("image_fixes") or []}
 
 
-def media_s3_pdf(src: dict, storyboard: list, photos: list, videos: list) -> bytes:
-    """글로 된 부분(목적·촬영 지시·프롬프트 A/B·스토리보드·첨부 목록)을 보고서 형식 PDF로."""
-    return media_s3_build_pdf(src, media_s3_group(src), storyboard, photos, videos,
-                              time.strftime("%Y-%m-%d"), MEDIA_S3_MEDIA_NOTE, media_s3_brief_ctx(src, storyboard))
+def media_s3_pdf(src: dict, group: dict, storyboard: list, photos: list, videos: list) -> bytes:
+    """글로 된 부분(목적·촬영 지시·프롬프트 A/B·스토리보드·첨부 목록)을 보고서 형식 PDF로. group = ④에서 보낸 가설 묶음."""
+    return media_s3_build_pdf(src, group, storyboard, photos, videos,
+                              time.strftime("%Y-%m-%d"), MEDIA_S3_MEDIA_NOTE, media_s3_brief_ctx(src, storyboard, group))
 
 
-def media_s3_package(src: dict, storyboard: list, photos: list, videos: list) -> bytes:
+def media_s3_package(src: dict, group: dict, storyboard: list, photos: list, videos: list) -> bytes:
     """외주 전달 묶음(zip): 브리프 PDF 한 장 + 사진 레퍼런스 + 영상 초안."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr(MEDIA_S3_EXPORT_PDF_NAME, media_s3_pdf(src, storyboard, photos, videos))
+        z.writestr(MEDIA_S3_EXPORT_PDF_NAME, media_s3_pdf(src, group, storyboard, photos, videos))
         for name, content in photos:
             z.writestr(f"photo_reference/{name}", content)
         for name, content in videos:
@@ -62,6 +62,9 @@ def media_s3_package(src: dict, storyboard: list, photos: list, videos: list) ->
             srt = media_s3_video_subtitles(name, "srt")   # 한국어 설명 자막 (같은 이름이라 재생기에서 자동으로 켜짐)
             if srt:
                 z.writestr(f"video_draft/{name.rsplit('.', 1)[0]}.srt", srt.encode("utf-8-sig"))
+                burned = media_s3_video_burned(name, content)   # 자막을 구워 넣은 영상 (설명 보기용)
+                if burned:
+                    z.writestr(f"video_draft/{name.rsplit('.', 1)[0]}_한국어설명.mp4", burned)
     return buf.getvalue()
 
 
@@ -94,7 +97,7 @@ def _media_s3_export_rows(rows: list, head: tuple | None = None) -> str:
 def media_s3_export_brief_html(src: dict, group: dict, storyboard: list | None = None) -> str:
     """PDF 1·2번과 같은 내용(목적: 데이터 → 가설 → 사진·영상 실험 → 결과물 / 촬영 지시: 공통 → 사진 → 영상 컷 → 규칙 → 여분 컷)을
     읽기 좋은 HTML로. 카드와 '크게 보기' 팝업이 같이 씀. 내용은 media_stage3_pdf.media_s3_brief() 한 곳에서 만듦."""
-    b = media_s3_brief(src, group, media_s3_brief_ctx(src, storyboard or []))
+    b = media_s3_brief(src, group, media_s3_brief_ctx(src, storyboard or [], group))
     lst = _media_s3_export_list
     video = (f"""<i>③ 영상 (자사몰, 한 번 촬영 → 두 버전 편집)</i>{_media_s3_export_rows(b["cuts"], ("컷", "내용", "쓰는 곳"))}
 <ul>{lst(b["edit"])}</ul>""" if b["cuts"] else "")
@@ -148,7 +151,8 @@ def _media_s3_export_remove(kind: str, file: str) -> None:
         return
     media_handoff_set_assets({"storyboard": assets["storyboard"],
                               "photos": [f for f in assets["photos"] if not (kind == "photos" and f == file)],
-                              "videos": [f for f in assets["videos"] if not (kind == "videos" and f == file)]})
+                              "videos": [f for f in assets["videos"] if not (kind == "videos" and f == file)],
+                              **({"group": assets["group"]} if assets.get("group") else {})})   # 보낸 가설은 그대로
     if MEDIA_S3_PICK in st.session_state:
         media_s3_set_pick([f for f in st.session_state[MEDIA_S3_PICK] if f != file])
     st.session_state["media-s3-ex-removed-toast"] = True
@@ -192,6 +196,7 @@ def media_stage3_export_render():
     src = media_handoff_prompt()
     assets = media_handoff_assets()   # ④에서 '⑤로 넘기기'로 넘긴 스토리보드·고른 기록 이름
     storyboard = assets["storyboard"]
+    group = assets.get("group") or media_s3_group(src)   # ④ '만든 결과 보기'에서 보낸 가설 (예전 넘김 값에는 없어서 지금 가설)
     # 파일 자체는 크기 때문에 Supabase에 넣지 않고, 이 컴퓨터의 '만든 결과' 기록 폴더에서 이름으로 찾음
     # zip 안 이름은 기록 이름(만든 시각_파일 이름)이라 다른 가설의 같은 이름 파일도 겹치지 않음
     photos = [(e["file"], c) for e, c in media_s3_store_history_find(assets["photos"])]
@@ -209,7 +214,7 @@ def media_stage3_export_render():
         left = st.container(border=True, key="media-s3-export-left")
         right = st.container(border=True, width=440, key="media-s3-export-right")
     with left:
-        media_s3_export_brief(src, media_s3_group(src), storyboard)
+        media_s3_export_brief(src, group, storyboard)
     with right:
         media_s3_export_files(photos, videos)
     # 내려받기는 아래 줄에 두어 작은 화면에서도 늘 보이게 (카드 안 스크롤에 숨지 않게)
@@ -217,10 +222,10 @@ def media_stage3_export_render():
         st.caption(notice)
         st.space("stretch")
         media_s3_guide("export")
-        st.download_button("브리프 PDF만 내려받기", media_s3_pdf(src, storyboard, photos, videos),
+        st.download_button("브리프 PDF만 내려받기", media_s3_pdf(src, group, storyboard, photos, videos),
                            file_name=MEDIA_S3_EXPORT_PDF_NAME, mime="application/pdf",
                            key="media-s3-btn-export-pdf", type="primary", disabled=not ready)
-        st.download_button("외주 전달 파일 다운로드 (.zip)", media_s3_package(src, storyboard, photos, videos),
+        st.download_button("외주 전달 파일 다운로드 (.zip)", media_s3_package(src, group, storyboard, photos, videos),
                            file_name="media_outsourcing_reference.zip", mime="application/zip",
                            key="media-s3-btn-export", type="primary", disabled=not ready,
                            help=None if ready else "④에서 '⑤로 넘기기'를 누르고, 프롬프트 확인을 통과해야 내려받을 수 있어요.")
