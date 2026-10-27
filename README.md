@@ -27,8 +27,9 @@
 | 화면 + 기능 | Python, Streamlit |
 | 데이터베이스 | Supabase (`st-supabase-connection`) |
 | 배포 | Streamlit Community Cloud |
-| AI | (확정 후 기재) |
-| 외부 API | 날씨 API, (영상/이미지 생성 API 확정 후 기재) |
+| AI | OpenAI (`openai`): 변수 도출, 프롬프트 다듬기, 사진 초안, 스토리보드·번역 (키가 없으면 규칙 기반으로 대신 만듦) |
+| 외부 API | 날씨: Open-Meteo, DWD · 경쟁사: Keepa (Amazon.de) · 영상 초안: Higgsfield (`higgsfield-client`) · 유입 분석: GA4 (없으면 샘플) |
+| 문서·영상 처리 | `fpdf2`, `matplotlib` (PDF 보고서), `plotly` (그래프), `imageio-ffmpeg` (영상 자막 넣기) |
 | 협업 | GitHub, GitHub Desktop, VS Code, Notion |
 
 ---
@@ -37,13 +38,14 @@
 
 | 순서 | 탭 이름 | 하는 일 | 경쟁사 관련 기능 | 모듈 코드 |
 |---|---|---|---|---|
-| 🏠 | 홈 | 날씨, 달력, 전날 매출과 이슈 알림 | - | `home` |
-| ① | 문제 분석 | 결과 데이터 요약, 문제 분석, 리포트 다운로드 | 문제 요인의 내부/외부 분석 | `report` |
-| ② | 가설 세우기 | 문제 해결 가설 제안 (현지 특성 반영) | 경쟁사 부정 리뷰를 우리 홍보 포인트로 활용 | `hypothesis` |
-| ③ | 광고 소재·솔루션 | 하위 탭 5개: 가설에서 변수 도출 → A/B 소재 준비 → 프롬프트 만들기(AI 다듬기) → 사진·영상 초안 제작 → 외주 정리 | 광고 소재 레퍼런스 (따라 하기 / 피하기), 경쟁사 부정 리뷰 활용 | `media` |
-| ④ | 광고 타이밍 | 날씨, 상황에 따른 광고(메타, 아마존) 노출 빈도와 예산 추천 | 폭염 + 경쟁사 품절 → 광고 빈도 증가 | `weather` |
+| 🏠 | 홈 | 독일 시간, 지구본(도시 기온), 지금 할 일 알림, 다른 탭 요약 | - | `home` |
+| ① | 문제 분석 | 검색어 클릭 분석, 경쟁 포지션·리뷰 분석, 가설 재료 정리, PDF 리포트 다운로드 | Keepa 경쟁사 가격·평점·재고, 내부/외부 요인 분석 | `report` |
+| ② | 가설 수립 | 문제 해결 가설 제안 (현지 특성 반영), 선택한 가설 PDF | 경쟁사 부정 리뷰를 우리 홍보 포인트로 활용 | `hypothesis` |
+| ③ | 매체 제작 | 하위 탭 4개: 가설에서 변수 도출 → A/B 소재 준비(프롬프트 만들기·AI 다듬기) → 사진·영상 초안 제작 → 외주 정리(zip) | 광고 소재 레퍼런스 (따라 하기 / 피하기), 경쟁사 부정 리뷰 활용 | `media` |
+| ④ | 날씨 광고 타이밍 | 권역 날씨에 따른 광고(메타, 아마존) 예산·채널 추천, PDF 보고서 | 폭염 + 경쟁사 품절 → 광고 빈도 증가 | `weather` |
 
-- 화면 구성: 화면 맨 왼쪽 **세로 아이콘 줄**에 홈, ①~④ 탭이 작업 순서대로 있고, 누르면 해당 화면으로 바뀝니다. (탭 이름과 순서는 `common/common_layout.py`의 `LAYOUT_TABS`, 모양은 `common/common_style.css`)
+- 화면 구성: 화면 맨 왼쪽 **세로 아이콘 줄**에 홈, ①~④ 탭이 작업 순서대로 있고, 누르면 해당 화면으로 바뀝니다. (탭 이름과 순서는 `common/common_layout.py`의 `LAYOUT_TABS`, 모양은 `common/common_style.css`, 공통 디자인은 `design.md`·`ui_theme.py`)
+- 탭끼리는 `store_set` / `store_get`(Supabase `common_store`)으로 값을 넘깁니다: ① → ② → ③, 그리고 홈이 각 탭 값을 읽어 요약합니다.
 - **모듈 코드**는 파일명, 폴더명, 함수명, 위젯 key, class, Supabase 표 이름 앞에 붙이는 이름입니다.
 - 담당자 기록은 노션에 정리합니다.
 
@@ -55,10 +57,17 @@
 miniproject2/
 ├── README.md                       # 프로젝트 소개, 구조, 실행/배포 (PM)
 ├── RULES.md                        # 팀 작업 규칙 (PM)
+├── CLAUDE.md                       # AI(Claude Code) 공통 작업 지침 (PM)
+├── design.md                       # 디자인 가이드 (색, 카드 배치)
+├── 문제 시나리오.md                 # 아마존 클릭률 문제 시나리오 (①·② 분석 기준)
 ├── app.py                          # ⭐ 시작 파일: streamlit run app.py (PM)
+├── ui_theme.py                     # 공통 디자인 함수 (테마, 색, 지도 배치)
+├── make_germany_image.py           # assets/germany.png 만드는 스크립트 (필요할 때만 실행)
 ├── requirements.txt                # 라이브러리 목록 (모두 한 줄 추가 가능)
 ├── .gitignore                      # GitHub에 올리지 않을 파일 목록 (PM)
 ├── .editorconfig                   # 들여쓰기, 줄바꿈 통일 설정 (PM)
+│
+├── assets/                         # 독일 지도 (germany.png, germany_states.geojson)
 │
 ├── .streamlit/
 │   ├── config.toml                 # 테마 색상 등 공통 설정 (PM, GitHub에 올라감)
@@ -69,54 +78,50 @@ miniproject2/
 │   ├── common_layout.py            # 탭 목록(LAYOUT_TABS), CSS 적용
 │   ├── common_db.py                # Supabase 읽기 / 저장 (db_read, db_insert ...)
 │   ├── common_store.py             # 탭끼리 데이터 주고받기 (store_get, store_set)
-│   ├── common_ai.py                # AI 호출 (ask_ai)
 │   ├── common_style.css            # 색상 변수, 카드 디자인
-│   └── images/                     # 같이 쓰는 이미지 (로고, 아이콘)
+│   ├── fonts/                      # 공통 폰트 SUIT (화면, PDF, 영상 자막)
+│   └── images/                     # 같이 쓰는 이미지 (로고, 탭 아이콘)
 │
-├── data/                           # 같이 쓰는 원본 데이터 (PM, 수정 금지)
-├── docs/                           # 회의록, 기획서
+├── data/                           # 같이 쓰는 원본 데이터: 경쟁사 DB, 독일 DB (PM, 수정 금지)
 │
 └── modules/                        # ⭐ 각자 자기 폴더만 수정
+    │                               # 모든 모듈 폴더에 모듈코드.md(설명), CLAUDE.md(AI 안내), 모듈코드_prompt.md(프롬프트 기록),
+    │                               # 모듈코드_style.css(디자인), images/, data/ 가 있습니다
     ├── home/                       # 홈
-    │   ├── home.md                 # 모듈 설명
     │   ├── home_page.py            # 화면 + 기능 (home_render 함수 하나)
-    │   ├── home_style.css          # 디자인
-    │   ├── images/                 # 홈에서만 쓰는 이미지
-    │   └── data/                   # 홈에서만 쓰는 데이터
+    │   ├── home_data.py            # 다른 탭 값 읽기, 지금 할 일 규칙
+    │   └── home_globe.py           # 독일 중심 지구본 + 도시 기온
     │
-    ├── report/                     # 1. 분석 리포트
-    │   ├── report.md
+    ├── report/                     # 1. 문제 분석
     │   ├── report_page.py
-    │   ├── report_download.py      # 리포트 다운로드 버튼
-    │   ├── report_style.css
-    │   ├── images/
-    │   └── data/
+    │   ├── report_data.py          # 데이터 불러오기
+    │   ├── report_sqp*.py          # 검색어 클릭 분석 (더미 SQP + Keepa·DWD)
+    │   ├── report_competitor.py    # 경쟁사 비교, 내부/외부 요인
+    │   ├── report_keepa.py         # Keepa 조회 (PIN·한도 확인)
+    │   ├── report_review.py        # 리뷰 분석
+    │   ├── report_plan.py          # ②에 넘길 가설 재료
+    │   ├── report_image.py         # 이미지로 고칠 수 있는 문제
+    │   ├── report_ga4.py           # GA4 유입·퍼널 (없으면 샘플)
+    │   ├── report_ab.py            # A/B 결과 아침 분석
+    │   └── report_download.py, report_pdf.py   # PDF 리포트
     │
     ├── hypothesis/                 # 2. 가설 수립
-    │   ├── hypothesis.md
     │   ├── hypothesis_page.py
-    │   ├── hypothesis_style.css
-    │   ├── images/
-    │   └── data/
+    │   ├── hypothesis_scenario.py  # 검색어 클릭 문제 가설 근거·KPI
+    │   ├── hypothesis_pdf.py       # ①요약 + ②가설 PDF
+    │   └── hypothesis_test.py      # 회귀 테스트
     │
     ├── media/                      # 3. 매체 제작 (3단계로 나눠 개발)
-    │   ├── media.md
     │   ├── media_page.py           # 하위 탭 4개를 만들고 단계별 화면 함수를 부름
     │   ├── media_handoff.py        # 단계 사이 데이터 주고받기
-    │   ├── media_variable.py       # 1단계: 단일 변수 추출
-    │   ├── media_ab.py             # 1단계: A/B 소재 선정
-    │   ├── media_style.css
-    │   ├── media_stage2/           # 2단계: 프롬프트 만들기 + AI 다듬기 (media_stage2.md, CLAUDE.md, media_stage2_prompt.md 포함)
-    │   ├── media_stage3/           # 3단계: 사진·영상 초안 → 외주 정리 (media_stage3.md, CLAUDE.md, media_stage3_prompt.md 포함)
-    │   ├── images/
-    │   └── data/
+    │   ├── media_variable.py       # 1단계 ①: 가설에서 변수 도출 (+ _ai.py, _pdf.py)
+    │   ├── media_stage2/           # 2단계 ②: A/B 소재 준비 (프롬프트 만들기 + AI 다듬기)
+    │   └── media_stage3/           # 3단계 ③ 사진·영상 초안(OpenAI, Higgsfield) → ④ 외주 정리(zip)
     │
     └── weather/                    # 4. 날씨 광고 타이밍
-        ├── weather.md
         ├── weather_page.py
-        ├── weather_style.css
-        ├── images/
-        └── data/
+        ├── weather_data.py         # 날씨 불러오기, 추천 계산
+        └── weather_report.py       # PDF 보고서
 ```
 
 > 폴더마다 있는 빈 `__init__.py`는 Python이 `modules.report.report_page`처럼 파일을 찾을 수 있게 해 주는 표시입니다. 지우지 않습니다.
@@ -129,7 +134,7 @@ miniproject2/
 | `모듈코드_main.html` + `모듈코드_script.js` + `모듈코드_server.py` | **`모듈코드_page.py` 하나** |
 | `common/common_api.js` (`Api.get/post`) | 필요 없음 (화면과 기능이 같은 Python 파일) |
 | `common/common_store.js` (localStorage) | `common/common_store.py` (세션 + Supabase) |
-| `server/shared/shared_ai.py` | `common/common_ai.py` |
+| `server/shared/shared_ai.py` | 각 모듈의 `모듈코드_ai.py` (OpenAI를 직접 부름) |
 | `server/requirements.txt` | `requirements.txt` (맨 위 폴더) |
 | `.env` / `.env.example` | `.streamlit/secrets.toml` / `.streamlit/secrets.toml.example` |
 | `uvicorn server.main:app --reload` | `streamlit run app.py` |
@@ -261,7 +266,7 @@ API_KEY = st.secrets["AI_API_KEY"]          # O
 
 ### 이후
 
-- `develop` → `main` PR이 합쳐지면 1~2분 안에 자동으로 새 버전이 올라갑니다.
+- `dev` → `main` PR이 합쳐지면 1~2분 안에 자동으로 새 버전이 올라갑니다.
 - `requirements.txt`가 바뀌면 라이브러리도 자동으로 다시 설치됩니다.
 - 새 비밀값이 생기면 **PM이 Streamlit Cloud > App settings > Secrets에도 추가**해야 배포된 앱에서 동작합니다.
 - 배포가 실패하면 Streamlit Cloud 앱 화면 오른쪽 아래 **Manage app**에서 로그를 확인합니다.
@@ -274,14 +279,14 @@ API_KEY = st.secrets["AI_API_KEY"]          # O
 
 - [x] PM: 뼈대(빈 파일 구조, app.py, common/) 올리기
 - [x] Streamlit + Supabase 구조로 전환
-- [ ] PM: Supabase 프로젝트 생성, `common_store` 표 만들기
-- [ ] PM: Streamlit Community Cloud 연결 (main 자동 배포)
-- [ ] 홈 (`home`)
-- [ ] 1. 분석 리포트 (`report`)
-- [ ] 2. 가설 수립 (`hypothesis`)
-- [ ] 3. 매체 제작 (`media`)
-- [ ] 4. 날씨 광고 타이밍 (`weather`)
-- [ ] 전체 통합 테스트 → `main` 반영
+- [x] PM: Supabase 프로젝트 생성, `common_store` 표 만들기
+- [x] PM: Streamlit Community Cloud 연결 (main 자동 배포)
+- [x] 홈 (`home`)
+- [x] 1. 문제 분석 (`report`)
+- [x] 2. 가설 수립 (`hypothesis`)
+- [x] 3. 매체 제작 (`media`)
+- [x] 4. 날씨 광고 타이밍 (`weather`)
+- [x] 전체 통합 → `main` 반영 (2026-10-27)
 - [ ] 최종 발표
 
 ---
@@ -302,3 +307,4 @@ API_KEY = st.secrets["AI_API_KEY"]          # O
 | 2026-10-24 | `media` 단계 사이 값을 단계 폴더의 JSON 파일로 저장 (푸시·풀로 다른 컴퓨터에서도 이어짐) | 000 |
 | 2026-10-25 | `media` 하위 탭 5개로 변경: AI 다듬기를 2단계로, 3단계는 ④ 사진·영상 초안(스토리보드 포함) + ⑤ 외주 정리 | 000 |
 | 2026-10-25 | `media` 단계 사이 값을 Supabase(`store("media")`의 `handoff`)에 저장, 단계마다 넘기기 버튼을 눌러야만 저장 (JSON 파일 저장 중단), `store_get(key, fresh=True)` 추가 | 000 |
+| 2026-10-27 | 최종 반영: 사용 기술(OpenAI, Keepa, Higgsfield, Open-Meteo·DWD, GA4), 탭 이름과 ③ 하위 탭 4개, 파일 구조(`common_ai.py` 삭제, `design.md`·`ui_theme.py`·`assets/`·`common/fonts/` 등 추가), `develop` → `dev`, 진행 현황 갱신 | 000 |
