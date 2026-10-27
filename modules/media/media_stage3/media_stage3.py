@@ -12,8 +12,8 @@ from pathlib import Path
 import streamlit as st
 
 from common.common_store import store_get
-from modules.media.media_stage3.media_stage3_hf_login import (media_s3_hf_login_start, media_s3_hf_login_status,
-                                                               media_s3_hf_logout)
+from modules.media.media_stage3.media_stage3_hf_login import (MEDIA_S3_HF_CAN_LOGIN, media_s3_hf_login_start,
+                                                               media_s3_hf_login_status, media_s3_hf_logout)
 from modules.media.media_stage3.media_stage3_hf_mcp import (MediaS3HFError, media_s3_hf_check, media_s3_hf_download,
                                                            media_s3_hf_submit)
 from modules.media.media_stage3.media_stage3_ai import (MEDIA_S3_VIDEO_ASPECT, MEDIA_S3_VIDEO_HOOK, MEDIA_S3_VIDEO_SECONDS, MediaS3AIError, media_s3_scene_version, media_s3_video_avoid, media_s3_ai_ready, media_s3_forbidden_hits,
@@ -780,24 +780,32 @@ def media_s3_storyboard_section(src: dict):
 
 @st.fragment(run_every=3)
 def media_s3_hf_login_section():
-    """Higgsfield 계정 로그인 칸 (컴퓨터마다 처음 한 번). 버튼을 누르면 시크릿 창으로 로그인 화면이 뜨고,
-    로그인을 마치면 3초 안에 알아채고 화면을 다시 그립니다. 앱을 자기 컴퓨터에서 켰을 때만 동작합니다."""
+    """Higgsfield 계정 로그인 칸 (팀에서 한 번). 버튼을 누르면 시크릿 창으로 로그인 화면이 뜨고,
+    로그인을 마치면 3초 안에 알아채고 화면을 다시 그립니다. 로그인 버튼은 앱을 자기 컴퓨터에서 켰을 때만 동작합니다.
+    2026-10-27: 로그인 열쇠를 팀 공용(Supabase)으로 써서, 배포된 앱·다른 컴퓨터는 로그인 없이 바로 '팀 계정 연결됨'."""
     status, info = media_s3_hf_login_status()
     if status == "done":
         if st.session_state.pop("media-s3-hf-logged-in", None) is False:
             st.rerun()   # 로그인 칸을 보던 중 방금 로그인됨 → 영상 만들기 버튼을 켜려고 화면 전체를 다시 그림
         with st.container(horizontal=True, vertical_alignment="center"):
-            st.caption("✅ Higgsfield 로그인됨 (구독 크레딧)")
+            st.caption("✅ Higgsfield 팀 계정 연결됨 (구독 크레딧)")
             st.space("stretch")
-            if st.button("계정 바꾸기", key="media-s3-hf-logout", type="tertiary",
-                         help="이 컴퓨터의 로그인을 지우고 다른 계정으로 다시 로그인해요"):
+            if MEDIA_S3_HF_CAN_LOGIN and st.button("계정 바꾸기", key="media-s3-hf-logout", type="tertiary",
+                                                   help="팀 공용 로그인을 지우고 다른 계정으로 다시 로그인해요 (팀 전체에 적용)"):
                 media_s3_hf_logout()
                 st.rerun()
         return
     st.session_state["media-s3-hf-logged-in"] = False   # 로그인 전 (로그인되면 위에서 화면을 다시 그림)
+    if not MEDIA_S3_HF_CAN_LOGIN:   # 배포된 앱: 서버에서는 로그인 창을 열 수 없음 → 안내만
+        with st.container(border=True, key="media-s3-hf-login"):
+            st.markdown("**Higgsfield 팀 계정 연결 전**")
+            st.caption("배포된 앱에서는 로그인 창을 열 수 없어요. 팀원 한 명이 앱을 자기 컴퓨터에서 켜고 "
+                       "여기서 'Higgsfield 로그인 창 열기'로 한 번 로그인하면, 이 화면도 바로 연결돼요.")
+        return
     with st.container(border=True, key="media-s3-hf-login"):
-        st.markdown("**Higgsfield 로그인** (이 컴퓨터에서 처음 한 번)")
-        st.caption("버튼을 누르면 시크릿 창으로 로그인 화면이 떠요. 구독(울트라) 계정으로 로그인하고 허용을 누르면 끝이에요.")
+        st.markdown("**Higgsfield 로그인** (팀에서 한 번)")
+        st.caption("버튼을 누르면 시크릿 창으로 로그인 화면이 떠요. 구독(울트라) 계정으로 로그인하고 허용을 누르면 끝이에요. "
+                   "배포된 앱과 다른 컴퓨터에도 바로 적용돼요.")
         if st.button("Higgsfield 로그인 창 열기", key="media-s3-hf-login-btn", type="primary"):
             try:
                 media_s3_hf_login_start()

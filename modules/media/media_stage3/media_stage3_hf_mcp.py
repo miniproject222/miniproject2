@@ -1,5 +1,6 @@
 # 3. 매체 제작 > 3단계 ④: Higgsfield MCP로 영상 만들기 (구독 크레딧 사용, API 잔액 불필요)
-# 로그인 열쇠는 ④의 로그인 버튼(media_stage3_hf_login.py)이 저장한 .streamlit/hf_mcp_token.json을 씁니다 (만료되면 자동 갱신).
+# 로그인 열쇠는 ④의 로그인 버튼(media_stage3_hf_login.py)이 저장한 열쇠를 씁니다 (만료되면 자동 갱신).
+# 2026-10-27: 내 컴퓨터 파일(.streamlit/hf_mcp_token.json)이 없어도 Supabase 공용 열쇠로 동작 (배포된 앱·다른 컴퓨터).
 # MCP 서버(https://mcp.higgsfield.ai/mcp)의 도구 generate_video → job_status(sync)를 차례로 부릅니다.
 import json
 import time
@@ -7,8 +8,8 @@ import time
 import requests
 
 from modules.media.media_stage3.media_stage3_hf_login import (MEDIA_S3_HF_AUTH, MEDIA_S3_HF_MCP_URL,
-                                                               MEDIA_S3_HF_TOKEN_FILE, media_s3_hf_logout,
-                                                               media_s3_hf_save)
+                                                               MEDIA_S3_HF_RELOGIN, media_s3_hf_expire,
+                                                               media_s3_hf_load, media_s3_hf_logout, media_s3_hf_save)
 
 MEDIA_S3_HF_MODEL = "seedance_2_0"   # Higgsfield 모델 이름 (MCP 카탈로그 기준). 2026-10-26 실측: 10초 A·B 동시 약 2분 (2.5는 약 5분)
 MEDIA_S3_HF_MODE = "fast"            # seedance_2_0의 빠른 모드 (480p·720p만, 10초 10크레딧)
@@ -22,24 +23,30 @@ class MediaS3HFError(Exception):
 
 
 def media_s3_hf_ready() -> bool:
-    """로그인 열쇠 파일이 있는지 (컴퓨터마다 처음 한 번 ④에서 로그인 필요)."""
-    return MEDIA_S3_HF_TOKEN_FILE.exists()
+    """쓸 수 있는 로그인 열쇠가 있는지 (내 컴퓨터 파일 또는 팀 공용 열쇠)."""
+    return media_s3_hf_load() is not None
 
 
 def _media_s3_hf_token() -> str:
-    """저장된 열쇠를 읽고, 만료됐으면 refresh_token으로 새로 받습니다."""
-    saved = json.loads(MEDIA_S3_HF_TOKEN_FILE.read_text(encoding="utf-8"))
+    """저장된 열쇠를 읽고(공용 열쇠는 매번 새로), 만료됐으면 refresh_token으로 새로 받습니다."""
+    saved = media_s3_hf_load(fresh=True)
+    if not saved:
+        raise MediaS3HFError(MEDIA_S3_HF_RELOGIN)
     if time.time() < saved.get("expires_at", 0):
         return saved["access_token"]
     if not saved.get("refresh_token"):
         media_s3_hf_logout()   # 지워야 화면에 로그인 버튼이 다시 나옴
-        raise MediaS3HFError("Higgsfield 로그인이 만료됐어요. 'Higgsfield 로그인 창 열기'로 다시 로그인해 주세요.")
+        raise MediaS3HFError(MEDIA_S3_HF_RELOGIN)
     res = requests.post(f"{MEDIA_S3_HF_AUTH}/token", timeout=30, data={
         "grant_type": "refresh_token", "refresh_token": saved["refresh_token"],
         "client_id": saved["client_id"], "resource": MEDIA_S3_HF_MCP_URL})
     if not res.ok:
+        # 다른 컴퓨터가 같은 순간 먼저 갱신했으면 내 refresh_token은 이미 바뀌었을 수 있음 → 공용 열쇠를 다시 읽어 봄
+        latest = media_s3_hf_load(fresh=True)
+        if latest and latest.get("refresh_token") != saved["refresh_token"] and time.time() < latest.get("expires_at", 0):
+            return latest["access_token"]
         media_s3_hf_logout()
-        raise MediaS3HFError("Higgsfield 로그인 갱신에 실패했어요. 'Higgsfield 로그인 창 열기'로 다시 로그인해 주세요.")
+        raise MediaS3HFError(MEDIA_S3_HF_RELOGIN)
     token = res.json()
     token.setdefault("refresh_token", saved["refresh_token"])
     media_s3_hf_save(saved["client_id"], token)
@@ -68,8 +75,9 @@ class MediaS3HFSession:
             body["id"] = self.next_id
         res = requests.post(MEDIA_S3_HF_MCP_URL, headers=self.headers, json=body, timeout=60)
         if res.status_code == 401:
-            media_s3_hf_logout()
-            raise MediaS3HFError("Higgsfield 로그인이 풀렸어요. 'Higgsfield 로그인 창 열기'로 다시 로그인해 주세요.")
+            # 팀 공용 열쇠라 바로 지우지 않고 만료로 표시 → 다음에 누르면 refresh_token으로 새로 받음 (그것도 안 되면 그때 지움)
+            media_s3_hf_expire()
+            raise MediaS3HFError("Higgsfield 로그인이 잠깐 풀렸어요. 버튼을 한 번 더 눌러 주세요 (열쇠를 새로 받아요).")
         if not res.ok:
             raise MediaS3HFError(f"Higgsfield 연결 오류 ({res.status_code}): {res.text[:200]}")
         return res
