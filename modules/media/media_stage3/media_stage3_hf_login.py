@@ -4,6 +4,9 @@
 # 로그인하면 로그인 열쇠(토큰)를 .streamlit/hf_mcp_token.json에 저장합니다.
 # 이 파일은 계정 비밀번호와 같아서 .gitignore에 넣어 GitHub에 올라가지 않게 합니다.
 # 이후 ④ '영상 초안 만들기'는 이 열쇠로 Higgsfield MCP에 연결해 구독(울트라 등) 크레딧으로 영상을 만듭니다.
+# 2026-10-27: 열쇠를 Supabase(common_store의 "media-hf-token")에도 올려 팀 공용으로 씁니다.
+#   배포된 앱(Streamlit Cloud)은 로그인 창을 열 수 없어서, 한 컴퓨터에서 한 번 로그인한 열쇠를 같이 씀.
+#   열쇠를 갱신하면(만료 시 자동) 공용 열쇠도 바꿔 두어 모든 컴퓨터가 최신 열쇠를 씀.
 import base64
 import hashlib
 import http.server
@@ -28,9 +31,17 @@ MEDIA_S3_HF_PORT = 8765
 MEDIA_S3_HF_REDIRECT = f"http://127.0.0.1:{MEDIA_S3_HF_PORT}/callback"
 MEDIA_S3_HF_SCOPE = "openid email offline_access"
 MEDIA_S3_HF_LOGIN_WAIT = 600   # 로그인 창을 연 뒤 기다리는 최대 시간(초)
+MEDIA_S3_HF_STORE = "media-hf-token"   # 팀 공용 열쇠를 저장하는 common_store 키
+MEDIA_S3_HF_SHARED_TTL = 30            # 화면 상태 확인용으로 공용 열쇠를 다시 읽는 간격(초). 영상을 만들 때는 매번 새로 읽음
+# Streamlit Cloud는 코드를 /mount/src 아래에 둠 → 서버에는 브라우저가 없어 로그인 창을 열 수 없음 (공용 열쇠만 씀)
+MEDIA_S3_HF_CAN_LOGIN = not Path("/mount/src").exists()
+MEDIA_S3_HF_RELOGIN = ("Higgsfield 로그인이 만료됐어요. 앱을 내 컴퓨터에서 켜고 'Higgsfield 로그인 창 열기'로 "
+                       "한 번 다시 로그인해 주세요 (팀 전체에 바로 적용돼요).")
 
 # 지금 진행 중인 로그인 (앱이 다시 그려져도 같은 것을 씀): {"thread", "url", "error"}
 _media_s3_hf_login = {}
+# 마지막으로 읽은 공용 열쇠 {"at": 읽은 시각, "value": 열쇠 dict 또는 None}
+_media_s3_hf_shared = {}
 
 
 def media_s3_hf_register() -> str:
@@ -43,17 +54,91 @@ def media_s3_hf_register() -> str:
     return res.json()["client_id"]
 
 
-def media_s3_hf_save(client_id: str, token: dict) -> None:
+def _media_s3_hf_age(data: dict | None) -> float:
+    """열쇠를 저장한 시각 (어느 쪽이 더 최근인지 비교용). 예전 파일에는 saved_at이 없어서 0
+    (공용 열쇠가 비어 있으면 그대로 올라가고, 공용 열쇠가 있으면 공용을 씀)."""
+    return (data or {}).get("saved_at", 0)
+
+
+def _media_s3_hf_write_file(data: dict) -> None:
     MEDIA_S3_HF_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-    MEDIA_S3_HF_TOKEN_FILE.write_text(json.dumps({
-        "client_id": client_id, "access_token": token["access_token"],
-        "refresh_token": token.get("refresh_token", ""),
-        "expires_at": time.time() + int(token.get("expires_in", 3600)) - 60}), encoding="utf-8")
+    MEDIA_S3_HF_TOKEN_FILE.write_text(json.dumps(data), encoding="utf-8")
+
+
+def _media_s3_hf_read_file() -> dict | None:
+    try:
+        data = json.loads(MEDIA_S3_HF_TOKEN_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) and data.get("access_token") else None
+
+
+def _media_s3_hf_read_shared(fresh: bool = False) -> dict | None:
+    """Supabase의 공용 열쇠. 화면 확인용은 MEDIA_S3_HF_SHARED_TTL초 동안 마지막 값을 다시 씀 (3초마다 그리는 로그인 칸 때문)."""
+    if not fresh and time.time() - _media_s3_hf_shared.get("at", 0) < MEDIA_S3_HF_SHARED_TTL:
+        return _media_s3_hf_shared.get("value")
+    try:   # common_store를 쓰지 않고 바로 읽음: 이번 접속(session_state)에 기억해 두지 않아야 다른 사람이 갱신한 열쇠를 받음
+        from common.common_db import db_read
+        rows = db_read("common_store", ttl=0, key=MEDIA_S3_HF_STORE)
+        value = rows[0]["value"] if rows else None
+    except Exception as err:   # Supabase 연결 전이어도 내 컴퓨터 열쇠로는 동작하게
+        print(f"[Higgsfield] 공용 열쇠 읽기 실패: {err}")
+        return _media_s3_hf_shared.get("value")
+    value = value if isinstance(value, dict) and value.get("access_token") else None
+    _media_s3_hf_shared.update(at=time.time(), value=value)
+    return value
+
+
+def _media_s3_hf_write_shared(data: dict | None) -> None:
+    try:
+        from common.common_db import db_upsert
+        db_upsert("common_store", {"key": MEDIA_S3_HF_STORE, "value": data})
+        _media_s3_hf_shared.update(at=time.time(), value=data)
+    except Exception as err:
+        print(f"[Higgsfield] 공용 열쇠 저장 실패: {err}")
+
+
+def media_s3_hf_load(fresh: bool = False) -> dict | None:
+    """쓸 열쇠: 내 컴퓨터 파일과 공용 열쇠 중 더 최근에 저장한 것 (saved_at이 늦은 쪽).
+    내 파일이 더 새것이면(방금 로그인·갱신) 공용 열쇠로 올리고, 공용이 더 새것이면(다른 컴퓨터가 갱신) 내 파일을 바꿈."""
+    mine, shared = _media_s3_hf_read_file(), _media_s3_hf_read_shared(fresh)
+    if mine and (not shared or _media_s3_hf_age(mine) > _media_s3_hf_age(shared)):
+        _media_s3_hf_write_shared(mine)
+        return mine
+    if shared and shared != mine:
+        try:
+            _media_s3_hf_write_file(shared)
+        except OSError:
+            pass
+    return shared
+
+
+def media_s3_hf_save(client_id: str, token: dict) -> None:
+    """새로 받은 열쇠를 내 파일에 저장하고 공용 열쇠도 바꿉니다
+    (로그인 대기는 뒤 작업에서 돌아서 공용 저장이 실패할 수 있음 → 다음 화면에서 media_s3_hf_load가 올림)."""
+    data = {"client_id": client_id, "access_token": token["access_token"],
+            "refresh_token": token.get("refresh_token", ""),
+            "expires_at": time.time() + int(token.get("expires_in", 3600)) - 60, "saved_at": time.time()}
+    _media_s3_hf_write_file(data)
+    _media_s3_hf_write_shared(data)
+
+
+def media_s3_hf_expire() -> None:
+    """열쇠가 거절됐을 때(401): 지우지 않고 만료로 표시 → 다음 호출에서 refresh_token으로 새로 받음."""
+    data = media_s3_hf_load(fresh=True)
+    if data:
+        data = {**data, "expires_at": 0, "saved_at": time.time()}
+        try:
+            _media_s3_hf_write_file(data)
+        except OSError:
+            pass
+        _media_s3_hf_write_shared(data)
 
 
 def media_s3_hf_logout() -> None:
-    """로그인 열쇠를 지웁니다 (다른 계정으로 다시 로그인할 때)."""
+    """로그인 열쇠를 지웁니다 (다른 계정으로 다시 로그인할 때, 갱신도 안 될 때). 공용 열쇠도 같이 지움."""
     MEDIA_S3_HF_TOKEN_FILE.unlink(missing_ok=True)
+    _media_s3_hf_write_shared(None)
 
 
 def media_s3_hf_open_private(url: str) -> None:
@@ -149,8 +234,9 @@ def media_s3_hf_login_start(open_window: bool = True) -> str:
 
 
 def media_s3_hf_login_status() -> tuple[str, str]:
-    """앱 화면용 로그인 상태: ("done", "") / ("waiting", 주소) / ("error", 이유) / ("none", "")."""
-    if MEDIA_S3_HF_TOKEN_FILE.exists():
+    """앱 화면용 로그인 상태: ("done", "") / ("waiting", 주소) / ("error", 이유) / ("none", "").
+    내 컴퓨터 파일이 없어도 공용 열쇠가 있으면 "done" (배포된 앱·다른 컴퓨터)."""
+    if media_s3_hf_load():
         return "done", ""
     t = _media_s3_hf_login.get("thread")
     if t and t.is_alive():
