@@ -939,3 +939,13 @@
   margin-top: 2px;     /* 버튼(18px) 가운데를 제목 글자 줄(22px) 가운데에 */
   margin-left: -6px;   /* 페이지 제목 옆 물음표처럼 제목에 가깝게 */
 }
+
+/* 오른쪽 아이콘 줄(판단 기준·근거 출처)은 화면에서 숨김 — 코드·기능은 그대로 (2026-10-27)
+   PDF 다운로드는 제목 줄 '불러오기' 왼쪽 버튼으로 옮김 */
+[class*="st-key-hypothesis-side-"] { display: none !important; }
+.st-key-hypothesis-btn-pdf button:not(:disabled) {
+  background: var(--color-card);
+  border: 1px solid #7B6CF2;
+}
+.st-key-hypothesis-btn-pdf button:not(:disabled) p,
+.st-key-hypothesis-btn-pdf button:not(:disabled) span { color: #7B6CF2 !important; }

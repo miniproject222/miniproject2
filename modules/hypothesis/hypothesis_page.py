@@ -674,7 +674,6 @@ def hypothesis_render_side(index: int, problem: dict, sqp: dict | None, saved: d
     )
     # 아이콘 3개는 가설마다 늘었다 줄었다 하지 않게 항상 같은 자리에 둠 (쓸 수 없으면 흐리게 + 이유 말풍선)
     has_evidence = bool(hypothesis_evidence_rows(problem))
-    has_saved = bool(saved and isinstance(saved.get("selected"), dict))
     with st.container(key=f"hypothesis-side-{index}"):
         if st.button("", icon=":material/fact_check:", key=f"hypothesis-btn-side-judge-{index}", type="tertiary",
                      disabled=not is_sqp_main,
@@ -684,11 +683,7 @@ def hypothesis_render_side(index: int, problem: dict, sqp: dict | None, saved: d
                      disabled=not has_evidence,
                      help="근거 · 출처" if has_evidence else "근거 · 출처 (이 가설은 원문 근거가 없어요)"):
             hypothesis_dialog_evidence(problem)
-        # 가설을 선택(저장)한 뒤에만 열림: ① 요약 + ② 가설 PDF 다운로드
-        if st.button("", icon=":material/download:", key=f"hypothesis-btn-side-pdf-{index}", type="tertiary",
-                     disabled=not has_saved,
-                     help="가설 보고서 PDF" if has_saved else "가설 보고서 PDF ('다음으로'로 가설을 저장하면 열려요)"):
-            hypothesis_dialog_pdf(saved)
+    # PDF 다운로드는 제목 줄 '불러오기' 왼쪽으로 옮김 (hypothesis_render). 이 아이콘 줄은 CSS로 화면에서 숨김 (기능은 그대로)
 
 
 def hypothesis_render():
@@ -707,6 +702,11 @@ def hypothesis_render():
             with st.popover("", icon=":material/help:", type="tertiary", help="이 탭 안내"):
                 st.markdown("① 문제 분석의 상위 문제로 가설 후보를 자동으로 만들고, 그중 하나를 골라 ③ 광고 소재로 넘겨요.\n\n"
                             "**순서**: 오른쪽 위 '불러오기' → 가설 1·2·3 중 하나 '선택하기' → '다음으로'(저장하고 ③으로 이동, ③에서 자동으로 불러옴)")
+        # 가설을 선택(저장)한 뒤에만 열림: ① 요약 + ② 가설 PDF 다운로드 (예전 오른쪽 아이콘 줄 맨 아래에 있던 것)
+        has_saved = bool(saved and isinstance(saved.get("selected"), dict))
+        if st.button("PDF 다운로드", icon=":material/picture_as_pdf:", key="hypothesis-btn-pdf", disabled=not has_saved,
+                     help="가설 보고서 PDF" if has_saved else "가설 보고서 PDF ('다음으로'로 가설을 저장하면 열려요)"):
+            hypothesis_dialog_pdf(saved)
         st.button("불러오기", icon=":material/download:", key="hypothesis-btn-load", on_click=_hypothesis_click_load,
                   help="① 탭에서 저장한 리포트로 가설 후보를 만듭니다 (저장된 리포트가 없으면 ① 탭으로 이동)")
         st.button("다음으로", icon=":material/arrow_forward:", key="hypothesis-btn-store", type="primary",
