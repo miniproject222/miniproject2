@@ -476,7 +476,7 @@
 /* 2026-10-26 PM: 'ANY Currency' 레퍼런스처럼 — 옅은 빛·큰 반투명 고리는 빼고
    지구본 조금 작게: 칸 폭 828 → 760 (구 지름 ≈ 633), 중심 위치는 그대로 (가운데 + 20, 위에서 355) */
 .home-globe {
-  top: calc(-25 * var(--u));
+  top: calc(-5 * var(--u));   /* 2026-10-26 PM: -25 → -5, 위 흰 띠가 잘리지 않게 살짝 내림 */
   left: calc(50% - 360 * var(--u));
   width: calc(760 * var(--u));
 }
@@ -507,7 +507,7 @@
    선과 점을 같은 SVG 그림 하나에 그려 점이 선 위에 완전한 흰 원으로 올라가게 함 (점 테두리 없음) */
 .home-globe::after {
   border: none;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 980 980'%3E%3Ccircle cx='490' cy='490' r='488.75' fill='none' stroke='white' stroke-opacity='0.7' stroke-width='2.5'/%3E%3Ccircle cx='66.7' cy='245.6' r='4.5' fill='white'/%3E%3Ccircle cx='933.0' cy='283.4' r='5' fill='white'/%3E%3Ccircle cx='945.7' cy='313.3' r='3' fill='white'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 980 980'%3E%3Ccircle cx='490' cy='490' r='488.75' fill='none' stroke='white' stroke-opacity='0.7' stroke-width='2.5'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
 }
 
 /* 2026-10-26 PM: 지구본 위아래 흔들림(home-bob)과 그림자 숨쉬기(home-shadow) 없앰 */
@@ -535,3 +535,50 @@
   cursor: default;
 }
 .home-clock-sub { display: flex; align-items: center; gap: calc(6 * var(--u)); }
+
+/* 2026-10-26 PM: 지구본 아래 바닥 그림자 없앰 */
+.home-globe-shadow { display: none; }
+
+/* 2026-10-26 PM: 지구본을 아주 조금 축소 (칸 폭 760 → 732, 약 96%) — 위쪽 흰 띠 위치는 그대로 두고
+   아래 흰 띠도 위쪽만큼 여백이 보이게. 가운데 위치 유지 (왼쪽 +14), 바깥 얇은 선 중심도 새 가운데(위에서 366)로 */
+.home-globe {
+  left: calc(50% - 346 * var(--u));
+  width: calc(732 * var(--u));
+}
+.home-globe::after { top: calc(366 * var(--u)); }
+
+/* 2026-10-26 PM: 점이 반원으로 잘리던 원인 = 원 모양(border-radius 50%)이 상자 가장자리에 걸친 점의 바깥 절반을 잘라 냄.
+   선·점은 SVG 그림이 그리므로 상자는 네모로 둬서 점이 선 중심에 완전한 원으로 보이게 함 */
+.home-globe::after { border-radius: 0; }
+
+/* 2026-10-26 PM: 흰 동그라미 포인트는 선 그림과 따로 (home_page.py home_ring_dots_html, 점 중심 = 선 위) */
+.home-ring-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #FFFFFF;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 2026-10-26 PM: 권역 핀(북부·동부·서부·남부) 호버 효과 더 또렷하게 —
+   말풍선이 살짝 떠오르며 커지고(+ 권역 색 테두리·그림자), 점은 커지고, 반투명 원은 진해지며 커짐 */
+.home-city-chip { transition: transform 0.22s ease, box-shadow 0.22s ease; }
+.home-city-dot, .home-city-halo { transition: transform 0.22s ease, background 0.22s ease; }
+.home-city:hover .home-city-chip {
+  transform: translateX(-50%) translateY(calc(-4 * var(--u))) scale(1.1);
+  box-shadow: 0 0 0 calc(1.5 * var(--u)) color-mix(in srgb, var(--c) 55%, transparent),
+              0 calc(10 * var(--u)) calc(22 * var(--u)) color-mix(in srgb, var(--c) 30%, transparent);
+}
+.home-city:hover .home-city-dot { transform: scale(1.3); }
+.home-city:hover .home-city-halo { transform: scale(1.25); background: color-mix(in srgb, var(--c) 34%, transparent); }
+
+/* 2026-10-26 PM: 권역 핀 호버가 안 되던 원인 = 왼쪽 칸(.home-left, z-index 2)이 판 전체 폭이라 지구본(z-index 1)을 덮음.
+   왼쪽 칸 빈 곳은 마우스가 통과하게 하고, 실제로 누르거나 마우스를 올리는 것(카드·지금 할 일 아이콘·시차·연락 표시)만 받게 함 */
+.home-left { pointer-events: none; }
+.home-left .home-float,
+.home-left .home-tpin-icon,
+.home-left .home-tpin-text,
+.home-left .home-tpin-pop,
+.home-left .home-gap,
+.home-left .home-contact { pointer-events: auto; }

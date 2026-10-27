@@ -8,6 +8,7 @@
 # 홈 탭이 열려 있으면 화면 전체를 채웁니다 (home_style.css)
 # 다른 탭이 구현 전이면 샘플 데이터로 채우고 지구본 아래에 "일부 샘플 데이터"로 알림 (데이터 모양은 home_data.py 맨 위 참고)
 import html
+import math
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -245,6 +246,25 @@ def home_left_html(stores, temps, tabs, todos):
 </div>"""
 
 
+# 바깥 얇은 흰 선(.home-globe::after, 지름 980 · 중심은 지구본 칸 가운데, 위에서 366) 위 흰 동그라미 포인트
+# (각도°, 반지름) — 레퍼런스처럼 왼쪽 위 1개, 오른쪽 위 큰 점·작은 점. 2026-10-26 PM: 선 그림과 따로 그려 잘리지 않게
+HOME_RING_R = 488.75
+HOME_RING_CENTER_TOP = 366
+HOME_RING_DOTS = [(150, 5.5), (25, 6), (21.2, 3.8)]
+
+
+def home_ring_dots_html():
+    """얇은 흰 선 위 흰 점들: 점 중심이 선 위에 오도록 각도로 위치 계산"""
+    dots = []
+    for deg, r in HOME_RING_DOTS:
+        dx = HOME_RING_R * math.cos(math.radians(deg))
+        dy = -HOME_RING_R * math.sin(math.radians(deg))
+        dots.append(f'<i class="home-ring-dot" style="left: calc(50% + {dx:.1f} * var(--u)); '
+                    f'top: calc({HOME_RING_CENTER_TOP + dy:.1f} * var(--u)); width: calc({2 * r} * var(--u)); '
+                    f'height: calc({2 * r} * var(--u));"></i>')
+    return "".join(dots)
+
+
 def home_clock_html():
     """큰 숫자 자리(예전 '광고 빈도 추천'): 독일(베를린) 지금 시간. 처음 값은 서버가 넣고, 브라우저가 1초마다 고침 (HOME_NAV_JS)"""
     try:
@@ -361,6 +381,7 @@ def home_render():
   <div class="home-globe">
     <div class="home-globe-wrap">{home_globe_svg()}{home_city_layer(temps, home_city_warning)}</div>
     <div class="home-globe-shadow"></div>
+    {home_ring_dots_html()}
   </div>
   {home_ad_panel_html(temps, real.get("weather"), home_ad_multiplier(stores, temps), tabs)}
   <div class="home-globe-foot">

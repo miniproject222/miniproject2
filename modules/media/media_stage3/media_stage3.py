@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from common.common_store import store_get
 from modules.media.media_stage3.media_stage3_hf_login import (media_s3_hf_login_start, media_s3_hf_login_status,
@@ -47,17 +48,19 @@ MEDIA_S3_HISTORY = "media-s3-history"           # 만든 결과 기록 목록
 MEDIA_S3_PICK = "media-s3-pick"                 # ⑤로 보내려고 고른 기록(file) 목록 ('만든 결과 보기'의 체크)
 MEDIA_S3_NOTES = "media-s3-notes"               # 위쪽 알림(예시 프롬프트 등) → 각 탭 아래 안내 줄에 붙임
 MEDIA_S3_PHOTO_IDX = "media-s3-photo-idx"       # 사진 넘겨 보기에서 지금 보는 사진 번호
-# 영상 스토리보드 틀 (자사몰 A/B, 10초): 첫 3초만 A·B가 다르고(A = 지금 방식, B = 가설의 이유가 보임) 나머지는 공통.
+# 영상 스토리보드 틀 (자사몰 A/B, 15초): 첫 3초만 A·B가 다르고(A = 지금 방식, B = 가설의 이유가 보임) 나머지는 공통.
 # 외주는 한 번 찍고 두 버전으로 편집. AI가 가설·리포트 값으로 채울 자리, 지금은 예시 (가설: 두께·원단이 보이면 클릭↑)
 MEDIA_S3_STORYBOARD_SAMPLE = [
     {"장면": "1 첫 3초 · A", "길이(초)": 3, "화면": "침대에 깔린 냉감패드를 멀리서 보여 줌 (두께·원단은 안 보임)", "움직임": "고정 카메라",
      "자막": "", "피할 것": "B와 다른 배경·조명"},
     {"장면": "1 첫 3초 · B", "길이(초)": 3, "화면": "같은 침대, 손이 원단을 쓸고 모서리를 들어 두께 클로즈업", "움직임": "쓸기 → 모서리 들기",
      "자막": "", "피할 것": "실제보다 두꺼워 보이는 연출"},
-    {"장면": "2 공통 · 증거", "길이(초)": 4, "화면": "손바닥을 패드에 대는 장면", "움직임": "손을 천천히 올려놓기",
+    {"장면": "2 공통 · 문제", "길이(초)": 4, "화면": "30℃ 전후 무더운 독일 여름밤 침실, 등을 대고 누워 뒤척임", "움직임": "천천히 다가가는 카메라",
+     "자막": "", "피할 것": "과장된 땀·괴로운 표정"},
+    {"장면": "3 공통 · 증거", "길이(초)": 4, "화면": "손바닥을 패드에 대는 장면", "움직임": "손을 천천히 올려놓기",
      "자막": "Die Hautoberfläche fühlt sich bis zu 7,8 °C kühler an (Wärmebildmessung, Fertigprodukt)",
      "피할 것": "체온을 낮춘다, 얼음·서리 연출"},
-    {"장면": "3 공통 · 마무리", "길이(초)": 3, "화면": "90×200 침대에 깔린 모습, OEKO-TEX 라벨 → 자사몰 구매 안내", "움직임": "위에서 내려오는 카메라",
+    {"장면": "4 공통 · 마무리", "길이(초)": 4, "화면": "90×200 침대에 깔린 모습, OEKO-TEX 라벨 → 자사몰 구매 안내", "움직임": "위에서 내려오는 카메라",
      "자막": "OEKO-TEX® STANDARD 100 · Jetzt im Shop", "피할 것": "친환경 아이콘, 직접 만든 인증 마크"},
 ]
 
@@ -126,44 +129,47 @@ def media_s3_video_prompt(src: dict, storyboard: list, ver: str = "") -> str:
     A·B는 첫 장면만 다르고 나머지 문장은 글자까지 같습니다 (공통 장면이 비슷하게 나오도록)."""
     rows = media_s3_video_versions(storyboard).get(ver) or storyboard
     scenes = [f"{i}. ({r.get('길이(초)', '')}s) {r.get('화면', '')} / {r.get('움직임', '')}"
-              + (f" / 자막: {r['자막']}" if r.get("자막") else "") + (f" / 피할 것: {r['피할 것']}" if r.get("피할 것") else "")
+              + (f" / 피할 것: {r['피할 것']}" if r.get("피할 것") else "")   # 자막 글은 넣지 않음 (AI가 화면에 글자를 그려 깨짐)
               for i, r in enumerate(rows, 1) if r.get("화면")]
     return "\n".join([f"Short product video draft, {MEDIA_S3_VIDEO_SECONDS} seconds, 16:9, realistic and calm, no exaggeration, "
-                      "silent autoplay (no sound, short German subtitles on screen).",
+                      "silent, no sound. Absolutely no on-screen text: no subtitles, captions, letters, numbers, logos or "
+                      "labels anywhere in the frame (subtitles are added later in editing).",
                       "Product: cooling mattress pad 90x200 cm, the same product look in every scene.",
                       "Scenes:", *scenes,
                       *(["Avoid: " + ", ".join(media_s3_video_avoid(src))] if media_s3_video_avoid(src) else [])])
 
 
 def _media_s3_sub_time(sec: float, sep: str) -> str:
-    return f"00:{int(sec) // 60:02d}:{int(sec) % 60:02d}{sep}000"
+    ms = int(round(sec * 1000))
+    return f"00:{ms // 60000:02d}:{ms // 1000 % 60:02d}{sep}{ms % 1000:03d}"
 
 
 def media_s3_video_subs(rows: list, ver: str = "") -> dict:
     """초안 영상에 붙일 한국어 설명 자막 {"vtt", "srt"}: 스토리보드 장면 길이대로 시간을 나누고,
     장면마다 '[영상 A · 첫 3초] 화면 설명'과 (있으면) 독일어 자막의 뜻을 한국어로 보여 줍니다.
     AI 영상에 글자를 직접 넣으면 한글이 깨져서, 영상 위에 겹쳐 보이는 자막 파일로 만듭니다 (앱 재생기·zip의 .srt)."""
-    def short(text: str, n: int = 55) -> str:   # 영상을 덜 가리게 한두 줄로
-        text = str(text).strip().split(". ")[0].rstrip(".")
-        return text if len(text) <= n else text[:n].rstrip() + "…"
-
     cues, t = [], 0.0
     for i, r in enumerate(rows):
         sec = float(r.get("길이(초)") or 0) or 3.0
         hv = media_s3_scene_version(r)
         part = (f"첫 {int(sec)}초 · {'A안 (지금 방식)' if hv == 'A' else 'B안 (가설 장면)'}" if hv
                 else f"공통 장면 {i}" if ver else str(r.get("장면", "")))
-        lines = [f"[영상 {ver} · {part}]" if ver else f"[{part}]", short(r.get("화면", ""))]
+        head = f"[영상 {ver} · {part}]" if ver else f"[{part}]"
+        desc = str(r.get("화면", "")).strip()
+        for de_name in ("SEORI REIF Kühlauflage", "SEORI REIF Kuehlauflage", "Kühlauflage"):   # 설명은 전부 한국어로
+            desc = desc.replace(de_name, "서리 냉감패드")
         de = str(r.get("자막") or "").strip()
-        if de:
-            ko = ""
-            if media_s3_ai_ready("OPENAI_API_KEY"):
-                try:
-                    ko = media_s3_translate(de)
-                except MediaS3AIError:
-                    ko = ""
-            lines.append(f"자막 뜻: {short(ko or de)}")
-        cues.append((t, t + sec, [line for line in lines if line]))
+        ko = ""
+        if de and media_s3_ai_ready("OPENAI_API_KEY"):
+            try:
+                ko = media_s3_translate(de)
+            except MediaS3AIError:
+                ko = ""
+        if de and ko:   # 글이 길어 자르지 않고, 장면 시간을 반씩: 앞 = 화면 설명, 뒤 = 독일어 자막의 한국어 뜻
+            cues.append((t, t + sec / 2, [head, desc]))
+            cues.append((t + sec / 2, t + sec, [head, "자막 뜻: " + ko.replace("ΔT", "온도차").replace("Δ", "")]))   # 번역이 안 되면 독일어는 넣지 않음 (한국어만)
+        else:
+            cues.append((t, t + sec, [head, desc]))
         t += sec
     vtt = "WEBVTT\n\n" + "\n".join(f"{_media_s3_sub_time(a, '.')} --> {_media_s3_sub_time(b, '.')}\n" + "\n".join(ls) + "\n"
                                      for a, b, ls in cues)
@@ -178,6 +184,47 @@ def media_s3_video_subtitles(name: str, kind: str = "vtt") -> str | None:
         if (name == key or name.endswith("_" + key)) and isinstance(info, dict) and info.get(f"subs_{kind}"):
             return info[f"subs_{kind}"]
     return None
+
+
+def media_s3_vtt_cues(vtt: str) -> list:
+    """WEBVTT 글 → 자막 cue [(시작초, 끝초, [줄…])] (영상에 구워 넣을 때 씀)."""
+    def sec(t: str) -> float:
+        h, m, s = t.strip().replace(",", ".").split(":")
+        return int(h) * 3600 + int(m) * 60 + float(s)
+
+    cues = []
+    for block in vtt.replace("\r", "").split("\n\n"):
+        lines = [x for x in block.strip().split("\n") if x.strip()]
+        if lines and "-->" in lines[0]:
+            a, b = lines[0].split("-->")
+            cues.append((sec(a), sec(b), lines[1:]))
+    return cues
+
+
+def media_s3_video_burned(name: str, content: bytes) -> bytes | None:
+    """한국어 설명 자막을 구워 넣은 영상 (자막 정보가 없거나 ffmpeg가 없으면 None)."""
+    from modules.media.media_stage3.media_stage3_burn import media_s3_burn_subs
+    vtt = media_s3_video_subtitles(name)
+    return media_s3_burn_subs(content, media_s3_vtt_cues(vtt)) if vtt else None
+
+
+def media_s3_video_download(name: str, content: bytes) -> tuple:
+    """영상 내려받기 (데이터, 파일 이름, 도움말). 한국어 설명 자막이 있으면 영상에 구워 넣은 MP4 하나
+    (앱에서 보던 그대로, 어떤 재생기로 열어도 자막이 보임). 굽기가 안 되면 영상 + 같은 이름 .srt를 zip으로."""
+    import io
+    import zipfile
+    srt = media_s3_video_subtitles(name, "srt")
+    if not srt:
+        return content, name, f"{name} 내려받기"
+    burned = media_s3_video_burned(name, content)
+    if burned:
+        return burned, name, "한국어 설명 자막이 들어간 영상 (앱에서 보던 그대로)"
+    stem = name.rsplit(".", 1)[0]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(name, content)
+        z.writestr(f"{stem}.srt", srt.encode("utf-8-sig"))
+    return buf.getvalue(), f"{stem}.zip", "영상 + 한국어 설명 자막(.srt) 묶음. 압축을 풀고 같은 폴더에서 VLC 등으로 열면 자막이 켜져요"
 
 
 def media_s3_play(name: str, content: bytes) -> None:
@@ -255,7 +302,7 @@ A/B 테스트는 사진 A와 B가 **딱 한 가지(단일 변수)만** 달라야
 
 ※ AI 사진은 아마존 메인 이미지로 쓰지 않아요 (촬영 참고용).""",
     "video": """**이 탭은 뭐 하는 곳?**
-자사몰에서 클릭률을 비교할 **영상 A·B의 설계도(스토리보드)**를 만들고, 그 설계도로 **10초 초안 영상 A·B**를 AI로 만들어 보는 곳이에요.
+자사몰에서 클릭률을 비교할 **영상 A·B의 설계도(스토리보드)**를 만들고, 그 설계도로 **15초 초안 영상 A·B**를 AI로 만들어 보는 곳이에요.
 
 **왜 하나요?**
 같은 가설을 영상에서도 시험해요. **첫 3초만** A(지금 방식)와 B(가설의 이유가 보이는 장면)가 다르고, 나머지 장면은 같아요.
@@ -264,7 +311,7 @@ A/B 테스트는 사진 A와 B가 **딱 한 가지(단일 변수)만** 달라야
 **순서**
 1. **스토리보드 만들기** (AI가 2번 가설의 이유 + 리포트 값으로 채움) → 표에서 직접 고치기
 2. **스토리보드 확정**
-3. **영상 A·B 초안 만들기** (Higgsfield, 10초·480p·소리 없음, A·B 동시에) → '만든 영상 보기'에서 비교
+3. **영상 A·B 초안 만들기** (Higgsfield, 15초·480p·소리 없음, A·B 동시에) → '만든 영상 보기'에서 비교
 
 **표시 뜻**: 확정됨 = 지금 표로 영상을 만듦 · 다시 확정 필요 = 표가 바뀜, 확정을 다시 눌러야 반영 · 금지 표현 있음 = 리포트 금지어가 들어 있음""",
     "history": """**이 탭은 뭐 하는 곳?**
@@ -389,6 +436,69 @@ def media_s3_photo_carousel():
                       args=(MEDIA_S3_PHOTOS, name, "media-s3-photo-files"))
 
 
+MEDIA_S3_AB_PLAY = "▶ A·B 이어 보기"   # 만든 영상 팝업의 첫 선택지 (영상 A·B가 다 있을 때만)
+MEDIA_S3_AB_CARD_SEC = 2.5             # 'A안'·'B안' 제목 카드를 보여 주는 시간(초)
+
+
+def _media_s3_link(name: str) -> dict:
+    for key, info in (st.session_state.get(MEDIA_S3_VIDEO_LINKS) or {}).items():
+        if (name == key or name.endswith("_" + key)) and isinstance(info, dict):
+            return info
+    return {}
+
+
+def media_s3_latest_ab(kept: list) -> dict:
+    """작업 공간 영상 중 가장 최근 영상 A·B {"A": (이름, 내용), "B": …} (둘 다 있어야 이어 보기)."""
+    out = {}
+    for name, content in kept:
+        part = name.split("_")
+        if len(part) > 2 and part[1] in ("A", "B"):
+            out[part[1]] = (name, content)
+    return out if set(out) == {"A", "B"} else {}
+
+
+def media_s3_ab_player(ab: dict) -> None:
+    """A안 제목 카드 → 영상 A → B안 제목 카드 → 영상 B를 차례로 틀어 주는 재생기 (한국어 설명 자막 포함).
+    영상 파일을 합치지 않고 화면에서만 이어 붙입니다 (합친 파일을 만들려면 ffmpeg가 필요)."""
+    import json
+    seq = []
+    for v, title in (("A", "A안 · 지금 방식"), ("B", "B안 · 가설")):
+        name, content = ab[v]
+        info = _media_s3_link(name)
+        seq.append({"title": title, "sub": info.get("hook", ""),
+                    "src": "data:video/mp4;base64," + base64.b64encode(content).decode(),
+                    "vtt": ("data:text/vtt;base64," + base64.b64encode(info["subs_vtt"].encode("utf-8")).decode())
+                    if info.get("subs_vtt") else ""})
+    page = """<div id="w" style="position:relative;width:100%;aspect-ratio:16/9;max-height:420px;background:#000;border-radius:10px;overflow:hidden;font-family:sans-serif">
+<video id="v" playsinline muted style="width:100%;height:100%;object-fit:contain"></video>
+<div id="c" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#1f2430;color:#fff;text-align:center;padding:24px;cursor:pointer">
+<div id="ct" style="font-size:30px;font-weight:700">▶ A·B 이어 보기</div>
+<div id="cs" style="font-size:15px;opacity:.85;max-width:80%">누르면 A안 → B안 순서로 재생돼요</div></div></div>
+<style>video::cue{font-size:13px;background:rgba(0,0,0,.55)}</style>
+<script>
+const seq = __SEQ__, v = document.getElementById('v'), c = document.getElementById('c'),
+      ct = document.getElementById('ct'), cs = document.getElementById('cs');
+let i = -1;
+function next() {
+  i += 1;
+  if (i >= seq.length) { ct.textContent = '끝 · 다시 보기'; cs.textContent = 'A안과 B안은 첫 3초만 달라요'; c.style.display = 'flex'; i = -1; return; }
+  ct.textContent = seq[i].title; cs.textContent = seq[i].sub ? '첫 3초: ' + seq[i].sub : '';
+  c.style.display = 'flex'; v.pause();
+  setTimeout(() => {
+    v.querySelectorAll('track').forEach(t => t.remove());
+    v.src = seq[i].src;
+    if (seq[i].vtt) { const t = document.createElement('track'); t.kind = 'subtitles'; t.label = '한국어 설명';
+      t.srclang = 'ko'; t.src = seq[i].vtt; t.default = true; v.appendChild(t); }
+    v.onloadedmetadata = () => { if (v.textTracks[0]) v.textTracks[0].mode = 'showing'; };
+    c.style.display = 'none'; v.play();
+  }, __CARD__);
+}
+v.onended = next;
+c.onclick = () => { if (c.style.display !== 'none' && (i === -1)) next(); };
+</script>""".replace("__SEQ__", json.dumps(seq)).replace("__CARD__", str(int(MEDIA_S3_AB_CARD_SEC * 1000)))
+    components.html(page, height=430)
+
+
 def media_s3_video_labels(names: list) -> list:
     """팝업에서 고를 이름: '영상 A', '영상 B' (같은 이름이 또 있으면 '영상 A (2)'처럼 번호)."""
     out, seen = [], {}
@@ -418,18 +528,26 @@ def media_s3_video_dialog():
             return
         names = [n for n, _ in kept]
         labels = media_s3_video_labels(names)
+        ab = media_s3_latest_ab(kept)
+        if ab and st.session_state.get("media-s3-video-view") == MEDIA_S3_AB_PLAY:   # A·B 이어 보기
+            media_s3_ab_player(ab)
+            with st.container(horizontal=True, vertical_alignment="center", key="media-s3-video-dialog-info"):
+                st.segmented_control("볼 영상", [MEDIA_S3_AB_PLAY, *labels], key="media-s3-video-view",
+                                     on_change=_media_s3_video_view_set, args=(names,), label_visibility="collapsed")
+            return
         idx = st.session_state.get("media-s3-video-idx", len(kept) - 1) % len(kept)
         st.session_state["media-s3-video-idx"] = idx
         st.session_state["media-s3-video-view"] = labels[idx]
         name, content = kept[idx]
         media_s3_play(name, content)
         with st.container(horizontal=True, vertical_alignment="center", key="media-s3-video-dialog-info"):
-            st.segmented_control("볼 영상", labels, key="media-s3-video-view", on_change=_media_s3_video_view_set,
-                                 args=(names,), label_visibility="collapsed")
+            st.segmented_control("볼 영상", ([MEDIA_S3_AB_PLAY] if ab else []) + labels, key="media-s3-video-view",
+                                 on_change=_media_s3_video_view_set, args=(names,), label_visibility="collapsed")
             st.space("stretch")
             with st.container(horizontal=True, gap="small", width="content"):
-                st.download_button("", content, file_name=name, key=f"media-s3-video-files-dl-{name}", type="tertiary",
-                                   icon=":material/download:", help=f"{name} 내려받기")
+                data, fname, tip = media_s3_video_download(name, content)
+                st.download_button("", data, file_name=fname, key=f"media-s3-video-files-dl-{name}", type="tertiary",
+                                   icon=":material/download:", help=tip)
                 st.button("", key=f"media-s3-video-files-rm-{name}", type="tertiary", icon=":material/delete:",
                           help=f"{name} 지우기", on_click=_media_s3_remove_file,
                           args=(MEDIA_S3_VIDEOS, name, "media-s3-video-files"))
@@ -663,7 +781,8 @@ def media_s3_video_section(src: dict):
                                               prompt=p)
                             subs = media_s3_video_subs(versions[v], v)
                             links = {**st.session_state.get(MEDIA_S3_VIDEO_LINKS, {}),
-                                     name: {"subs_vtt": subs["vtt"], "subs_srt": subs["srt"]}}
+                                     name: {"subs_vtt": subs["vtt"], "subs_srt": subs["srt"],
+                                            "hook": str(versions[v][0].get("화면", "")) if v else ""}}
                             st.session_state[MEDIA_S3_VIDEO_LINKS] = links
                             media_s3_store_json(MEDIA_S3_VIDEO_LINKS, links)
                         st.toast("영상 초안이 완성됐어요. '만든 영상 보기'에서 볼 수 있어요", icon="🎬")
@@ -726,7 +845,8 @@ def media_s3_video_job_step():
             subs = media_s3_video_subs(job.get("rows") or [], job.get("ver") or "") if job.get("rows") else {}
             links = {**st.session_state.get(MEDIA_S3_VIDEO_LINKS, {}),
                      name: {"job_id": job["job_id"], "url": url, "seconds": int(time.time() - job.get("started", time.time())),
-                            **({"subs_vtt": subs["vtt"], "subs_srt": subs["srt"]} if subs else {})}}
+                            **({"subs_vtt": subs["vtt"], "subs_srt": subs["srt"]} if subs else {}),
+                            "hook": str((job.get("rows") or [{}])[0].get("화면", "")) if job.get("ver") else ""}}
             st.session_state[MEDIA_S3_VIDEO_LINKS] = links
             media_s3_store_json(MEDIA_S3_VIDEO_LINKS, links)
             st.toast(f"{tag} 초안이 완성됐어요 ({_media_s3_elapsed(job)}). '만든 영상 보기'에서 볼 수 있어요", icon="🎬")
@@ -905,8 +1025,10 @@ def media_s3_history_tile(e: dict, picks: list, latest: bool, no: int, where: st
             st.space("stretch")
             with st.container(horizontal=True, gap="small", width="content", key=f"media-s3-hist-tools-{k}"):
                 if content is not None:
-                    st.download_button("", content, file_name=e["name"], type="tertiary", icon=":material/download:",
-                                       key=f"media-s3-hist-dl-{k}")
+                    data, fname, tip = (media_s3_video_download(e["name"], content) if e["kind"] == "영상"
+                                        else (content, e["name"], None))
+                    st.download_button("", data, file_name=fname, type="tertiary", icon=":material/download:",
+                                       key=f"media-s3-hist-dl-{k}", help=tip)
                 if e.get("prompt"):
                     with st.popover("", icon=":material/description:"):
                         st.code(e["prompt"], language=None, wrap_lines=True)
@@ -981,8 +1103,11 @@ def media_s3_history_card(gid: str, slot: str, title: str, diff: str, picks: lis
                 st.checkbox("⑤", key=f"media-s3-pick-{e['file']}", on_change=_media_s3_toggle_pick, args=(e["file"],))
                 with st.container(horizontal=True, gap="small", width="content", key=f"media-s3-hist-tools-card-{slot}"):
                     if content is not None:
-                        st.download_button("", content, file_name=e["name"], type="tertiary", icon=":material/download:",
-                                           key=f"media-s3-hist-dl-card-{e['file']}", help=f"{e['created'][5:]} · 내려받기")
+                        data, fname, tip = (media_s3_video_download(e["name"], content) if e["kind"] == "영상"
+                                            else (content, e["name"], None))
+                        st.download_button("", data, file_name=fname, type="tertiary", icon=":material/download:",
+                                           key=f"media-s3-hist-dl-card-{e['file']}",
+                                           help=f"{e['created'][5:]} · " + (tip or "내려받기"))
                     st.button("", key=f"media-s3-hist-rm-card-{e['file']}", type="tertiary", icon=":material/delete:",
                               help="이 버전 지우기", on_click=_media_s3_history_delete, args=(e["file"],))
             if st.button("", key=f"media-s3-hist-all-{slot}", icon=":material/grid_view:", type="tertiary",
@@ -1082,6 +1207,8 @@ def media_s3_video_tab(src: dict):
             if st.button(f"만든 영상 보기 ({count})", key="media-s3-btn-view-videos", icon=":material/video_library:",
                          disabled=not count):
                 st.session_state["media-s3-video-idx"] = count - 1   # 가장 최근 영상부터
+                if media_s3_latest_ab(media_s3_current(MEDIA_S3_VIDEOS)):   # A·B가 다 있으면 이어 보기부터
+                    st.session_state["media-s3-video-view"] = MEDIA_S3_AB_PLAY
                 media_s3_video_dialog()
             media_s3_guide("video")
             media_s3_handoff_step("video")
