@@ -154,6 +154,25 @@ def media_handoff_set_solution(solution: dict) -> None:
     store_set(MEDIA_HANDOFF_STORE, data)
 
 
+def media_handoff_candidates() -> dict:
+    """1단계 후보 변수 묶음 {"text", "set", "source", "error", "version"} (store("media")의 "candidates" 칸, 없으면 빈 dict).
+    가설 문장 하나에 한 번만 AI로 만들어 팀이 같이 씁니다 (2026-10-27: 접속할 때마다 새로 만들어 변수 이름·B안 글자가 달라져
+    확정한 값과 안 맞고 '확정 안 됨'이 계속 뜨던 문제)."""
+    saved = store_get(MEDIA_HANDOFF_STORE, fresh=True)
+    gen = saved.get("candidates") if isinstance(saved, dict) else None
+    return gen if isinstance(gen, dict) else {}
+
+
+def media_handoff_set_candidates(gen: dict) -> None:
+    """새로 만든 후보 변수 묶음을 저장합니다 (다른 칸은 그대로)."""
+    saved = store_get(MEDIA_HANDOFF_STORE, fresh=True)
+    data = dict(saved) if isinstance(saved, dict) else {}
+    if data.get("candidates") == gen:
+        return
+    data["candidates"] = gen
+    store_set(MEDIA_HANDOFF_STORE, data)
+
+
 def media_handoff_solution() -> dict:
     """확정해 둔 솔루션 (없으면 빈 dict)."""
     saved = store_get(MEDIA_HANDOFF_STORE)
