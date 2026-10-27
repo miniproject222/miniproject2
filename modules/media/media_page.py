@@ -63,6 +63,11 @@ def media_load_stage_css() -> None:
             st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 
+MEDIA_HELP_ABOUT = "가설에서 변수 도출 → A/B 소재·프롬프트 → 사진·영상 초안 제작 → 외주 정리, 단계별로 넘어가요."
+MEDIA_HELP_ORDER = ("**순서**: 단계마다 맨 아래 '다음: …' 버튼으로 넘어가요 (가설에서 변수 도출에서 B안을 골라 확정해야 다음 단계가 열려요). "
+                    "가설은 ② 가설 탭에서 '다음으로'를 누르면 자동으로 불러와요")
+
+
 def media_step_nav(i: int) -> None:
     """하위 탭 맨 아래 이전/다음 단계 버튼 (이전은 왼쪽, 다음은 오른쪽)."""
     align = "right" if i == 0 else ("left" if i == len(MEDIA_STEPS) - 1 else "distribute")
@@ -77,13 +82,23 @@ def media_step_nav(i: int) -> None:
                       on_click=_media_go_step, args=(nxt, MEDIA_STEP_ON_NEXT.get(MEDIA_STEPS[i][0])))
 
 
+def media_header() -> None:
+    """① 문제 분석·② 가설 세우기와 같은 제목 줄: 제목 · 바로 옆 물음표(설명). 단계 이동은 단계마다 맨 아래 이전/다음 버튼."""
+    with st.container(horizontal=True, vertical_alignment="center", key="media-head"):
+        with st.container(key="media-head-title"):
+            ui.page_header("3. 매체 제작")   # 설명 한 줄은 옆 물음표 안 (①·② 탭과 같음)
+        with st.container(key="media-help"):
+            with st.popover("", icon=":material/help:", type="tertiary", help="이 탭 안내"):
+                st.markdown(f"{MEDIA_HELP_ABOUT}\n\n{MEDIA_HELP_ORDER}")
+
+
 def media_render():
     """'3. 매체 제작' 탭을 열 때마다 실행됩니다. 화면은 전부 이 함수 안에서 그립니다."""
     media_load_stage_css()
     # key="media-root": media_style.css가 이 탭 안의 간격만 줄이도록 범위를 정하는 class (.st-key-media-root)
     with st.container(key="media-root"):
         media_variable_leave_notice()   # ①을 떠나려다 막혔으면 가운데 경고창, 진행 불가 변수면 솔루션 팝업
-        ui.page_header("3. 매체 제작", "가설에서 변수 도출 → A/B 소재·프롬프트 → 사진·영상 초안 제작 → 외주 정리, 단계별로 넘어가요")
+        media_header()
         tabs = st.tabs([label for label, _ in MEDIA_STEPS], key="media-step", on_change=_media_step_changed)
         for i, (tab, (_, render)) in enumerate(zip(tabs, MEDIA_STEPS)):
             if tab.open:   # 선택된 단계만 그립니다

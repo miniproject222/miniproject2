@@ -162,8 +162,8 @@
   transition: background 0.15s, color 0.15s;
 }
 .st-key-media-s3-photo-tools button:hover {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: #7B6CF2;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-color: #7B6CF2;
   color: var(--color-card);
 }
 .st-key-media-s3-photo-tools button [data-testid="stIconMaterial"] {
@@ -272,7 +272,7 @@
   color: var(--color-text) !important;
 }
 .st-key-media-root [class*="st-key-media-s3-btn-view-"] button:hover {
-  border-color: var(--color-primary);
+  border-color: #7B6CF2;
 }
 .st-key-media-s3-video-head {
   flex-wrap: nowrap;
@@ -380,8 +380,8 @@
   color: var(--color-text) !important;
 }
 [class*="st-key-media-s3-hist-tools-"] button:hover {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: #7B6CF2;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-color: #7B6CF2;
 }
 .st-key-media-root [class*="st-key-media-s3-hist-tools-"] button:hover [data-testid="stIconMaterial"] {
   color: var(--color-card) !important;
@@ -471,6 +471,23 @@
 .st-key-media-root:has(.st-key-media-s3-sub) [data-testid="stLayoutWrapper"]:has(> .st-key-media-step-nav-2) {
   display: none;
 }
+
+/* 영상 초안 제작 탭에서는 ③ 공통 이전/다음 줄도 보여 줌 (2026-10-27): 위 ④ 줄 '다음: 만든 결과 보기'와 따로,
+   '← A/B 소재 준비'·'다음: 외주 정리 →'로 바로 가는 길. 둘 다 흰 버튼 (사진·만든 결과 보기 탭은 ④ 줄과 겹쳐서 숨김 그대로) */
+.st-key-media-root:has(.st-key-media-s3-sub [role="tab"]:nth-of-type(2)[aria-selected="true"]) .st-key-media-step-nav-2,
+.st-key-media-root:has(.st-key-media-s3-sub [role="tab"]:nth-of-type(2)[aria-selected="true"]) [data-testid="stLayoutWrapper"]:has(> .st-key-media-step-nav-2) {
+  display: flex;
+}
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled) {
+  background: var(--color-card) !important;
+  border: 1px solid #7B6CF2 !important;
+  box-shadow: none !important;
+}
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled):hover {
+  background: color-mix(in srgb, #7B6CF2 8%, var(--color-card)) !important;
+}
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled) p,
+.st-key-media-root .st-key-media-btn-step-next-2 .stButton button[kind="primary"]:not(:disabled) span { color: #7B6CF2 !important; }
 
 /* ⑤ 외주 정리 (media_stage3_export_render): 사진·영상 탭처럼 100% 화면에서 스크롤 없이 한 화면
    ④ 안쪽 탭 줄이 없어서 그만큼(약 60px) 더 씀. 넘치는 글은 카드 안에서만 스크롤 */
@@ -926,20 +943,20 @@ div[role="dialog"]:has(.media-s3-sb-table) {
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"]:hover {
   background: transparent !important;
-  color: var(--color-primary) !important;
-  border-bottom-color: color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
+  color: #7B6CF2 !important;
+  border-bottom-color: color-mix(in srgb, #7B6CF2 35%, transparent) !important;
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"][aria-selected="true"] {
   background: transparent !important;
-  color: var(--color-primary) !important;
-  border-bottom-color: var(--color-primary) !important;
+  color: #7B6CF2 !important;   /* ①·② 탭과 같은 밝은 보라 (2026-10-26) */
+  border-bottom-color: #7B6CF2 !important;
   box-shadow: none !important;
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"] p {
   font-size: 13.5px;
 }
 .st-key-media-step .st-key-media-s3-sub.st-key-media-s3-sub [role="tab"][aria-selected="true"] p {
-  color: var(--color-primary) !important;
+  color: #7B6CF2 !important;
   font-weight: 700;
 }
 
@@ -993,6 +1010,193 @@ div[role="dialog"]:has(.media-s3-sb-table) {
   line-height: 1.35;
   background: rgba(0, 0, 0, 0.55);
 }
+
+
+/* ── 영상 A·B 초안 제목 줄 (2026-10-27): '프롬프트 보기'를 작은 알약으로 줄이고 제목·물음표를 한 줄에 (높이를 줄여 스크롤 줄임) ── */
+.st-key-media-s3-video-head [data-testid="stMarkdown"] > div { flex-wrap: nowrap; }
+.st-key-media-s3-video-head [data-testid="stMarkdownContainer"] p { white-space: nowrap; }
+.st-key-media-root .st-key-media-s3-btn-view-video button {
+  min-height: 30px !important;
+  padding: 2px 12px !important;
+  border-radius: 999px !important;
+}
+.st-key-media-root .st-key-media-s3-btn-view-video button p { font-size: 13px; }
+
+/* ── 만든 결과 보기 v5 (2026-10-27): 가설 기록 목록 — 한 줄 = 날짜 · 시간 · 제목 · 개수 ──
+   마우스를 올리면 가설 전문(.media-s3-hist-li-preview), 누르면 팝업(media_s3_history_popup).
+   줄 전체를 덮는 투명 버튼(media-s3-hist-libtn-)이 누름을 받음 (1단계 후보 카드와 같은 방식) */
+.st-key-media-s3-hist-rows { gap: 8px !important; }
+[class*="st-key-media-s3-hist-li-"] {
+  position: relative;
+  padding: 12px 18px;
+  background: var(--color-card);
+  border: 1px solid transparent;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 7%, transparent);
+  transition: border-color 0.15s, background 0.15s;
+}
+[class*="st-key-media-s3-hist-li-"]:hover {
+  border-color: color-mix(in srgb, #7B6CF2 45%, transparent);
+  background: color-mix(in srgb, #7B6CF2 4%, var(--color-card));
+}
+.media-s3-hist-li {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  min-width: 0;
+  white-space: nowrap;
+  font-size: 14.5px;
+}
+.media-s3-hist-li-date { font-weight: 700; color: var(--color-text); }
+.media-s3-hist-li-time { color: var(--color-sub); font-variant-numeric: tabular-nums; }
+.media-s3-hist-li-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.media-s3-hist-li-now {
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: #EEF2DD;   /* ① '정상'·③ 연결 배지와 같은 연두 */
+  color: #5E6B2E;
+  font-size: 12px;
+  font-weight: 700;
+}
+.media-s3-hist-li-meta { color: var(--color-sub); font-size: 13px; }
+[class*="st-key-media-s3-hist-libtn-"] {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100%;
+  z-index: 1;
+}
+[class*="st-key-media-s3-hist-libtn-"] .stButton,
+[class*="st-key-media-s3-hist-libtn-"] button {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.media-s3-hist-li-preview {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 12px);
+  z-index: 20;
+  padding: 12px 16px;
+  background: var(--color-card);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 16%, transparent);
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--color-text);
+  white-space: normal;
+  pointer-events: none;
+}
+[class*="st-key-media-s3-hist-li-"]:hover .media-s3-hist-li-preview { display: block; }
+.media-s3-hist-li-preview b { margin-right: 4px; font-weight: 600; color: var(--color-sub); }
+
+/* 팝업 (media_s3_history_popup): ③ 화면 밖에 그려져 화면용 높이 변수가 없어서 팝업에 맞춰 다시 정함 */
+.st-key-media-s3-hist-pop {
+  --d-h: min(640px, calc(100vh - 240px));
+  --d-col: min(470px, calc(100vh - 340px));
+  --d-row: 300px;
+  gap: 10px;
+}
+.media-s3-hist-pop-hypo {
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #C4C3E3 35%, #FFFFFF);   /* ① ③ 상자와 같은 연보라 */
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--color-text);
+}
+/* 팝업 안 칸(사진 A · 사진 B · 영상): ① 안쪽 상자처럼 연한 회보라, 미리 보기 바탕은 흰색 */
+.st-key-media-s3-hist-pop [class*="st-key-media-s3-hist-card-"] {
+  border: none !important;
+  border-radius: 14px !important;
+  background: var(--color-bg) !important;
+  box-shadow: none !important;
+}
+.st-key-media-s3-hist-pop .media-s3-hist-big { background: var(--color-card); }
+/* 팝업 안 아이콘·글자 색 (③ 탭 밖이라 탭 규칙이 안 걸림) */
+.st-key-media-s3-hist-pop [class*="st-key-media-s3-hist-cardhead-"] [data-testid="stIconMaterial"],
+.st-key-media-s3-hist-pop [class*="st-key-media-s3-hist-tools-"] [data-testid="stIconMaterial"],
+.st-key-media-s3-hist-pop [class*="st-key-media-s3-hist-tools-"] button p {
+  color: var(--color-text) !important;
+}
+/* '… 전부' 탭: 미리 보기를 칸 폭에 맞춘 3:2 */
+.st-key-media-s3-hist-pop [class*="st-key-media-s3-hist-tile-"] { width: 100% !important; }
+.st-key-media-s3-hist-pop [class*="st-key-media-s3-hist-tile-"] .media-s3-hist-thumb,
+.st-key-media-s3-hist-pop [class*="st-key-media-s3-hist-tile-"] [class*="st-key-media-s3-hist-vid-"] video {
+  height: auto;
+  width: 100%;
+}
+/* 팝업 안 탭: ④ 안쪽 탭(사진·영상·만든 결과 보기)과 같은 밑줄형 — 고른 탭은 밝은 보라 글자·밑줄 (공통 테마의 채운 탭 대신) */
+.st-key-media-s3-hist-pop [role="tab"] {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-bottom: 2.5px solid transparent !important;
+  border-radius: 0 !important;
+  padding: 6px 4px 8px !important;
+  color: var(--color-sub) !important;
+}
+.st-key-media-s3-hist-pop [role="tab"] p { color: inherit !important; }
+.st-key-media-s3-hist-pop [role="tab"]:hover { color: #7B6CF2 !important; }
+.st-key-media-s3-hist-pop [role="tab"][aria-selected="true"] {
+  color: #7B6CF2 !important;
+  border-bottom-color: #7B6CF2 !important;
+}
+.st-key-media-s3-hist-pop [role="tab"][aria-selected="true"] p { font-weight: 700; }
+.media-s3-hist-pop-hypo { margin-bottom: 4px; }
+
+/* ── 영상 초안 제작: 오른쪽 영상 카드 높이를 왼쪽 스토리보드 카드와 같게 (2026-10-27) ──
+   줄 전체 높이는 예전 그대로(--media-s3-h - 20px) 두고, 왼쪽 칸을 풀어(display: contents) 줄을 격자로 바꿈:
+   1행 = 스토리보드 카드 | 영상 카드 (같은 높이), 2행 = 왼쪽 아래 줄(만든 영상 보기·사용법·넘기기), 3행 = 안내 한 줄.
+   화면 높이·글자 크기가 달라도 격자가 아래 줄 높이를 빼고 나눠서 두 카드 아래 끝이 항상 같음 */
+.st-key-media-s3-video-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
+  grid-auto-rows: auto;
+  column-gap: 1rem;
+  row-gap: 1rem;
+  height: calc(var(--media-s3-h) - 20px);
+}
+.st-key-media-s3-video-row > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-left),
+.st-key-media-s3-video-row .st-key-media-s3-video-left {
+  display: contents !important;
+}
+.st-key-media-s3-video-row > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-right) {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 0;
+}
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-sb-card) {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+}
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-actions) {
+  grid-column: 1;
+  grid-row: 2;
+}
+.st-key-media-s3-video-left > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-note) {
+  grid-column: 1;
+  grid-row: 3;
+}
+.st-key-media-s3-video-right,
+.st-key-media-s3-video-right > [data-testid="stLayoutWrapper"]:has(> .st-key-media-s3-video-card),
+.st-key-media-s3-video-row .st-key-media-s3-video-card {
+  height: 100% !important;
+  min-height: 0;
+}
+
 
 /* 만든 결과 보기 v5: 가설 카드 = 날짜 → 단일 변수 → B안 → (맨 아래) 개수 · 작은 '외주로 보내기'. 스크롤 없음.
    카드 전체가 '열기' 버튼 (투명 버튼이 카드를 덮고, '외주로 보내기'만 그 위에 올라옴). 가설 전문은 열었을 때 맨 위에서 봄 */
@@ -1120,3 +1324,4 @@ div[role="dialog"]:has(.media-s3-sb-table) {
   height: max(50px, calc(var(--d-col) - 96px)) !important;
 }
 .media-s3-hist-b { -webkit-line-clamp: 3; }
+

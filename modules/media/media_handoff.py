@@ -71,10 +71,26 @@ MEDIA_HANDOFF_RESULT_SAMPLE = {
 }
 
 
+def media_tab_open() -> bool:
+    """지금 왼쪽 큰 탭 줄에서 ③ 매체 제작 탭이 열려 있는지 (app.py st.tabs key="main_tabs", 탭을 바꾸면 다시 그려짐).
+    ③ 내용은 다른 탭을 보고 있을 때도 같이 그려지므로, AI 호출·Supabase 다시 읽기는 ③이 열렸을 때만 하려고 씀
+    (2026-10-27: 접속할 때마다 ③을 열지 않아도 OpenAI를 부르던 비용·속도 문제). 알 수 없으면 예전처럼 True."""
+    current = st.session_state.get("main_tabs")
+    if current is None:
+        return True
+    try:
+        from common.common_layout import LAYOUT_TABS   # 순환 import를 피하려고 함수 안에서 (common_layout이 media를 불러옴)
+        tab = next(t for t in LAYOUT_TABS if t["code"] == "media")
+    except Exception:
+        return True
+    return current == f"{tab['icon']} {tab['label'].replace(' ', chr(160))}"   # app.py 탭 이름과 같은 모양
+
+
 def _media_handoff_all(fresh: bool) -> dict:
-    """store("media")의 handoff 칸 전체. fresh면 (MEDIA_HANDOFF_FRESH_SEC마다 한 번) Supabase에서 다시 읽습니다."""
+    """store("media")의 handoff 칸 전체. fresh면 (MEDIA_HANDOFF_FRESH_SEC마다 한 번) Supabase에서 다시 읽습니다.
+    ③ 탭이 닫혀 있으면 다시 읽지 않음 (다른 탭을 누를 때마다 0.3~0.9초씩 늦어지던 것, ③을 열면 그때 다시 읽음)."""
     last = st.session_state.get("media-handoff-read-at", 0.0)
-    if fresh and time.time() - last < MEDIA_HANDOFF_FRESH_SEC:
+    if fresh and (time.time() - last < MEDIA_HANDOFF_FRESH_SEC or not media_tab_open()):
         fresh = False   # 한 번 화면을 그리는 동안 여러 번 불러도 Supabase는 한 번만 읽음
     if fresh:
         st.session_state["media-handoff-read-at"] = time.time()
